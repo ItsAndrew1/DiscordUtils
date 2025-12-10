@@ -1,0 +1,59 @@
+#Developed by _ItsAndrew_
+#This file is for configuring the main settings of DiscordUtils.
+
+chat-prefix: "&9&lDL &8>> "
+discord-link: "" #Enter your discord's server invite link
+choice: "book" #Whether you want a chat message or a book for displaying the link to the players
+
+#Configure the Discord GUI shown to players
+discord-gui:
+  rows: 6 #The number MUST be between 1 and 6. (1 row has 9 SLOTS).
+  title: "Get the discord link!" #Use '&' for styles.
+
+  #Configure the exit item
+  exit-item:
+    toggle: false #Whether you want this item in the GUI or not
+    slot: 40
+    display-name: "&cEXIT"
+    lore: #Leave blank for no lore
+      -
+    material: red_concrete
+
+  #Configure the decorations.
+  decorations:
+    toggle: true #Toggle the decorations
+    material: black_stained_glass_pane
+    display-name: " "
+
+  #Configure an info item. This item is for displaying additional information
+  info-item:
+    toggle: true
+    slot: 4 #The slot in the GUI
+    material: oak_sign #Material of the item
+    display-name: "&eGet the &ldiscord server &elink" #Enter the display name of the item\
+    lore: #Leave blank for no lore. Used for more additional information
+      -
+
+  discord-item: #This is the item gives players the discord link
+    #To get a custom head, navigate to https://minecraft-heads.com, search for a head, scroll down and paste the VALUE
+    use-custom-head: true
+    custom-head: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTNiMTgzYjE0OGI5YjRlMmIxNTgzMzRhZmYzYjViYjZjMmMyZGJiYzRkNjdmNzZhN2JlODU2Njg3YTJiNjIzIn19fQ=="
+
+    #This uses a normal minecraft item
+    use-normal-material: false
+    material: blue_concrete
+
+    slot: 13
+    display-name: "&9Click to get the &linvite link&9!" #Use '&' for styles
+    lore: #Leave blank for no lore
+      -
+
+#Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
+#TIP: do /playsound ... in Minecraft to HEAR the sound and see the sound's NAME
+exit-item-sound: "ui.button.click"
+eis-volume: 1
+eis-pitch: 1
+
+open-discord-gui-sound: "entity.player.levelup"
+odgs-volume: 1
+odgs-pitch: 1.4

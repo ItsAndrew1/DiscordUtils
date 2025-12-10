@@ -1,0 +1,26 @@
+name: DiscordUtils-1.0
+version: '1.0'
+main: me.andrew.DiscordUtils.DiscordUtils
+api-version: '1.21'
+author: _ItsAndrew_
+
+commands:
+  discord:
+    aliases: [dc]
+    usage: /discord
+    description: Opens the discord GUI
+    permission: discordlink.use
+
+  dcutils:
+    usage: /dcutils help
+    description: Handles different configuration of the plugin
+    permission: discordlink.staff
+
+permissions:
+  discordutils.use:
+    description: Allows the use of the command
+    default: true
+
+  discordutils.staff:
+    description: Gives access to the commands
+    default: op
