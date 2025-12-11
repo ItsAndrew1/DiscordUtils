@@ -1,7 +1,7 @@
 #Developed by _ItsAndrew_
 #This file is for configuring the main settings of DiscordUtils.
 
-chat-prefix: "&9&lDL &8>> "
+chat-prefix: "&9&lDL &8>>"
 discord-link: "" #Enter your discord's server invite link
 choice: "book" #Whether you want a chat message or a book for displaying the link to the players
 
@@ -12,7 +12,7 @@ discord-gui:
 
   #Configure the exit item
   exit-item:
-    toggle: false #Whether you want this item in the GUI or not
+    toggle: true #Whether you want this item in the GUI or not
     slot: 40
     display-name: "&cEXIT"
     lore: #Leave blank for no lore
@@ -43,10 +43,14 @@ discord-gui:
     use-normal-material: false
     material: blue_concrete
 
-    slot: 13
+    slot: 22
     display-name: "&9Click to get the &linvite link&9!" #Use '&' for styles
     lore: #Leave blank for no lore
       -
+
+#Configure all the messages for DiscordUtils.
+error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
+command-no-permission-message: "&cYou don't have permission to run this command."
 
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
 #TIP: do /playsound ... in Minecraft to HEAR the sound and see the sound's NAME
@@ -54,6 +58,14 @@ exit-item-sound: "ui.button.click"
 eis-volume: 1
 eis-pitch: 1
 
+gui-error-sound: "entity.enderman.teleport"
+ges-volume: 1
+ges-pitch: 1
+
 open-discord-gui-sound: "entity.player.levelup"
 odgs-volume: 1
 odgs-pitch: 1.4
+
+#Configure the help message
+help-message:
+  - ""
