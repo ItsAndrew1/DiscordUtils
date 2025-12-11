@@ -1,13 +1,12 @@
 package me.andrew.DiscordUtils;
 
-import org.bukkit.ChatColor;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -75,7 +74,7 @@ public class Commands implements CommandExecutor {
                         return true;
                     }
 
-                    plugin.getConfig().set("choice", choice);
+                    plugin.getConfig().set("link-appearance-choice", choice);
                     plugin.saveConfig();
 
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
@@ -83,15 +82,19 @@ public class Commands implements CommandExecutor {
                     break;
 
                 case "help":
-                    List<String> helpMessageLines = plugin.getConfig().getStringList("help-message");
-                    if(helpMessageLines.isEmpty()) return true;
-                    else{
-                        for(String line : helpMessageLines){
-                            String coloredLine =  ChatColor.translateAlternateColorCodes('&', line);
-                            player.sendMessage(coloredLine);
-                        }
+                    List<String> helpBookPages = plugin.getConfig().getStringList("help-message-book-pages");
+                    ItemStack helpBook = new ItemStack(Material.WRITTEN_BOOK);
+                    BookMeta hbMeta = (BookMeta) helpBook.getItemMeta();
+
+                    //Adds the pages from config to the help book
+                    for(String page : helpBookPages){
+                        String coloredPage = ChatColor.translateAlternateColorCodes('&', page);
+                        hbMeta.addPage(coloredPage);
                     }
+
+                    helpBook.setItemMeta(hbMeta);
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
+                    player.openBook(helpBook);
                     break;
 
                 case "reload":

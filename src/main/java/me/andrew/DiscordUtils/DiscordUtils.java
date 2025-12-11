@@ -1,8 +1,10 @@
 package me.andrew.DiscordUtils;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.*;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.List;
 
 public final class DiscordUtils extends JavaPlugin {
     private int guiSize;
@@ -13,6 +15,7 @@ public final class DiscordUtils extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        startBroadcasting(); //Broadcasts the message over an interval of seconds
 
         //Checks the GUI size
         int guiRows = getConfig().getInt("discord-gui.rows");
@@ -39,6 +42,27 @@ public final class DiscordUtils extends JavaPlugin {
         saveConfig();
 
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
+    }
+
+    private void startBroadcasting(){
+        //Check if broadcasting is toggled
+        boolean toggleBroadcasting = getConfig().getBoolean("autobroadcast.toggle");
+        if(!toggleBroadcasting) return;
+
+        long interval = getConfig().getLong("autobroadcast.interval");
+        Sound broadcastSound = Registry.SOUNDS.get(NamespacedKey.minecraft(getConfig().getString("boardcast-message-sound").toLowerCase()));
+        float bcsVolume = getConfig().getInt("bms-volume");
+        float bcsPitch = getConfig().getInt("bms-pitch");
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            List<String> broadcastLines = getConfig().getStringList("autobroadcast.message-lines");
+            for(Player player : Bukkit.getOnlinePlayers()){
+                for(String line : broadcastLines){
+                    String coloredLine =  ChatColor.translateAlternateColorCodes('&', line);
+                    player.sendMessage(coloredLine);
+                }
+                player.playSound(player.getLocation(), broadcastSound, bcsVolume, bcsPitch);
+            }
+        }, 20L * interval, 20L * interval);
     }
 
     //Getters

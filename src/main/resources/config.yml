@@ -1,9 +1,32 @@
 #Developed by _ItsAndrew_
 #This file is for configuring the main settings of DiscordUtils.
 
-chat-prefix: "&9&lDL &8>>"
-discord-link: "" #Enter your discord's server invite link
-choice: "book" #Whether you want a chat message or a book for displaying the link to the players
+chat-prefix: "&9&lDU &8>>"
+
+#Broadcast custom message configuration
+autobroadcast:
+  toggle: true
+  interval: 600 #In seconds. For example here the interval is 10 minutes.
+  message-lines: #Use '&' for styles.
+    - "&9&lJOIN OUR DISCORD TODAY!"
+    - ""
+    - "&7If you didn't know, our server has a &ldiscord server&7!"
+    - "&7Do &e&l/discord &7for more info."
+
+#Configure the task of giving players the link.
+discord-link: "https://www.youtube.com"#Enter your discord's server invite link
+discord-link-word: "here" #The word which has the link
+link-appearance-choice: "chat-message" #Whether you want a chat message or a book for displaying the link to the players
+hover-text: "Click to enter our server!"
+message-lines:
+  - "%discord_link_word%"
+
+#Configure a 'fetching-data' mini task. This task runs after the player clicks on the discord-item in the GUI.
+#P.S: It is only for 'professional appearance' :)
+fetching-data:
+  toggle: true #If you want this feature or not
+  chat-message: "&8Fetching data..."
+  duration: 3 #In seconds
 
 #Configure the Discord GUI shown to players
 discord-gui:
@@ -53,10 +76,14 @@ error-gui-message: "&cThere was error opening the GUI. Contact the server admini
 command-no-permission-message: "&cYou don't have permission to run this command."
 
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
-#TIP: do /playsound ... in Minecraft to HEAR the sound and see the sound's NAME
+#TIP: do /playsound ... in Minecraft to HEAR the sound and see the sound's NAME.
 exit-item-sound: "ui.button.click"
 eis-volume: 1
 eis-pitch: 1
+
+boardcast-message-sound: "block.note_block.pling"
+bms-volume: 1
+bms-pitch: 1
 
 gui-error-sound: "entity.enderman.teleport"
 ges-volume: 1
@@ -66,6 +93,7 @@ open-discord-gui-sound: "entity.player.levelup"
 odgs-volume: 1
 odgs-pitch: 1.4
 
-#Configure the help message
-help-message:
-  - ""
+#Configure the help book. Use '\n' to go on a new line in a page
+help-message-book-pages:
+  - " &9&l  DISCORD UTILS        HELP MANUAL\n\n&41. &l/dcutils setdclink <link>\n  &4->set the link of your discord server.\n\n&42. &l/dcutils setdcchoice\n  &4->set the choice of the link's appearance to the player."
+  - "&43. &l/dcutils reload\n  &4->reload the config file. Use when manually changing something in it.\n\n&44. &l/dcutils help\n  &4->brings up the help manual.\n\n&45. &l/discord\n  &4->Opens the GUI. Main command for players."

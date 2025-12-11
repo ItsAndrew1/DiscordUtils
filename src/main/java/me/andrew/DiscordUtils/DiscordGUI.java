@@ -278,7 +278,7 @@ public class DiscordGUI implements Listener {
             return;
         }
 
-        //If the player clicks on discord-item
+        //If the player clicks on discord-item, runs the task.
         if(clickedItem.equals(discordItem)) plugin.getDiscordTaskManager().handleTask(player);
     }
 }

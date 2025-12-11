@@ -12,7 +12,7 @@ commands:
     permission: discordlink.use
 
   dcutils:
-    usage: /dcutils help
+    usage: Do /dcutils help for info!
     description: Handles different configuration of the plugin
     permission: discordlink.staff
 
