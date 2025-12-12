@@ -1,3 +1,4 @@
+![DiscordUtils banner](https://github.com/user-attachments/assets/e0ef9048-17ce-4383-b84c-ca5ef383d292)
 
 **DiscordUtils** is a *lightweight*, *discord utility minecraft plugin*, designed to help every server owner *connect* the players with **his discord server**.
 
@@ -12,7 +13,8 @@
  - **Simple configuration**  
 And **more**! Check `config.yml` for every feature!  
 
-🔴 **DiscordUtils** works best with a *PAPER server*, because it uses some stuff which work **ONLY** on it.
+🔴 **DiscordUtils** works best with a *PAPER server*, because it uses some stuff which work **ONLY** on it.  
+    For more information, check the release info [here](https://github.com/ItsAndrew1/DiscordUtils/releases/tag/v1.0).
 
 ---
 
