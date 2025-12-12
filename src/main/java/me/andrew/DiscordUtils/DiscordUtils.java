@@ -1,3 +1,4 @@
+//Developed by _ItsAndrew_
 package me.andrew.DiscordUtils;
 
 import org.bukkit.*;
@@ -20,7 +21,7 @@ public final class DiscordUtils extends JavaPlugin {
         //Checks the GUI size
         int guiRows = getConfig().getInt("discord-gui.rows");
         if(guiRows < 1 || guiRows > 6) {
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value of 'discord-gui.rows' is invalid!");
+            Bukkit.getLogger().warning("[DISCORDUTILS] The value of 'discord-gui.rows' is invalid! The GUI won't show up.");
         }
         guiSize = guiRows * 9; //Sets the GUI size
 
@@ -35,6 +36,7 @@ public final class DiscordUtils extends JavaPlugin {
 
         //Setting events
         getServer().getPluginManager().registerEvents(discordGUI, this);
+        Bukkit.getLogger().info("DiscordUtils has been enabled successfully!");
     }
 
     @Override
@@ -44,15 +46,34 @@ public final class DiscordUtils extends JavaPlugin {
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
     }
 
+    //Handles the broadcasting task
     private void startBroadcasting(){
         //Check if broadcasting is toggled
         boolean toggleBroadcasting = getConfig().getBoolean("autobroadcast.toggle");
         if(!toggleBroadcasting) return;
 
-        long interval = getConfig().getLong("autobroadcast.interval");
+        //Check if the interval is valid
+        long interval;
+        String intervalString = getConfig().getString("autobroadcast.interval");
+        try{
+            interval =  Long.parseLong(intervalString);
+            if(interval <= 0){
+                Bukkit.getLogger().warning("[DISCORDUTILS] Could not start broadcasting task. The interval value is <= 0!");
+                return;
+            }
+        }catch(Exception e){
+            Bukkit.getLogger().warning("[DISCORDUTILS] Could not start broadcasting task. The interval value is invalid!");
+            return;
+        }
+
         Sound broadcastSound = Registry.SOUNDS.get(NamespacedKey.minecraft(getConfig().getString("boardcast-message-sound").toLowerCase()));
+
+        //Check if sound is null
+        if(broadcastSound == null) Bukkit.getLogger().warning("[DISCORDUTILS] Sound for broadcast is invalid!");
         float bcsVolume = getConfig().getInt("bms-volume");
         float bcsPitch = getConfig().getInt("bms-pitch");
+
+        //Starts the task
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             List<String> broadcastLines = getConfig().getStringList("autobroadcast.message-lines");
             for(Player player : Bukkit.getOnlinePlayers()){

@@ -1,25 +1,35 @@
 #Developed by _ItsAndrew_
 #This file is for configuring the main settings of DiscordUtils.
 
-chat-prefix: "&9&lDU &8>>"
+chat-prefix: "&9&lDU &8>>" #The chat prefix shown to players.
 
 #Broadcast custom message configuration
 autobroadcast:
   toggle: true
-  interval: 600 #In seconds. For example here the interval is 10 minutes.
+  interval: 600 #In seconds. For example here the interval is 10 minutes. You will need to RESTART THE SERVER when changing this!
   message-lines: #Use '&' for styles.
-    - "&9&lJOIN OUR DISCORD TODAY!"
+    - "&c-----------------------------------------------------"
     - ""
-    - "&7If you didn't know, our server has a &ldiscord server&7!"
-    - "&7Do &e&l/discord &7for more info."
+    - "                    &9&lJOIN OUR DISCORD TODAY!"
+    - ""
+    - "    &7If you didn't know, our server has a &ldiscord server&7!"
+    - "                    &7Do &e&l/discord &7for more info."
+    - ""
+    - "&c-----------------------------------------------------"
 
 #Configure the task of giving players the link.
-discord-link: "https://www.youtube.com"#Enter your discord's server invite link
-discord-link-word: "here" #The word which has the link
-link-appearance-choice: "chat-message" #Whether you want a chat message or a book for displaying the link to the players
+discord-link: "" #Enter your discord's server invite link
+link-appearance-choice: "book" #Whether you want a chat message or a book for displaying the link to the players
 hover-text: "Click to enter our server!"
-message-lines:
-  - "%discord_link_word%"
+
+discord-link-word: "here" #The word which has the click and hover event
+
+message-lines: #Use the discord-link-word in your message! The discord-link-word is 'here', so I use 'here' in the message.
+  - "&c&lClick &9&lhere &c&lto join our discord server!"
+
+#TIP: You may include as many details as you can if using the book!
+book-pages: #Use the discord-link-word in your page! The discord-link-word is 'here', so I use 'here' in the page.
+  - "&4&lOUR DISCORD\n\n&c&lClick &9&lhere &c&lto join our discord server!"
 
 #Configure a 'fetching-data' mini task. This task runs after the player clicks on the discord-item in the GUI.
 #P.S: It is only for 'professional appearance' :)
@@ -74,6 +84,7 @@ discord-gui:
 #Configure all the messages for DiscordUtils.
 error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
 command-no-permission-message: "&cYou don't have permission to run this command."
+error-task-message: "&cThere was an error giving the discord link. Contact the server administrators about this."
 
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
 #TIP: do /playsound ... in Minecraft to HEAR the sound and see the sound's NAME.
@@ -85,13 +96,21 @@ boardcast-message-sound: "block.note_block.pling"
 bms-volume: 1
 bms-pitch: 1
 
+get-discord-link-sound: "entity.player.levelup"
+gdls-volume: 1
+gdls-pitch: 1.4
+
 gui-error-sound: "entity.enderman.teleport"
 ges-volume: 1
 ges-pitch: 1
 
-open-discord-gui-sound: "entity.player.levelup"
+task-error-sound: "entity.enderman.teleport"
+tes-volume: 1
+tes-pitch: 1
+
+open-discord-gui-sound: "entity.experience_orb.pickup"
 odgs-volume: 1
-odgs-pitch: 1.4
+odgs-pitch: 1
 
 #Configure the help book. Use '\n' to go on a new line in a page
 help-message-book-pages:

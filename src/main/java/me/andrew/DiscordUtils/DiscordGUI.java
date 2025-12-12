@@ -1,3 +1,4 @@
+//Developed by _ItsAndrew_
 package me.andrew.DiscordUtils;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
@@ -31,7 +32,7 @@ public class DiscordGUI implements Listener {
         //Checks the gui size
         if(plugin.getGuiSize() < 9 || plugin.getGuiSize() > 54){
             error(player);
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value of 'discord-gui.rows' is invalid!");
+            Bukkit.getLogger().warning("[DISCORDUTILS] The value of 'discord-gui.rows' is invalid! Set a valid one and restart the server.");
             return;
         }
         Inventory gui = Bukkit.createInventory(null, plugin.getGuiSize(), plugin.getGuiTitle());
@@ -44,8 +45,6 @@ public class DiscordGUI implements Listener {
             Bukkit.getLogger().warning("[DISCORDUTILS] The value of both 'use-custom-head' and 'use-normal-material' are TRUE");
             return;
         }
-
-
         if(!useCustomHead && !useNormalMaterial){
             error(player);
             Bukkit.getLogger().warning("[DISCORDUTILS] The value of both 'use-custom-head' and 'use-normal-material' are FALSE");
@@ -105,6 +104,13 @@ public class DiscordGUI implements Listener {
             ItemMeta infoMeta = infoItem.getItemMeta();
             int infoItemSlot = plugin.getConfig().getInt("discord-gui.info-item.slot");
 
+            //Check if the slot is valid
+            if(infoItemSlot < 1 || infoItemSlot > plugin.getGuiSize()){
+                error(player);
+                Bukkit.getLogger().warning("[DISCORDUTILS] The slot for info-item is INVALID!");
+                return;
+            }
+
             //Setting the display name
             String iiDisplayName =  plugin.getConfig().getString("discord-gui.info-item.display-name");
             infoMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', iiDisplayName));
@@ -137,7 +143,14 @@ public class DiscordGUI implements Listener {
 
             ItemStack exitItem = new ItemStack(eiMaterial);
             ItemMeta exitMeta = exitItem.getItemMeta();
+
+            //Check the slot for exit-item
             int exitItemSlot = plugin.getConfig().getInt("discord-gui.exit-item.slot");
+            if(exitItemSlot < 1 || exitItemSlot > plugin.getGuiSize()){
+                error(player);
+                Bukkit.getLogger().warning("[DISCORDUTILS]  The slot for exit-item is INVALID!");
+                return;
+            }
             String eiDisplayName =  plugin.getConfig().getString("discord-gui.exit-item.display-name");
 
             //Setting the display name
@@ -158,9 +171,17 @@ public class DiscordGUI implements Listener {
             gui.setItem(exitItemSlot, exitItem);
         }
 
-        //Displays the 'discord item' (with a custom-head or with a material)
+        //Display the 'discord item' (with a custom-head or with a material)
         String diDisplayName = plugin.getConfig().getString("discord-gui.discord-item.display-name");
+
+        //Check the slot for discord-item
         int diSlot =  plugin.getConfig().getInt("discord-gui.discord-item.slot");
+        if(diSlot < 1 || diSlot > plugin.getGuiSize()){
+            error(player);
+            Bukkit.getLogger().warning("[DISCORDUTILS] The slot for discord-item is INVALID!");
+            return;
+        }
+
         if(useCustomHead){
             String customHeadValue = plugin.getConfig().getString("discord-gui.discord-item.custom-head");
             if(customHeadValue == null){
@@ -241,6 +262,7 @@ public class DiscordGUI implements Listener {
         return head;
     }
 
+    //Manages the error task
     private void error(Player player){
         Sound errorGUI = Registry.SOUNDS.get(NamespacedKey.minecraft("open-discord-gui-sound"));
         float egVolume = plugin.getConfig().getInt("odgs-volume");
@@ -262,10 +284,6 @@ public class DiscordGUI implements Listener {
         ItemMeta clickedMeta = clickedItem.getItemMeta();
         if(clickedMeta == null) return;
 
-        //If the player clicks on info-item
-        Material infoItem = Material.matchMaterial(plugin.getConfig().getString("discord-gui.info-item.material").toUpperCase());
-        if(clickedItem.getType().equals(infoItem)) return;
-
         //If the player clicks on exit-item
         Material exitItem = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material").toUpperCase());
         if(clickedItem.getType().equals(exitItem)){
@@ -279,6 +297,9 @@ public class DiscordGUI implements Listener {
         }
 
         //If the player clicks on discord-item, runs the task.
-        if(clickedItem.equals(discordItem)) plugin.getDiscordTaskManager().handleTask(player);
+        if(clickedItem.equals(discordItem)){
+            player.closeInventory();
+            plugin.getDiscordTaskManager().handleTask(player);
+        }
     }
 }
