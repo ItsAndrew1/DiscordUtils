@@ -18,6 +18,11 @@ And **more**! Check `config.yml` for every feature!
 
 ---
 
+## 📸 Demo Video
+Watch the demonstration video [here](https://www.youtube.com/watch?v=nlR4cYXFHXk)!
+
+---
+
 ## 🪄 Commands
 | Command                | Description                                       | Permission           |
 |------------------------|---------------------------------------------------|----------------------|
