@@ -100,6 +100,27 @@ public class Commands implements CommandExecutor {
 
                 case "reload":
                     plugin.reloadConfig();
+                    plugin.getDiscordBlockManager().spawnDiscordBlock(); //Spawns the discord block
+
+                    //If the plugin is run for the first time, it starts the particles normally
+                    boolean firstTimeRun = plugin.getConfig().getBoolean("initialized");
+                    if(firstTimeRun && plugin.isParticleTaskFirstTime()){
+                        plugin.getDiscordBlockManager().startParticleTask();
+                        plugin.setParticleTaskFirstTime(false);
+                    }
+
+                    //Else, if the task is active, it resets it
+                    else if(!plugin.getDiscordBlockManager().getParticleTask().isCancelled()){
+                        plugin.getDiscordBlockManager().getParticleTask().cancel();
+                        plugin.getDiscordBlockManager().startParticleTask();
+                    }
+
+                    //Starts the broadcastingTask with a new one, so the task's don't pile up
+                    if(!plugin.getBroadcastTask().isCancelled()){
+                        plugin.getBroadcastTask().cancel();
+                        plugin.startBroadcasting();
+                    }
+
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &a&lDiscordUtils &asuccessfully reloaded!"));
                     break;

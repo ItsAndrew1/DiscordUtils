@@ -4,6 +4,8 @@ package me.andrew.DiscordUtils;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
 
@@ -12,6 +14,11 @@ public final class DiscordUtils extends JavaPlugin {
     private String guiTitle;
     private DiscordGUI discordGUI;
     private DiscordTask discordTaskManager;
+    private DiscordBlock discordBlockManager;
+
+    private boolean blockConfigured;
+    private boolean particleTaskFirstTime;
+    private BukkitTask broadcastTask;
 
     @Override
     public void onEnable() {
@@ -28,6 +35,7 @@ public final class DiscordUtils extends JavaPlugin {
         guiTitle = ChatColor.translateAlternateColorCodes('&', getConfig().getString("discord-gui.title"));
         discordTaskManager = new DiscordTask(this);
         discordGUI = new DiscordGUI(this);
+        discordBlockManager = new DiscordBlock(this);
 
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(new Commands(this));
@@ -36,7 +44,18 @@ public final class DiscordUtils extends JavaPlugin {
 
         //Setting events
         getServer().getPluginManager().registerEvents(discordGUI, this);
-        Bukkit.getLogger().info("DiscordUtils has been enabled successfully!");
+
+        //Runs a 'first-run' message if the plugin is run for the first time
+        if(!getConfig().getBoolean("initialized", false)){
+            firstRunSetup();
+            setParticleTaskFirstTime(true);
+            getConfig().set("initialized", true);
+            saveConfig();
+        }
+        else{ //Spawns the discord-block and starts the particle task if the plugin is not run for the first time.
+            getDiscordBlockManager().spawnDiscordBlock();
+            getDiscordBlockManager().startParticleTask();
+        }
     }
 
     @Override
@@ -47,7 +66,7 @@ public final class DiscordUtils extends JavaPlugin {
     }
 
     //Handles the broadcasting task
-    private void startBroadcasting(){
+    public void startBroadcasting(){
         //Check if broadcasting is toggled
         boolean toggleBroadcasting = getConfig().getBoolean("autobroadcast.toggle");
         if(!toggleBroadcasting) return;
@@ -73,8 +92,7 @@ public final class DiscordUtils extends JavaPlugin {
         float bcsVolume = getConfig().getInt("bms-volume");
         float bcsPitch = getConfig().getInt("bms-pitch");
 
-        //Starts the task
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
+        broadcastTask = Bukkit.getScheduler().runTaskTimer(this, ()->{
             List<String> broadcastLines = getConfig().getStringList("autobroadcast.message-lines");
             for(Player player : Bukkit.getOnlinePlayers()){
                 for(String line : broadcastLines){
@@ -83,12 +101,31 @@ public final class DiscordUtils extends JavaPlugin {
                 }
                 player.playSound(player.getLocation(), broadcastSound, bcsVolume, bcsPitch);
             }
-        }, 20L * interval, 20L * interval);
+        }, 20L*interval, 20L*interval);
+    }
+
+    //Message that runs on the first setup
+    private void firstRunSetup(){
+        Bukkit.getLogger().info("=========================================================================");
+        Bukkit.getLogger().info(" ");
+        Bukkit.getLogger().info("             DiscordUtils has been initialized successfully!");
+        Bukkit.getLogger().info(" ");
+        Bukkit.getLogger().info("IMPORTANT: To toggle on the discord-block, run /dcutils blockconfig,");
+        Bukkit.getLogger().info("          configure the block, and then run /dcutils reload!");
+        Bukkit.getLogger().info(" ");
+        Bukkit.getLogger().info("                 Thank you for using DiscordUtils!");
+        Bukkit.getLogger().info("=========================================================================");
     }
 
     //Getters
+    public BukkitTask getBroadcastTask() {
+        return broadcastTask;
+    }
     public DiscordTask getDiscordTaskManager() {
         return  discordTaskManager;
+    }
+    public DiscordBlock getDiscordBlockManager() {
+        return  discordBlockManager;
     }
     public DiscordGUI getDiscordGUI() {
         return discordGUI;
@@ -98,5 +135,13 @@ public final class DiscordUtils extends JavaPlugin {
     }
     public String getGuiTitle() {
         return guiTitle;
+    }
+
+    //Getter/Setter for particleTaskFirstTime
+    public void setParticleTaskFirstTime(boolean value) {
+        particleTaskFirstTime = value;
+    }
+    public boolean isParticleTaskFirstTime() {
+        return particleTaskFirstTime;
     }
 }

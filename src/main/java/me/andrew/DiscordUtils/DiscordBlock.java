@@ -11,17 +11,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.UUID;
 
 public class DiscordBlock implements Listener {
-    DiscordUtils plugin;
+    private final DiscordUtils plugin;
+    private BukkitTask particleTask;
 
-    private DiscordBlock(DiscordUtils plugin){
+    public DiscordBlock(DiscordUtils plugin){
         this.plugin = plugin;
     }
 
-    public void showDiscordBlock(){
+    public void spawnDiscordBlock(){
         //Check if the block is toggled
         boolean toggleBlock = plugin.getConfig().getBoolean("toggle-discord-block");
         if(!toggleBlock) return;
@@ -73,12 +75,91 @@ public class DiscordBlock implements Listener {
 
         //Setting the custom block from config
         if(!(discordBlock.getState() instanceof Skull discordSkull)) return;
-        discordSkull.setRotation(BlockFace.valueOf(blockFacing));
+
+        //Get and set the block facing
+        BlockFace blockFace;
+        try{
+            blockFace = getBlockFacing(blockFacing);
+            discordSkull.setRotation(blockFace);
+        } catch (Exception e){
+            Bukkit.getLogger().warning("[DISCORDUTILS] The FACING of discord-block is INVALID!");
+            return;
+        }
 
         PlayerProfile discordBlockProfile =Bukkit.createProfile(UUID.randomUUID());
         discordBlockProfile.setProperty(new ProfileProperty("textures", headTexture));
         discordSkull.setPlayerProfile(discordBlockProfile);
         discordSkull.update(true, false);
+    }
+
+    public void startParticleTask(){
+        FileConfiguration config = plugin.getConfig();
+
+        //Checks if the particles are toggled
+        boolean toggleParticle = config.getBoolean("toggle-discord-block-particles");
+        if(!toggleParticle) return;
+
+        //Gets the particle
+        Particle blockParticle;
+        String particleValue = config.getString("discord-block-particle");
+        try{
+            blockParticle = getParticle(particleValue);
+        } catch (Exception e){
+            Bukkit.getLogger().warning("[DISCORDUTILS] The value for discord-block-particle is invalid!");
+            return;
+        }
+
+        //Getting the necessary data from the config to spawn the particles
+        double blockX, blockY, blockZ;
+        try{
+            String StringBlockX = plugin.getConfig().getString("block-x");
+            String StringBlockY = plugin.getConfig().getString("block-y");
+            String StringBlockZ = plugin.getConfig().getString("block-z");
+
+            //Check if one of the coordinates is null
+            if(StringBlockX == null || StringBlockY == null || StringBlockZ == null){
+                Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is NULL! Particle will not show up.");
+                return;
+            }
+
+            blockX = Double.parseDouble(StringBlockX) + 0.5;
+            blockY = Double.parseDouble(StringBlockY);
+            blockZ = Double.parseDouble(StringBlockZ) + 0.5;
+        } catch (Exception e){
+            Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is INVALID! Particle will not show up.");
+            return;
+        }
+
+        //Get and check the world
+        World world = Bukkit.getWorld(plugin.getConfig().getString("block-world"));
+        if(world == null){
+            Bukkit.getLogger().warning("[DISCORDUTILS] World for discord-block NOT found! Particle will not show up.");
+            return;
+        }
+
+        double offsetX = config.getDouble("offsetX");
+        double offsetY = config.getDouble("offsetY");
+        double offsetZ = config.getDouble("offsetZ");
+        double extra = config.getDouble("extra");
+        int particleCount = config.getInt("particle-count");
+        Location blockLocation = new Location(world, blockX, blockY, blockZ);
+
+        //Starts the particle task
+        particleTask = Bukkit.getScheduler().runTaskTimer(plugin, ()->{
+            for(Player p : Bukkit.getOnlinePlayers()){
+                p.spawnParticle(blockParticle, blockLocation, particleCount, offsetX, offsetY, offsetZ, extra);
+            }
+        }, 0L, 10L);
+    }
+
+    private Particle getParticle(String value){
+        return Particle.valueOf(value.toUpperCase());
+    }
+    private BlockFace getBlockFacing(String value){
+        return BlockFace.valueOf(value.toUpperCase());
+    }
+    public BukkitTask getParticleTask(){
+        return particleTask;
     }
 
     @EventHandler
@@ -103,6 +184,7 @@ public class DiscordBlock implements Listener {
             return;
         }
 
+        e.setCancelled(true); //Makes the block unbreakable
 
     }
 }
