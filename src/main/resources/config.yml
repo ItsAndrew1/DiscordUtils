@@ -17,6 +17,16 @@ autobroadcast:
     - ""
     - "&c-----------------------------------------------------"
 
+#Configure the discord block. Used for players to click it and get the link.
+#TIP: For the custom head, go to https://minecraft-heads.com/ , search for a head and copy-paste the VALUE
+toggle-discord-block: true #Whether you want this block or not.
+block-world:  #TIP: Look in your server's folder for the world name (ex: world, world_nether, world_the_end etc.)
+block-x:
+block-y:
+block-z:
+facing:  #Values: NORTH, WEST, SOUTH, WEST, NORTH-EAST, NORTH-WEST, SOUTH-EAST, SOUTH-WEST
+custom-head: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19"
+
 #Configure the task of giving players the link.
 discord-link: "" #Enter your discord's server invite link
 link-appearance-choice: "book" #Whether you want a chat message or a book for displaying the link to the players
@@ -84,6 +94,7 @@ discord-gui:
 #Configure all the messages for DiscordUtils.
 error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
 command-no-permission-message: "&cYou don't have permission to run this command."
+block-no-permission-message: "&cYou don't have permission to get the link."
 error-task-message: "&cThere was an error giving the discord link. Contact the server administrators about this."
 
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
@@ -107,6 +118,10 @@ ges-pitch: 1
 task-error-sound: "entity.enderman.teleport"
 tes-volume: 1
 tes-pitch: 1
+
+player-no-permission-sound: "entity.enderman.teleport" #This sound comes up when the player clicks the discord-block and doesn't have 'discordutils.use' permission
+pnps-volume: 1
+pnps-pitch: 1
 
 open-discord-gui-sound: "entity.experience_orb.pickup"
 odgs-volume: 1
