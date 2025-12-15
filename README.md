@@ -1,5 +1,12 @@
 ![DiscordUtils banner](https://github.com/user-attachments/assets/e0ef9048-17ce-4383-b84c-ca5ef383d292)
 
+<p align="center">
+ <img src="https://img.shields.io/badge/plugin%20version-1.0-blue?style=for-the-badge"><img src="https://img.shields.io/badge/Minecraft%20Version-1.19%2B-green?style=for-the-badge&labelColor=gray"><img src="https://img.shields.io/github/license/ItsAndrew1/DiscordUtils?style=for-the-badge&label=License&color=purple"> <br>
+ <a href="https://www.youtube.com/watch?v=nlR4cYXFHXk">
+  <img src="https://img.shields.io/badge/demo-video-red?style=for-the-badge&logo=youtube">
+ </a>
+</p>
+
 **DiscordUtils** is a *lightweight*, *discord utility minecraft plugin*, designed to help every server owner *connect* the players with **his discord server**.
 
 ---
