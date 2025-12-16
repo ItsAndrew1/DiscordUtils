@@ -201,7 +201,7 @@ public class DiscordBlock implements Listener {
         if(clickedBlockLocation.equals(discordBlockLocation)){
             e.setCancelled(true); //Makes the block unbreakable
 
-            //If the fetching data task is toggled and running
+            //If the fetching data task is toggled and running (BUG HERE -> Double Tasks)
             boolean toggleFetchingData = config.getBoolean("fetching-data");
             if(toggleFetchingData) {
                 BukkitRunnable fetchingDataTask = plugin.getDiscordTaskManager().getFetchingDataTask();
@@ -221,7 +221,7 @@ public class DiscordBlock implements Listener {
                 }
                 playerTasks.put(player, fetchingDataTask);
             }
-            plugin.getDiscordTaskManager().handleTask(player);
+            plugin.getDiscordTaskManager().handleTask(player); //Do giveDiscordLink() instead of handleTask() I think
         }
     }
 
