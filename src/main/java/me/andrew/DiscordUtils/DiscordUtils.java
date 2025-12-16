@@ -1,22 +1,31 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils;
 
+import me.andrew.DiscordUtils.GUIs.DiscordGUI;
+import me.andrew.DiscordUtils.GUIs.MainConfigGUI;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Consumer;
 
-public final class DiscordUtils extends JavaPlugin {
+public final class DiscordUtils extends JavaPlugin implements Listener{
     private int guiSize;
     private String guiTitle;
     private DiscordGUI discordGUI;
     private DiscordTask discordTaskManager;
     private DiscordBlock discordBlockManager;
+    private MainConfigGUI mainConfigGUI;
+    private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
 
-    private boolean blockConfigured;
     private boolean particleTaskFirstTime;
     private BukkitTask broadcastTask;
 
@@ -36,6 +45,7 @@ public final class DiscordUtils extends JavaPlugin {
         discordTaskManager = new DiscordTask(this);
         discordGUI = new DiscordGUI(this);
         discordBlockManager = new DiscordBlock(this);
+        mainConfigGUI = new MainConfigGUI(this);
 
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(new Commands(this));
@@ -44,6 +54,9 @@ public final class DiscordUtils extends JavaPlugin {
 
         //Setting events
         getServer().getPluginManager().registerEvents(discordGUI, this);
+        getServer().getPluginManager().registerEvents(mainConfigGUI, this);
+        getServer().getPluginManager().registerEvents(discordBlockManager, this);
+        getServer().getPluginManager().registerEvents(this, this);
 
         //Runs a 'first-run' message if the plugin is run for the first time
         if(!getConfig().getBoolean("initialized", false)){
@@ -63,6 +76,23 @@ public final class DiscordUtils extends JavaPlugin {
         saveConfig();
 
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
+    }
+
+    @EventHandler
+    public void chatAsync(AsyncPlayerChatEvent event){
+        Player player = event.getPlayer();
+        UUID playerUUID = player.getUniqueId();
+
+        if(!chatInput.containsKey(playerUUID)) return;
+        event.setCancelled(true);
+
+        String message = event.getMessage();
+        Consumer<String> callback = chatInput.remove(playerUUID);
+        Bukkit.getScheduler().runTask(this, () -> callback.accept(message));
+    }
+
+    public void waitForPlayerInput(Player player, Consumer<String> callback){
+        chatInput.put(player.getUniqueId(), callback);
     }
 
     //Handles the broadcasting task
@@ -129,6 +159,9 @@ public final class DiscordUtils extends JavaPlugin {
     }
     public DiscordGUI getDiscordGUI() {
         return discordGUI;
+    }
+    public MainConfigGUI getMainConfigGUI() {
+        return mainConfigGUI;
     }
     public int getGuiSize() {
         return guiSize;

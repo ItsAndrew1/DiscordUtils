@@ -19,6 +19,7 @@ import java.util.List;
 public class DiscordTask {
     private final DiscordUtils plugin;
     private String configChoice;
+    private BukkitRunnable fetchingDataTask;
 
     public DiscordTask(DiscordUtils plugin) {
         this.plugin = plugin;
@@ -35,8 +36,9 @@ public class DiscordTask {
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
 
             long duration = plugin.getConfig().getLong("fetching-data.duration");
-            new BukkitRunnable() {
+            fetchingDataTask = (BukkitRunnable) new BukkitRunnable() {
                 public void run() {
+                    plugin.getDiscordBlockManager().getPlayerTasks().remove(player);
                     giveDiscordLink(player);
                 }
             }.runTaskLater(plugin, duration*20L); //Runs the task of giving the discord link later
@@ -133,4 +135,7 @@ public class DiscordTask {
         }
     }
 
+    public BukkitRunnable getFetchingDataTask(){
+        return fetchingDataTask;
+    }
 }

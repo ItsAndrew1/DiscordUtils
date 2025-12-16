@@ -24,10 +24,7 @@ public class CommandTABS implements TabCompleter {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NonNull @NotNull String[] strings) {
         if(command.getName().equalsIgnoreCase("dcutils")) {
             if(strings.length == 1){
-                return Arrays.asList("setdclink", "setdcchoice", "reload", "help");
-            }
-            if(strings.length == 2 && strings[0].equalsIgnoreCase("setdcchoice")) {
-                return Arrays.asList("book", "chat-message");
+                return Arrays.asList("configuration", "reload", "help");
             }
         }
 

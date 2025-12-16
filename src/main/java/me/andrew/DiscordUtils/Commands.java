@@ -44,42 +44,9 @@ public class Commands implements CommandExecutor {
             }
 
             switch(strings[0]){
-                //dcutils setdclink <link>
-                case "setdclink":
-                    if(strings.length < 2){
-                        player.playSound(player.getLocation(), invalid, 1f, 1f);
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils setdclink <link>"));
-                        return true;
-                    }
-
-                    String link = strings[1];
-                    plugin.getConfig().set("discord-link", link);
-                    plugin.saveConfig();
-
+                case "configuration":
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aLink successfully saved."));
-                    break;
-
-                case "setdcchoice":
-                    if(strings.length < 2){
-                        player.playSound(player.getLocation(), invalid, 1f, 1f);
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils setdcchoice <choice>"));
-                        return true;
-                    }
-
-                    String choice = strings[1];
-                    //Check if the choice isn't 'book' or 'chat-message'
-                    if(!choice.equalsIgnoreCase("book") && !choice.equalsIgnoreCase("chat-message")){
-                        player.playSound(player.getLocation(),  invalid, 1f, 1f);
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThe choice must be &lbook &cor &lchat-message&c!"));
-                        return true;
-                    }
-
-                    plugin.getConfig().set("link-appearance-choice", choice);
-                    plugin.saveConfig();
-
-                    player.playSound(player.getLocation(), good, 1f, 1.4f);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aSaved choice &l"+choice+"&a!"));
+                    plugin.getMainConfigGUI().showGUI(player);
                     break;
 
                 case "help":

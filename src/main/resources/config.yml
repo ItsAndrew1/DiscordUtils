@@ -28,7 +28,7 @@ offsetX: 0.4 #The maximum random offset on the X axis
 offsetY: 0.5 #The maximum random offset on the Y axis
 offsetZ: 0.4 #The maximum random offset on the Z axis
 extra: 0 #Extra data for particle (usually speed)
-#TIP: Try to play with these offsets :)
+#TIP: Try to play with these values and experiment :)
 
 block-world: . #TIP: Look in your server's folder for the world name (ex: world, world_nether, world_the_end etc.)
 block-x: .
@@ -105,6 +105,7 @@ discord-gui:
 error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
 command-no-permission-message: "&cYou don't have permission to run this command."
 block-no-permission-message: "&cYou don't have permission to get the link."
+fetching-data-task-in-progress-message: "&cYou must wait &l%task_interval% &cseconds!" #Use '%task_interval%' to display the seconds. It's the same value from fetching-data.duration.
 error-task-message: "&cThere was an error giving the discord link. Contact the server administrators about this."
 
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
@@ -124,6 +125,10 @@ gdls-pitch: 1.4
 gui-error-sound: "entity.enderman.teleport"
 ges-volume: 1
 ges-pitch: 1
+
+fetching-data-task-in-progress-sound: "entity.villager.no"
+fdtips-volume: 1
+fdtips-pitch: 0.9
 
 task-error-sound: "entity.enderman.teleport"
 tes-volume: 1

@@ -11,13 +11,18 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 public class DiscordBlock implements Listener {
     private final DiscordUtils plugin;
     private BukkitTask particleTask;
+    private HashMap<Player, BukkitRunnable> playerTasks =  new HashMap<>();
 
     public DiscordBlock(DiscordUtils plugin){
         this.plugin = plugin;
@@ -165,12 +170,12 @@ public class DiscordBlock implements Listener {
     @EventHandler
     public void blockClickEvent(PlayerInteractEvent e){
         FileConfiguration config = plugin.getConfig();
+        if(e.getClickedBlock() == null) return;
+        if(!e.getClickedBlock().getType().equals(Material.PLAYER_HEAD)) return;
+
         Player player = e.getPlayer();
         Block clickedBlock = e.getClickedBlock();
-        Location clickedBlockLocation = e.getClickedBlock().getLocation();
-
-        if(clickedBlock == null) return;
-        if(!clickedBlock.getType().equals(Material.PLAYER_HEAD)) return;
+        Location clickedBlockLocation = clickedBlock.getLocation();
 
         //Checks if the player has permission
         if(!player.hasPermission("discordutils.use")){
@@ -184,7 +189,44 @@ public class DiscordBlock implements Listener {
             return;
         }
 
-        e.setCancelled(true); //Makes the block unbreakable
+        //Get the location of the discord-block, then check if it matches with the clicked block
+        double blockX, blockY, blockZ;
+        World world;
+        blockX = config.getDouble("block-x");
+        blockY = config.getDouble("block-y");
+        blockZ = config.getDouble("block-z");
+        world = Bukkit.getWorld(plugin.getConfig().getString("block-world"));
+        Location discordBlockLocation = new Location(world, blockX, blockY, blockZ);
 
+        if(clickedBlockLocation.equals(discordBlockLocation)){
+            e.setCancelled(true); //Makes the block unbreakable
+
+            //If the fetching data task is toggled and running
+            boolean toggleFetchingData = config.getBoolean("fetching-data");
+            if(toggleFetchingData) {
+                BukkitRunnable fetchingDataTask = plugin.getDiscordTaskManager().getFetchingDataTask();
+                if (fetchingDataTask != null) { //If there is any task running
+                    if (playerTasks.containsKey(player)) {
+                        Sound taskInProgress = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("fetching-data-task-in-progress").toLowerCase()));
+                        float volume = plugin.getConfig().getInt("fdtips-volume");
+                        float pitch = plugin.getConfig().getInt("fdtips-pitch");
+                        player.playSound(player.getLocation(), taskInProgress, volume, pitch);
+
+                        //Replaces the %% placeholder
+                        int taskInterval = plugin.getConfig().getInt("fetching-data.interval");
+                        String chatMessage = plugin.getConfig().getString("fetching-data-task-in-progress-message").replace("%task_interval%", String.valueOf(taskInterval));
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatMessage));
+                        return;
+                    }
+                }
+                playerTasks.put(player, fetchingDataTask);
+            }
+            plugin.getDiscordTaskManager().handleTask(player);
+        }
+    }
+
+    public HashMap<Player, BukkitRunnable> getPlayerTasks(){
+        return playerTasks;
     }
 }
+
