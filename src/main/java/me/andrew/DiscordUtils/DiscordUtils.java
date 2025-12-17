@@ -26,7 +26,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private MainConfigGUI mainConfigGUI;
     private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
 
-    private boolean particleTaskFirstTime;
     private BukkitTask broadcastTask;
 
     @Override
@@ -61,7 +60,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         //Runs a 'first-run' message if the plugin is run for the first time
         if(!getConfig().getBoolean("initialized", false)){
             firstRunSetup();
-            setParticleTaskFirstTime(true);
             getConfig().set("initialized", true);
             saveConfig();
         }
@@ -171,10 +169,4 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
 
     //Getter/Setter for particleTaskFirstTime
-    public void setParticleTaskFirstTime(boolean value) {
-        particleTaskFirstTime = value;
-    }
-    public boolean isParticleTaskFirstTime() {
-        return particleTaskFirstTime;
-    }
 }

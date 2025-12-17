@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,7 @@ import java.util.List;
 public class DiscordTask {
     private final DiscordUtils plugin;
     private String configChoice;
-    private BukkitRunnable fetchingDataTask;
+    private BukkitTask fetchingDataTask;
 
     public DiscordTask(DiscordUtils plugin) {
         this.plugin = plugin;
@@ -35,18 +36,12 @@ public class DiscordTask {
             String message = plugin.getConfig().getString("fetching-data.chat-message");
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
 
-            long duration = plugin.getConfig().getLong("fetching-data.duration");
-            fetchingDataTask = (BukkitRunnable) new BukkitRunnable() {
-                public void run() {
-                    plugin.getDiscordBlockManager().getPlayerTasks().remove(player);
-                    giveDiscordLink(player);
-                }
-            }.runTaskLater(plugin, duration*20L); //Runs the task of giving the discord link later
+            fetchingDataTask.run
         }
         else giveDiscordLink(player);
     }
 
-    private void giveDiscordLink(Player player){
+    public void giveDiscordLink(Player player){
         FileConfiguration config = plugin.getConfig();
 
         //Get the giveLinkSound information
@@ -133,9 +128,5 @@ public class DiscordTask {
                 player.sendMessage(compLine);
             }
         }
-    }
-
-    public BukkitRunnable getFetchingDataTask(){
-        return fetchingDataTask;
     }
 }

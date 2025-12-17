@@ -14,15 +14,12 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class DiscordBlock implements Listener {
     private final DiscordUtils plugin;
     private BukkitTask particleTask;
-    private HashMap<Player, BukkitRunnable> playerTasks =  new HashMap<>();
+    private Set<UUID> cooldowns = new  HashSet<>();
 
     public DiscordBlock(DiscordUtils plugin){
         this.plugin = plugin;
@@ -200,33 +197,35 @@ public class DiscordBlock implements Listener {
 
         if(clickedBlockLocation.equals(discordBlockLocation)){
             e.setCancelled(true); //Makes the block unbreakable
+            //Checking if the fetching data task is toggled
+            boolean toggleMiniTask = plugin.getConfig().getBoolean("fetching-data.toggle");
+            if(!toggleMiniTask) plugin.getDiscordTaskManager().giveDiscordLink(player);
+            else{
+                //Checks if the player already has the task running
+                if(cooldowns.contains(player.getUniqueId())){
+                    //Plays the sound from config
+                    Sound taskInProgress = Registry.SOUNDS.get(NamespacedKey.minecraft(config.getString("fetching-data-task-in-progress-sound").toLowerCase()));
+                    float fdtipsVolume = plugin.getConfig().getInt("fdtips-volume");
+                    float fdtipsPitch = plugin.getConfig().getInt("fdtips-pitch");
+                    player.playSound(player.getLocation(), taskInProgress, fdtipsVolume, fdtipsPitch);
 
-            //If the fetching data task is toggled and running (BUG HERE -> Double Tasks)
-            boolean toggleFetchingData = config.getBoolean("fetching-data");
-            if(toggleFetchingData) {
-                BukkitRunnable fetchingDataTask = plugin.getDiscordTaskManager().getFetchingDataTask();
-                if (fetchingDataTask != null) { //If there is any task running
-                    if (playerTasks.containsKey(player)) {
-                        Sound taskInProgress = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("fetching-data-task-in-progress").toLowerCase()));
-                        float volume = plugin.getConfig().getInt("fdtips-volume");
-                        float pitch = plugin.getConfig().getInt("fdtips-pitch");
-                        player.playSound(player.getLocation(), taskInProgress, volume, pitch);
-
-                        //Replaces the %% placeholder
-                        int taskInterval = plugin.getConfig().getInt("fetching-data.interval");
-                        String chatMessage = plugin.getConfig().getString("fetching-data-task-in-progress-message").replace("%task_interval%", String.valueOf(taskInterval));
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatMessage));
-                        return;
-                    }
+                    //Sends the player the message from config
+                    String chatMessage = ChatColor.translateAlternateColorCodes('&', config.getString("fetching-data-task-in-progress-message"));
+                    player.sendMessage(chatMessage);
+                    return;
                 }
-                playerTasks.put(player, fetchingDataTask);
+
+                cooldowns.add(player.getUniqueId());
+                int duration = plugin.getConfig().getInt("fetching-data.duration");
+
+                new BukkitRunnable(){
+                    @Override
+                    public void run() {
+
+                        cooldowns.remove(player.getUniqueId());
+                    }
+                }.runTaskLater(plugin, duration*20L);
             }
-            plugin.getDiscordTaskManager().handleTask(player); //Do giveDiscordLink() instead of handleTask() I think
         }
     }
-
-    public HashMap<Player, BukkitRunnable> getPlayerTasks(){
-        return playerTasks;
-    }
 }
-
