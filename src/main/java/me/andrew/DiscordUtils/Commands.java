@@ -69,13 +69,14 @@ public class Commands implements CommandExecutor {
                     plugin.reloadConfig();
                     plugin.getDiscordBlockManager().spawnDiscordBlock(); //Spawns the discord block
 
-                    //If the task is null, starts it
-                    if(plugin.getDiscordBlockManager().getParticleTask() == null){
+                    //If the task is null or disabled, starts it
+                    if(plugin.getDiscordBlockManager().getParticleTask() == null || plugin.getDiscordBlockManager().getParticleTask().isCancelled()){
                         plugin.getDiscordBlockManager().startParticleTask();
                     }
                     //Else, if the task is active, it resets it
                     else if(!plugin.getDiscordBlockManager().getParticleTask().isCancelled()){
                         plugin.getDiscordBlockManager().getParticleTask().cancel();
+                        plugin.getDiscordBlockManager().startParticleTask();
                     }
 
                     //Starts the broadcastingTask with a new one, so the task's don't pile up

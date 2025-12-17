@@ -41,9 +41,7 @@ custom-head: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3
 discord-link: "" #Enter your discord's server invite link
 link-appearance-choice: "book" #Whether you want a chat message or a book for displaying the link to the players
 hover-text: "Click to enter our server!"
-
 discord-link-word: "here" #The word which has the click and hover event
-
 message-lines: #Use the discord-link-word in your message! The discord-link-word is 'here', so I use 'here' in the message.
   - "&c&lClick &9&lhere &c&lto join our discord server!"
 
@@ -55,7 +53,6 @@ book-pages: #Use the discord-link-word in your page! The discord-link-word is 'h
 #P.S: It is only for 'professional appearance' :)
 fetching-data:
   toggle: true #If you want this feature or not
-  chat-message: "&8Fetching data..."
   duration: 3 #In seconds
 
 #Configure the Discord GUI shown to players
@@ -105,7 +102,8 @@ discord-gui:
 error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
 command-no-permission-message: "&cYou don't have permission to run this command."
 block-no-permission-message: "&cYou don't have permission to get the link."
-fetching-data-task-in-progress-message: "&cYou must wait &l%task_interval% &cseconds!" #Use '%task_interval%' to display the seconds. It's the same value from fetching-data.duration.
+fetching-data-task-in-progress-message: "&cYou must wait before attempting again!"
+fetching-data-chat-message: "&8Fetching data..."
 error-task-message: "&cThere was an error giving the discord link. Contact the server administrators about this."
 
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!

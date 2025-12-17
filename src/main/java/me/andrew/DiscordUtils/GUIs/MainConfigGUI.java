@@ -4,9 +4,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import io.papermc.paper.event.player.AsyncChatCommandDecorateEvent;
 import me.andrew.DiscordUtils.*;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -18,11 +16,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import java.net.URI;
 import java.util.UUID;
 
 public class MainConfigGUI implements Listener {
     private final DiscordUtils plugin;
     private String GUIName;
+    private ItemStack discordBlock;
 
     public MainConfigGUI(DiscordUtils plugin) {
         this.plugin = plugin;
@@ -63,8 +63,8 @@ public class MainConfigGUI implements Listener {
         mainConfigGUI.setItem(40, exitItem);
 
         //Manage Discord Block
-        ItemStack discordBlock = new ItemStack(Material.PLAYER_HEAD);
-        ItemMeta  discordBlockMeta = discordBlock.getItemMeta();
+        discordBlock = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta discordBlockMeta = discordBlock.getItemMeta();
         SkullMeta dbSkull = (SkullMeta) discordBlockMeta;
         //Setting the custom head for it
         PlayerProfile dbProfile = Bukkit.createProfile(UUID.randomUUID());
@@ -100,9 +100,58 @@ public class MainConfigGUI implements Listener {
         ItemStack clickedItem = event.getCurrentItem();
         if(clickedItem == null || clickedItem.getType().equals(Material.OAK_SIGN) || clickedItem.getType().equals(Material.BLACK_STAINED_GLASS_PANE)) return;
 
+        String chatPrefix = plugin.getConfig().getString("chat-prefix");
+        Material clickedMaterial = clickedItem.getType();
         ItemMeta ciMeta = clickedItem.getItemMeta();
         if(ciMeta == null) return;
 
+        //Click sound
+        Sound clickSound = Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
 
+        //If the player clicks on exitItem
+        Material exitItemMat = Material.RED_CONCRETE;
+        if(clickedMaterial.equals(exitItemMat)){
+            player.playSound(player.getLocation(), clickSound, 1f, 1f);
+            player.closeInventory();
+        }
+
+        //If the player clicks on discord-link button
+        Material linkSetupMat = Material.PAPER;
+        if(clickedMaterial.equals(linkSetupMat)){
+            player.playSound(player.getLocation(), clickSound, 1f, 1f);
+            player.closeInventory();
+            plugin.waitForPlayerInput(player, input->{
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the discord invite link:"));
+                if(!isUrlValid(input)){
+                    Sound invalidUrl = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
+                    player.playSound(player.getLocation(), invalidUrl, 1f, 1f);
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThe URL is invalid! Please enter a valid one."));
+                    return;
+                }
+
+                //Saves the link to config
+                plugin.getConfig().set("discord-link", input);
+                plugin.saveConfig();
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aLink successfully set!"));
+            });
+        }
+
+        //If the player clicks on block-configuration button
+        if(clickedItem.equals(discordBlock)){
+            player.closeInventory();
+            player.playSound(player.getLocation(), clickSound, 1f, 1f);
+            plugin.getBlockConfigurationGUI().showGUI(player);
+        }
+    }
+
+    //Helps checking if the URL typed in by the player is valid
+    private boolean isUrlValid(String url){
+        try{
+          URI uri = new URI(url);
+          uri.toURL();
+          return uri.getScheme() != null;
+        } catch(Exception e){
+            return false;
+        }
     }
 }

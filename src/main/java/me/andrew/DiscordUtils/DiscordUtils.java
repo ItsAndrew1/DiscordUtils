@@ -1,8 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils;
 
-import me.andrew.DiscordUtils.GUIs.DiscordGUI;
-import me.andrew.DiscordUtils.GUIs.MainConfigGUI;
+import me.andrew.DiscordUtils.GUIs.*;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,6 +23,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private DiscordTask discordTaskManager;
     private DiscordBlock discordBlockManager;
     private MainConfigGUI mainConfigGUI;
+    private BlockConfigurationGUI blockConfigurationGUI;
     private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
 
     private BukkitTask broadcastTask;
@@ -45,6 +45,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         discordGUI = new DiscordGUI(this);
         discordBlockManager = new DiscordBlock(this);
         mainConfigGUI = new MainConfigGUI(this);
+        blockConfigurationGUI = new BlockConfigurationGUI(this);
 
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(new Commands(this));
@@ -54,6 +55,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         //Setting events
         getServer().getPluginManager().registerEvents(discordGUI, this);
         getServer().getPluginManager().registerEvents(mainConfigGUI, this);
+        getServer().getPluginManager().registerEvents(blockConfigurationGUI, this);
         getServer().getPluginManager().registerEvents(discordBlockManager, this);
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -158,6 +160,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     public DiscordGUI getDiscordGUI() {
         return discordGUI;
     }
+    public BlockConfigurationGUI getBlockConfigurationGUI() {
+        return  blockConfigurationGUI;
+    }
     public MainConfigGUI getMainConfigGUI() {
         return mainConfigGUI;
     }
@@ -167,6 +172,4 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     public String getGuiTitle() {
         return guiTitle;
     }
-
-    //Getter/Setter for particleTaskFirstTime
 }

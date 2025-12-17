@@ -12,37 +12,59 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DiscordTask {
     private final DiscordUtils plugin;
-    private String configChoice;
-    private BukkitTask fetchingDataTask;
 
     public DiscordTask(DiscordUtils plugin) {
         this.plugin = plugin;
     }
 
-    public void handleTask(Player player){
-        //Gets the appearance choice
-        configChoice = plugin.getConfig().getString("link-appearance-choice");
-
+    public void handleTask(Player player){ //This is mainly used for the discord GUI
         //Starts the 'fetching data' mini task if it is enabled
         boolean toggleFetchingData = plugin.getConfig().getBoolean("fetching-data.toggle");
-        if(toggleFetchingData){
-            String message = plugin.getConfig().getString("fetching-data.chat-message");
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
+        if(!toggleFetchingData) giveDiscordLink(player);
+        else{
+            //Check if the player has cooldown
+            if(plugin.getDiscordBlockManager().getCooldowns().contains(player.getUniqueId())){
+                //Plays the sound
+                Sound taskInProgress = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("fetching-data-task-in-progress-sound").toLowerCase()));
+                float fdtipsVolume = plugin.getConfig().getInt("fdtips-volume");
+                float fdtipsPitch = plugin.getConfig().getInt("fdtips-pitch");
+                player.playSound(player.getLocation(), taskInProgress, fdtipsVolume, fdtipsPitch);
 
-            fetchingDataTask.run
+                //Sends the message from the config
+                String taskInProgressMessage = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("fetching-data-task-in-progress-message"));
+                player.sendMessage(taskInProgressMessage);
+                return;
+            }
+
+            //Adds the player to the Cooldowns Set
+            plugin.getDiscordBlockManager().getCooldowns().add(player.getUniqueId());
+
+            //Sends the fetching data chat message
+            String fdChatMessage = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("fetching-data-chat-message"));
+            player.sendMessage(fdChatMessage);
+
+            int duration = plugin.getConfig().getInt("fetching-data.duration");
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    plugin.getDiscordBlockManager().getCooldowns().remove(player.getUniqueId()); //Removes the player from the cooldown Set
+                    giveDiscordLink(player);
+                }
+            }.runTaskLater(plugin, duration*20L);
         }
-        else giveDiscordLink(player);
     }
 
     public void giveDiscordLink(Player player){
         FileConfiguration config = plugin.getConfig();
+
+        //Gets the appearance choice
+        String configChoice = plugin.getConfig().getString("link-appearance-choice");
 
         //Get the giveLinkSound information
         Sound giveLinkSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("get-discord-link-sound").toLowerCase()));

@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -26,10 +27,6 @@ public class DiscordBlock implements Listener {
     }
 
     public void spawnDiscordBlock(){
-        //Check if the block is toggled
-        boolean toggleBlock = plugin.getConfig().getBoolean("toggle-discord-block");
-        if(!toggleBlock) return;
-
         //Get the block coordinates and checks them
         double blockX, blockY, blockZ;
         try{
@@ -70,10 +67,12 @@ public class DiscordBlock implements Listener {
             return;
         }
 
-        //Setting the block
+        //Spawning/despawning the block
+        boolean toggleBlock = plugin.getConfig().getBoolean("toggle-discord-block");
         Location blockLocation = new Location(world, blockX, blockY, blockZ);
         Block discordBlock = blockLocation.getBlock();
-        discordBlock.setType(Material.PLAYER_HEAD);
+        if(toggleBlock) discordBlock.setType(Material.PLAYER_HEAD);
+        else despawnDiscordBlock(discordBlock);
 
         //Setting the custom block from config
         if(!(discordBlock.getState() instanceof Skull discordSkull)) return;
@@ -92,6 +91,11 @@ public class DiscordBlock implements Listener {
         discordBlockProfile.setProperty(new ProfileProperty("textures", headTexture));
         discordSkull.setPlayerProfile(discordBlockProfile);
         discordSkull.update(true, false);
+    }
+
+    //Despawns the discord-block
+    private void despawnDiscordBlock(Block discordBlock){
+        discordBlock.setType(Material.AIR);
     }
 
     public void startParticleTask(){
@@ -168,6 +172,7 @@ public class DiscordBlock implements Listener {
     public void blockClickEvent(PlayerInteractEvent e){
         FileConfiguration config = plugin.getConfig();
         if(e.getClickedBlock() == null) return;
+        if(e.getHand() != EquipmentSlot.HAND) return;
         if(!e.getClickedBlock().getType().equals(Material.PLAYER_HEAD)) return;
 
         Player player = e.getPlayer();
@@ -209,7 +214,7 @@ public class DiscordBlock implements Listener {
                     float fdtipsPitch = plugin.getConfig().getInt("fdtips-pitch");
                     player.playSound(player.getLocation(), taskInProgress, fdtipsVolume, fdtipsPitch);
 
-                    //Sends the player the message from config
+                    //Sends the message from config
                     String chatMessage = ChatColor.translateAlternateColorCodes('&', config.getString("fetching-data-task-in-progress-message"));
                     player.sendMessage(chatMessage);
                     return;
@@ -218,14 +223,22 @@ public class DiscordBlock implements Listener {
                 cooldowns.add(player.getUniqueId());
                 int duration = plugin.getConfig().getInt("fetching-data.duration");
 
+                //Sends the fetching data chat message
+                String fdChatMessage = ChatColor.translateAlternateColorCodes('&', config.getString("fetching-data-chat-message"));
+                player.sendMessage(fdChatMessage);
+
                 new BukkitRunnable(){
                     @Override
                     public void run() {
-
+                        plugin.getDiscordTaskManager().giveDiscordLink(player);
                         cooldowns.remove(player.getUniqueId());
                     }
                 }.runTaskLater(plugin, duration*20L);
             }
         }
+    }
+
+    public Set<UUID> getCooldowns(){
+        return cooldowns;
     }
 }
