@@ -142,5 +142,5 @@ odgs-pitch: 1
 
 #Configure the help book. Use '\n' to go on a new line in a page
 help-message-book-pages:
-  - " &9&l  DISCORD UTILS        HELP MANUAL\n\n&41. &l/dcutils setdclink <link>\n  &4->set the link of your discord server.\n\n&42. &l/dcutils setdcchoice\n  &4->set the choice of the link's appearance to the player."
-  - "&43. &l/dcutils reload\n  &4->reload the config file. Use when manually changing something in it.\n\n&44. &l/dcutils help\n  &4->brings up the help manual.\n\n&45. &l/discord\n  &4->Opens the GUI. Main command for players."
+  - " &9&l  DISCORD UTILS        HELP MANUAL\n\n&41. &l/dcutils configuration\n  &4->opens the Configuration GUI."
+  - "&42. &l/dcutils reload\n  &4->reload the config file. Use when manually changing something in it.\n\n&43. &l/dcutils help\n  &4->brings up the help manual.\n\n&44. &l/discord\n  &4->Opens the GUI. Main command for players."
