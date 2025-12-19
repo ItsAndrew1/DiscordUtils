@@ -1,5 +1,5 @@
 name: DiscordUtils-1.0
-version: '1.0'
+version: '1.0.1'
 main: me.andrew.DiscordUtils.DiscordUtils
 api-version: '1.21'
 author: _ItsAndrew_

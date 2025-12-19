@@ -24,9 +24,11 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private DiscordBlock discordBlockManager;
     private MainConfigGUI mainConfigGUI;
     private BlockConfigurationGUI blockConfigurationGUI;
+    private AppearanceChoiceGUI appearanceChoiceGUI;
+    private FacingChoiceGUI facingChoiceGUI;
     private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
 
-    private BukkitTask broadcastTask;
+    private BukkitTask broadcastTask; //Task for broadcasting
 
     @Override
     public void onEnable() {
@@ -46,6 +48,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         discordBlockManager = new DiscordBlock(this);
         mainConfigGUI = new MainConfigGUI(this);
         blockConfigurationGUI = new BlockConfigurationGUI(this);
+        appearanceChoiceGUI = new AppearanceChoiceGUI(this);
+        facingChoiceGUI = new FacingChoiceGUI(this);
 
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(new Commands(this));
@@ -57,6 +61,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         getServer().getPluginManager().registerEvents(mainConfigGUI, this);
         getServer().getPluginManager().registerEvents(blockConfigurationGUI, this);
         getServer().getPluginManager().registerEvents(discordBlockManager, this);
+        getServer().getPluginManager().registerEvents(appearanceChoiceGUI, this);
+        getServer().getPluginManager().registerEvents(facingChoiceGUI, this);
         getServer().getPluginManager().registerEvents(this, this);
 
         //Runs a 'first-run' message if the plugin is run for the first time
@@ -140,10 +146,11 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("             DiscordUtils has been initialized successfully!");
         Bukkit.getLogger().info(" ");
-        Bukkit.getLogger().info("IMPORTANT: To toggle on the discord-block, run /dcutils blockconfig,");
+        Bukkit.getLogger().info("IMPORTANT: To toggle on the discord-block, run /dcutils configuration,");
         Bukkit.getLogger().info("          configure the block, and then run /dcutils reload!");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("                 Thank you for using DiscordUtils!");
+        Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("=========================================================================");
     }
 
@@ -165,6 +172,12 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public MainConfigGUI getMainConfigGUI() {
         return mainConfigGUI;
+    }
+    public FacingChoiceGUI getFacingChoiceGUI() {
+        return facingChoiceGUI;
+    }
+    public AppearanceChoiceGUI getAppearanceChoiceGUI() {
+        return appearanceChoiceGUI;
     }
     public int getGuiSize() {
         return guiSize;

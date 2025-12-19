@@ -39,7 +39,7 @@ public class Commands implements CommandExecutor {
 
             if(strings.length == 0){
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils <setdclink | setdcchoice | reload | help>"));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils <configuration | reload | help>"));
                 return true;
             }
 

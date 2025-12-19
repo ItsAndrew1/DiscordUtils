@@ -1,7 +1,9 @@
+//Developed by _ItsAndrew_
 package me.andrew.DiscordUtils;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import org.apache.maven.model.Profile;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -20,7 +22,7 @@ import java.util.*;
 public class DiscordBlock implements Listener {
     private final DiscordUtils plugin;
     private BukkitTask particleTask;
-    private Set<UUID> cooldowns = new  HashSet<>();
+    private Set<UUID> cooldowns = new HashSet<>();
 
     public DiscordBlock(DiscordUtils plugin){
         this.plugin = plugin;
@@ -56,12 +58,7 @@ public class DiscordBlock implements Listener {
         }
 
         //Checking the head texture and the facing
-        String headTexture = plugin.getConfig().getString("custom-head");
         String blockFacing = plugin.getConfig().getString("facing");
-        if(headTexture == null){
-;           Bukkit.getLogger().warning("[DISCORDUTILS] The head texture of the discord-block is NULL!");
-            return;
-        }
         if(blockFacing == null){
             Bukkit.getLogger().warning("[DISCORDUTILS] The block facing of the discord-block is NULL!");
             return;
@@ -72,7 +69,10 @@ public class DiscordBlock implements Listener {
         Location blockLocation = new Location(world, blockX, blockY, blockZ);
         Block discordBlock = blockLocation.getBlock();
         if(toggleBlock) discordBlock.setType(Material.PLAYER_HEAD);
-        else despawnDiscordBlock(discordBlock);
+        else{
+            discordBlock.setType(Material.AIR); //Despawns the block
+            return;
+        }
 
         //Setting the custom block from config
         if(!(discordBlock.getState() instanceof Skull discordSkull)) return;
@@ -88,14 +88,21 @@ public class DiscordBlock implements Listener {
         }
 
         PlayerProfile discordBlockProfile =Bukkit.createProfile(UUID.randomUUID());
-        discordBlockProfile.setProperty(new ProfileProperty("textures", headTexture));
+        //Check if the head texture is valid or not
+        try{
+            String headTexture = plugin.getConfig().getString("custom-head");
+            if(headTexture == null){
+                Bukkit.getLogger().warning("[DISCORDUTILS] The head texture of the discord-block is NULL!");
+                return;
+            }
+            discordBlockProfile.setProperty(new ProfileProperty("textures", headTexture));
+            discordSkull.setPlayerProfile(discordBlockProfile);
+            discordSkull.update(true, false);
+        } catch (Exception e) {
+            Bukkit.getLogger().warning("DISCORDUTILS] The texture of the block is INVALID!");
+        }
         discordSkull.setPlayerProfile(discordBlockProfile);
         discordSkull.update(true, false);
-    }
-
-    //Despawns the discord-block
-    private void despawnDiscordBlock(Block discordBlock){
-        discordBlock.setType(Material.AIR);
     }
 
     public void startParticleTask(){

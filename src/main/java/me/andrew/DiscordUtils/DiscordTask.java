@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -82,10 +83,10 @@ public class DiscordTask {
 
         //Check the discord link
         String discordLink = config.getString("discord-link");
-        if(discordLink == null || discordLink.isEmpty()){
+        if(discordLink == null || discordLink.isEmpty() || !isUrlValid(discordLink)){
             player.playSound(player.getLocation(), taskErrorSound, tesVolume, tesPitch);
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("error-task-message")));
-            Bukkit.getLogger().warning("[DISCORDUTILS] The discord link is null! Set one with '/dcutils setdclink <link>'!");
+            Bukkit.getLogger().warning("[DISCORDUTILS] The discord link is null or invalid! Run /dcutils configuration and set a valid one!");
             return;
         }
 
@@ -93,13 +94,13 @@ public class DiscordTask {
         if(configChoice == null || configChoice.isEmpty()){ //Check if it is null
             player.playSound(player.getLocation(), taskErrorSound, tesVolume, tesPitch);
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("error-task-message")));
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value for 'link-appearance-choice' is null! Set one with '/dcutils setdcchoice <book | chat-message>");
+            Bukkit.getLogger().warning("[DISCORDUTILS] The value for 'link-appearance-choice' is null! Run /dcutils configuration and set it!");
             return;
         }
         if(!configChoice.equalsIgnoreCase("book") && !configChoice.equalsIgnoreCase("chat-message")){ //Check if it has a valid value
             player.playSound(player.getLocation(), taskErrorSound, tesVolume, tesPitch);
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("error-task-message")));
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value for 'link-appearance-choice' is invalid! Set a valid one and reload the plugin using '/dcutils reload'!");
+            Bukkit.getLogger().warning("[DISCORDUTILS] The value for 'link-appearance-choice' is invalid! Run /dcutils configuration and set a valid one!");
             return;
         }
         player.playSound(player.getLocation(), giveLinkSound, glsVolume, glsPitch); //Plays the good sound if there is no error
@@ -149,6 +150,16 @@ public class DiscordTask {
                         .build());
                 player.sendMessage(compLine);
             }
+        }
+    }
+
+    private boolean isUrlValid(String url){
+        try{
+            URI uri = new URI(url);
+            uri.toURL();
+            return uri.getScheme() != null;
+        } catch(Exception e){
+            return false;
         }
     }
 }

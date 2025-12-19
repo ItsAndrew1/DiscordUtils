@@ -39,7 +39,7 @@ custom-head: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3
 
 #Configure the task of giving players the link.
 discord-link: "" #Enter your discord's server invite link
-link-appearance-choice: "book" #Whether you want a chat message or a book for displaying the link to the players
+link-appearance-choice: "book" #Whether you want a chat message or a book for displaying the link to the players. Values: 'book' / 'chat-message'
 hover-text: "Click to enter our server!"
 discord-link-word: "here" #The word which has the click and hover event
 message-lines: #Use the discord-link-word in your message! The discord-link-word is 'here', so I use 'here' in the message.
