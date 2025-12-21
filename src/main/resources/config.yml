@@ -98,6 +98,11 @@ discord-gui:
     lore: #Leave blank for no lore
       -
 
+
+#Configure the verification codes task
+verification-code-length: 6 #How many digits the verification code will have
+verification-code-expire-time: 300 #In seconds!!!
+
 #Configure all the messages for DiscordUtils.
 error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
 command-no-permission-message: "&cYou don't have permission to run this command."
@@ -106,11 +111,23 @@ fetching-data-task-in-progress-message: "&cYou must wait before attempting again
 fetching-data-chat-message: "&8Fetching data..."
 error-task-message: "&cThere was an error giving the discord link. Contact the server administrators about this."
 
+player-already-verifying-message: "&cPlease finish this verification before starting a new one!"
+player-is-already-verified-message: "&cYou are already verified!"
+code-expired-message: "&cVerification code expired. Please run &l/verify &cagain."
+# %code% -> display the code ; %expire_at% -> display the duration of the code (in minutes)
+use-verification-code-message:
+  - "&aYour code is &e&l%code%&a! Do &e&l/verify <code> &ain our discord server to complete the verification."
+  - "&cThe code will expire in &l%expire_at% minutes&c!"
+
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
 #TIP: do /playsound ... in Minecraft to HEAR the sound and see the sound's NAME.
 exit-item-sound: "ui.button.click"
 eis-volume: 1
 eis-pitch: 1
+
+give-verification-code-sound: "block.note_block.pling"
+gvcs-volume: 1
+gvcs-pitch: 1
 
 boardcast-message-sound: "block.note_block.pling"
 bms-volume: 1

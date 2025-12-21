@@ -10,6 +10,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,17 +22,21 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private String guiTitle;
     private DiscordGUI discordGUI;
     private DiscordTask discordTaskManager;
+    private Commands commands;
     private DiscordBlock discordBlockManager;
     private MainConfigGUI mainConfigGUI;
     private BlockConfigurationGUI blockConfigurationGUI;
     private AppearanceChoiceGUI appearanceChoiceGUI;
     private FacingChoiceGUI facingChoiceGUI;
+    private PlayerJoin playerJoin;
+    private VerificationManager verificationManager;
+    private DatabaseManager databaseManager;
     private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
 
     private BukkitTask broadcastTask; //Task for broadcasting
 
     @Override
-    public void onEnable() {
+    public void onEnable(){
         saveDefaultConfig();
         startBroadcasting(); //Broadcasts the message over an interval of seconds
 
@@ -44,7 +49,11 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
         guiTitle = ChatColor.translateAlternateColorCodes('&', getConfig().getString("discord-gui.title"));
         discordTaskManager = new DiscordTask(this);
+        commands = new Commands(this);
+        databaseManager = new DatabaseManager(this);
+        verificationManager = new VerificationManager(this);
         discordGUI = new DiscordGUI(this);
+        playerJoin = new PlayerJoin(this);
         discordBlockManager = new DiscordBlock(this);
         mainConfigGUI = new MainConfigGUI(this);
         blockConfigurationGUI = new BlockConfigurationGUI(this);
@@ -52,8 +61,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         facingChoiceGUI = new FacingChoiceGUI(this);
 
         //Setting the commands and the tabs
-        getCommand("discord").setExecutor(new Commands(this));
-        getCommand("dcutils").setExecutor(new Commands(this));
+        getCommand("discord").setExecutor(commands);
+        getCommand("verify").setExecutor(commands);
+        getCommand("dcutils").setExecutor(commands);
         getCommand("dcutils").setTabCompleter(new CommandTABS(this));
 
         //Setting events
@@ -63,11 +73,17 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         getServer().getPluginManager().registerEvents(discordBlockManager, this);
         getServer().getPluginManager().registerEvents(appearanceChoiceGUI, this);
         getServer().getPluginManager().registerEvents(facingChoiceGUI, this);
+        getServer().getPluginManager().registerEvents(playerJoin, this);
         getServer().getPluginManager().registerEvents(this, this);
 
         //Runs a 'first-run' message if the plugin is run for the first time
         if(!getConfig().getBoolean("initialized", false)){
             firstRunSetup();
+            try {
+                databaseManager.createDb();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
             getConfig().set("initialized", true);
             saveConfig();
         }
@@ -84,6 +100,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
     }
 
+    //Handles the chat input for different configurations of the plugin
     @EventHandler
     public void chatAsync(AsyncPlayerChatEvent event){
         Player player = event.getPlayer();
@@ -142,6 +159,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     //Message that runs on the first setup
     private void firstRunSetup(){
+        //Displays a message
         Bukkit.getLogger().info("=========================================================================");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("             DiscordUtils has been initialized successfully!");
@@ -178,6 +196,12 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public AppearanceChoiceGUI getAppearanceChoiceGUI() {
         return appearanceChoiceGUI;
+    }
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
+    }
+    public VerificationManager getVerificationManager() {
+        return verificationManager;
     }
     public int getGuiSize() {
         return guiSize;

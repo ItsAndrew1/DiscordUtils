@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.jetbrains.annotations.NotNull;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -105,6 +106,20 @@ public class Commands implements CommandExecutor {
             }
 
             plugin.getDiscordGUI().showGUI(player);
+            return true;
+        }
+
+        if(command.getName().equalsIgnoreCase("verify")){
+            if(!player.hasPermission("discordutils.use")){
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message")));
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
+                return true;
+            }
+            try {
+                plugin.getVerificationManager().verificationProcess(player);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
             return true;
         }
 

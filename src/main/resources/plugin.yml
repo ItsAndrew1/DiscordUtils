@@ -8,11 +8,15 @@ commands:
   discord:
     aliases: [dc]
     description: Opens the discord GUI
-    permission: discordlink.use
+    permission: discordutils.use
 
   dcutils:
-    description: Handles different configuration of the plugin
-    permission: discordlink.staff
+    description: Handles different configuration/punishments of the plugin
+    permission: discordutils.staff
+
+  verify:
+    description: Handles the verification of the players
+    permission: discordutils.use
 
 permissions:
   discordutils.use:
