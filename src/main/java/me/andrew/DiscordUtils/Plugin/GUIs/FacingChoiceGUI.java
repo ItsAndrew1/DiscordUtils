@@ -1,7 +1,7 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils.GUIs;
+package me.andrew.DiscordUtils.Plugin.GUIs;
 
-import me.andrew.DiscordUtils.DiscordUtils;
+import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;

@@ -1,7 +1,8 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils;
+package me.andrew.DiscordUtils.Plugin;
 
-import me.andrew.DiscordUtils.GUIs.*;
+import me.andrew.DiscordUtils.DiscordBot.*;
+import me.andrew.DiscordUtils.Plugin.GUIs.*;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,18 +23,18 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private String guiTitle;
     private DiscordGUI discordGUI;
     private DiscordTask discordTaskManager;
-    private Commands commands;
     private DiscordBlock discordBlockManager;
     private MainConfigGUI mainConfigGUI;
+    private YMLFiles botConfig;
     private BlockConfigurationGUI blockConfigurationGUI;
     private AppearanceChoiceGUI appearanceChoiceGUI;
     private FacingChoiceGUI facingChoiceGUI;
-    private PlayerJoin playerJoin;
     private VerificationManager verificationManager;
     private DatabaseManager databaseManager;
     private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
 
     private BukkitTask broadcastTask; //Task for broadcasting
+    private BotMain discordBot;
 
     @Override
     public void onEnable(){
@@ -49,17 +50,17 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
         guiTitle = ChatColor.translateAlternateColorCodes('&', getConfig().getString("discord-gui.title"));
         discordTaskManager = new DiscordTask(this);
-        commands = new Commands(this);
+        Commands commands = new Commands(this);
         databaseManager = new DatabaseManager(this);
         verificationManager = new VerificationManager(this);
         discordGUI = new DiscordGUI(this);
-        playerJoin = new PlayerJoin(this);
+        PlayerJoin playerJoin = new PlayerJoin(this);
         discordBlockManager = new DiscordBlock(this);
+        botConfig = new YMLFiles(this, "botconfig.yml");
         mainConfigGUI = new MainConfigGUI(this);
         blockConfigurationGUI = new BlockConfigurationGUI(this);
         appearanceChoiceGUI = new AppearanceChoiceGUI(this);
         facingChoiceGUI = new FacingChoiceGUI(this);
-
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(commands);
         getCommand("verify").setExecutor(commands);
@@ -81,6 +82,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             firstRunSetup();
             try {
                 databaseManager.createDb();
+                Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
@@ -91,11 +93,29 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             getDiscordBlockManager().spawnDiscordBlock();
             getDiscordBlockManager().startParticleTask();
         }
+
+        //Starts the discord bot if everything is ok
+        try{
+            String botToken = botFile().getConfig().getString("bot-token");
+            String guildId = botFile().getConfig().getString("guild-id");
+
+            if(botToken == null || guildId == null){
+                Bukkit.getLogger().warning("[DISCORDUTILS] Bot Token and/or Guild ID is null. The bot won't start!");
+            }
+            else discordBot = new BotMain(botToken, guildId, this);
+        } catch (Exception e){
+            Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. See message:");
+            Bukkit.getLogger().warning(e.getMessage());
+        }
     }
 
     @Override
     public void onDisable() {
         saveConfig();
+        if(discordBot.getJda() != null){
+            Bukkit.getLogger().info("Bot shut down successfully!");
+            discordBot.getJda().shutdownNow(); //Shuts down the bot if it is turned on
+        }
 
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
     }
@@ -159,13 +179,15 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     //Message that runs on the first setup
     private void firstRunSetup(){
-        //Displays a message
         Bukkit.getLogger().info("=========================================================================");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("             DiscordUtils has been initialized successfully!");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("IMPORTANT: To toggle on the discord-block, run /dcutils configuration,");
         Bukkit.getLogger().info("          configure the block, and then run /dcutils reload!");
+        Bukkit.getLogger().info(" ");
+        Bukkit.getLogger().info("ALSO IMPORTANT: For the discord bot, go into config.yml and configure the bot.");
+        Bukkit.getLogger().info("         Then, restart the server. More instructions are there!");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("                 Thank you for using DiscordUtils!");
         Bukkit.getLogger().info(" ");
@@ -190,6 +212,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public MainConfigGUI getMainConfigGUI() {
         return mainConfigGUI;
+    }
+    public YMLFiles botFile() {
+        return botConfig;
     }
     public FacingChoiceGUI getFacingChoiceGUI() {
         return facingChoiceGUI;

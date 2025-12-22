@@ -1,5 +1,5 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils;
+package me.andrew.DiscordUtils.Plugin;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;

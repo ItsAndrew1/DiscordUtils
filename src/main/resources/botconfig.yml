@@ -1,0 +1,5 @@
+#Developed by _ItsAndrew_
+#This file is for configuring the discord bot.
+
+guild-id: "" #This is the ID your discord server has. To get it, turn on 'Developer Mode', right click on your server and click on 'Copy ID'
+bot-token: ""

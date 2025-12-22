@@ -1,5 +1,5 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils;
+package me.andrew.DiscordUtils.Plugin;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -8,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;

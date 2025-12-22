@@ -1,11 +1,11 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils;
+package me.andrew.DiscordUtils.Plugin;
 
 import java.io.File;
 import java.sql.*;
 import java.util.UUID;
 
-//This class handles the database.
+//This class handles the database. It also has all the helper methods that I need
 public class DatabaseManager {
     private final DiscordUtils plugin;
     private Connection connection;
@@ -25,8 +25,9 @@ public class DatabaseManager {
         String playersTable = """
              CREATE TABLE IF NOT EXISTS playersVerification(
                 uuid TEXT PRIMARY KEY,
-                discordID TEXT UNIQUE,
-                verified BOOLEAN DEFAULT FALSE
+                discordId TEXT UNIQUE,
+                verified BOOLEAN DEFAULT FALSE,
+                hasVerified BOOLEAN DEFAULT FALSE
              );
              """;
         try(Statement statement = connection.createStatement()){
@@ -37,6 +38,7 @@ public class DatabaseManager {
         String verificationCodesTable = """
                 CREATE TABLE IF NOT EXISTS verificationCodes(
                     uuid TEXT PRIMARY KEY UNIQUE,
+                    discordId TEXT,
                     code INT UNIQUE,
                     expire_at BIGINT
                 );
@@ -53,7 +55,7 @@ public class DatabaseManager {
                     type TEXT,
                     reason TEXT,
                     staff TEXT,
-                    duration INT,
+                    duration BIGINT,
                     active BOOL DEFAULT TRUE
                 );
         """;
@@ -62,7 +64,8 @@ public class DatabaseManager {
         }
     }
 
-    public boolean isVerified(UUID uuid) throws SQLException {
+    //This is for minecraft (UUID)
+    public boolean isVerifiedMC(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT verified FROM playersVerification WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
@@ -71,11 +74,42 @@ public class DatabaseManager {
         }
     }
 
-    public void setVerified(UUID uuid, boolean verified) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement(
-                "UPDATE playersVerification SET verified = ? WHERE uuid = ?")){
-            ps.setBoolean(1, verified);
-            ps.setString(2, uuid.toString());
+    //This is for the bot (discord ID)
+    public boolean isVerifiedDc(String discordId) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("SELECT verified FROM playersVerification WHERE discordId = ?")){
+            ps.setString(1, discordId);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next() && rs.getBoolean("verified");
+            }
+        }
+    }
+
+    public void setPlayerVerified(String discordId) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET verified=true WHERE discordId = ?")){
+            ps.setString(1, discordId);
+            ps.executeUpdate();
+        }
+    }
+
+    public void setPlayerHasVerified(String discordId) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET hasVerified=true WHERE discordId = ?")){
+            ps.setString(1, discordId);
+            ps.executeUpdate();
+        }
+    }
+
+    public boolean hasPlayerVerified(UUID uuid) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("SELECT hasVerified FROM playersVerification WHERE uuid = ?")){
+            ps.setString(1, uuid.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next() && rs.getBoolean("hasVerified");
+            }
+        }
+    }
+
+    public void deleteDiscordId(String discordId) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET discordId=null WHERE discordId = ?")){
+            ps.setString(1, discordId);
             ps.executeUpdate();
         }
     }
@@ -99,7 +133,17 @@ public class DatabaseManager {
         }
     }
 
-    public boolean isCodeExpired(UUID uuid) throws SQLException {
+    public boolean isCodeRight(String discordId, int code) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("SELECT code FROM verificationCodes WHERE discordId = ?")){
+            ps.setString(1, discordId);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next() && rs.getInt("code") == code;
+            }
+        }
+    }
+
+    //This is for Minecraft
+    public boolean isCodeExpiredMC(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT expire_at FROM verificationCodes WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
@@ -111,14 +155,34 @@ public class DatabaseManager {
         }
     }
 
-    public void deleteExpiredCode(UUID uuid) throws SQLException {
+    //This is for discord
+    public boolean isCodeExpiredDiscord(String discordId) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("SELECT expire_at FROM verificationCodes WHERE discordId = ?")){
+            ps.setString(1, discordId);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+
+                long expireTime = rs.getLong("expire_at");
+                return expireTime < System.currentTimeMillis();
+            }
+        }
+    }
+
+    public void deleteExpiredCodeMC(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("DELETE FROM verificationCodes WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             ps.executeUpdate();
         }
     }
 
-    public Connection getConnection() {
+    public void deleteExpiredCodeDc(String discordId) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("DELETE FROM verificationCodes WHERE discordId = ?")){
+            ps.setString(1, discordId);
+            ps.executeUpdate();
+        }
+    }
+
+    public Connection getConnection(){
         return connection;
     }
 }

@@ -1,5 +1,5 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils;
+package me.andrew.DiscordUtils.Plugin;
 
 import org.bukkit.*;
 import org.bukkit.command.Command;
@@ -11,8 +11,6 @@ import org.bukkit.inventory.meta.BookMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class Commands implements CommandExecutor {

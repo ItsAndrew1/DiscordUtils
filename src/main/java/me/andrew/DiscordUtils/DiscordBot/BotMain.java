@@ -1,0 +1,40 @@
+package me.andrew.DiscordUtils.DiscordBot;
+
+import me.andrew.DiscordUtils.Plugin.*;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import org.bukkit.Bukkit;
+
+public class BotMain{
+    private final JDA jda;
+    private final Guild discordServer;
+
+    public BotMain(String token, String guildId, DiscordUtils plugin) throws Exception{
+        //Creating the bot itself
+        this.jda = JDABuilder.createDefault(token)
+                .addEventListeners(new SlashCommands(plugin))
+                .build()
+                .awaitReady();
+
+        //Getting the discord server and adding commands
+        this.discordServer = jda.getGuildById(guildId);
+        if(discordServer == null){
+            Bukkit.getLogger().info("[DISCORDUTILS] Discord server not found!");
+        }
+
+        discordServer.updateCommands().addCommands(
+                Commands.slash("verify", "Verify your minecraft account!")
+                        .addOption(OptionType.INTEGER, "code", "Enter the code you were given.", true)
+        ).queue();
+    }
+
+    public JDA getJda() {
+        return jda;
+    }
+    public Guild getDiscordServer() {
+        return discordServer;
+    }
+}

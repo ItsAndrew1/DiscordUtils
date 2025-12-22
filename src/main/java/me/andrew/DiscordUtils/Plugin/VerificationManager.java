@@ -1,5 +1,5 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils;
+package me.andrew.DiscordUtils.Plugin;
 
 import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
@@ -8,14 +8,12 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
 import java.security.SecureRandom;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 
 public class VerificationManager{
     private final DiscordUtils plugin;
-    private Connection connection;
 
     public VerificationManager(DiscordUtils plugin){
         this.plugin = plugin;
@@ -23,10 +21,8 @@ public class VerificationManager{
 
     public void verificationProcess(Player player) throws SQLException {
         Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.villager.no"));
-        connection = plugin.getDatabaseManager().getConnection();
-
         //Check if the player is verified
-        if(plugin.getDatabaseManager().isVerified(player.getUniqueId())){
+        if(plugin.getDatabaseManager().isVerifiedMC(player.getUniqueId())){
             String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-is-already-verified-message"));
             player.sendMessage(message);
             player.playSound(player.getLocation(), invalid, 1f, 1f);
@@ -34,8 +30,8 @@ public class VerificationManager{
         }
 
         //Check if the code expired
-        if(plugin.getDatabaseManager().isCodeExpired(player.getUniqueId())){
-            plugin.getDatabaseManager().deleteExpiredCode(player.getUniqueId());
+        if(plugin.getDatabaseManager().isCodeExpiredMC(player.getUniqueId())){
+            plugin.getDatabaseManager().deleteExpiredCodeMC(player.getUniqueId());
             String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("code-expired-message"));
             player.sendMessage(message);
             player.playSound(player.getLocation(), invalid, 1f, 1f);
@@ -54,7 +50,7 @@ public class VerificationManager{
         String verificationCode = getVerificationCode();
         long durationSeconds = plugin.getConfig().getLong("verification-code-expire-time");
         long expireTime = System.currentTimeMillis() + durationSeconds*1000L;
-        try(PreparedStatement ps = connection.prepareStatement("INSERT INTO verificationCodes(uuid, code, expire_at) values (?, ?, ?)")){
+        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO verificationCodes(uuid, code, expire_at) values (?, ?, ?)")){
             ps.setString(1, player.getUniqueId().toString());
             ps.setString(2, verificationCode);
             ps.setLong(3, expireTime);

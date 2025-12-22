@@ -1,13 +1,11 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils.GUIs;
+package me.andrew.DiscordUtils.Plugin.GUIs;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
-import io.papermc.paper.event.player.AsyncChatCommandDecorateEvent;
-import me.andrew.DiscordUtils.*;
+import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
