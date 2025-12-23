@@ -54,7 +54,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         databaseManager = new DatabaseManager(this);
         verificationManager = new VerificationManager(this);
         discordGUI = new DiscordGUI(this);
-        PlayerJoin playerJoin = new PlayerJoin(this);
         discordBlockManager = new DiscordBlock(this);
         botConfig = new YMLFiles(this, "botconfig.yml");
         mainConfigGUI = new MainConfigGUI(this);
@@ -74,24 +73,25 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         getServer().getPluginManager().registerEvents(discordBlockManager, this);
         getServer().getPluginManager().registerEvents(appearanceChoiceGUI, this);
         getServer().getPluginManager().registerEvents(facingChoiceGUI, this);
-        getServer().getPluginManager().registerEvents(playerJoin, this);
         getServer().getPluginManager().registerEvents(this, this);
 
         //Runs a 'first-run' message if the plugin is run for the first time
         if(!getConfig().getBoolean("initialized", false)){
             firstRunSetup();
-            try {
-                databaseManager.createDb();
-                Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
             getConfig().set("initialized", true);
             saveConfig();
         }
         else{ //Spawns the discord-block and starts the particle task if the plugin is not run for the first time.
             getDiscordBlockManager().spawnDiscordBlock();
             getDiscordBlockManager().startParticleTask();
+        }
+
+        //Creates the database
+        try {
+            databaseManager.createDb();
+            Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
 
         //Starts the discord bot if everything is ok

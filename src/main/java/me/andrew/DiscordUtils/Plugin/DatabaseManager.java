@@ -25,7 +25,7 @@ public class DatabaseManager {
         String playersTable = """
              CREATE TABLE IF NOT EXISTS playersVerification(
                 uuid TEXT PRIMARY KEY,
-                discordId TEXT UNIQUE,
+                discordId TEXT,
                 verified BOOLEAN DEFAULT FALSE,
                 hasVerified BOOLEAN DEFAULT FALSE
              );
@@ -38,7 +38,6 @@ public class DatabaseManager {
         String verificationCodesTable = """
                 CREATE TABLE IF NOT EXISTS verificationCodes(
                     uuid TEXT PRIMARY KEY UNIQUE,
-                    discordId TEXT,
                     code INT UNIQUE,
                     expire_at BIGINT
                 );
@@ -65,7 +64,7 @@ public class DatabaseManager {
     }
 
     //This is for minecraft (UUID)
-    public boolean isVerifiedMC(UUID uuid) throws SQLException {
+    public boolean isVerified(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT verified FROM playersVerification WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
@@ -74,26 +73,17 @@ public class DatabaseManager {
         }
     }
 
-    //This is for the bot (discord ID)
-    public boolean isVerifiedDc(String discordId) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT verified FROM playersVerification WHERE discordId = ?")){
+    public void setPlayerVerified(UUID uuid, String discordId) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET verified=true, discordId=? WHERE uuid=?")){
             ps.setString(1, discordId);
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next() && rs.getBoolean("verified");
-            }
-        }
-    }
-
-    public void setPlayerVerified(String discordId) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET verified=true WHERE discordId = ?")){
-            ps.setString(1, discordId);
+            ps.setString(2, uuid.toString());
             ps.executeUpdate();
         }
     }
 
-    public void setPlayerHasVerified(String discordId) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET hasVerified=true WHERE discordId = ?")){
-            ps.setString(1, discordId);
+    public void setPlayerHasVerified(UUID uuid) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET hasVerified=true WHERE uuid = ?")){
+            ps.setString(1, uuid.toString());
             ps.executeUpdate();
         }
     }
@@ -107,16 +97,8 @@ public class DatabaseManager {
         }
     }
 
-    public void deleteDiscordId(String discordId) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET discordId=null WHERE discordId = ?")){
-            ps.setString(1, discordId);
-            ps.executeUpdate();
-        }
-    }
-
     public boolean playerAlreadyExits(UUID uuid) throws SQLException {
-        try(PreparedStatement ps =  connection.prepareStatement(
-                "SELECT 1 FROM playersVerification WHERE uuid = ?")){
+        try(PreparedStatement ps =  connection.prepareStatement("SELECT 1 FROM playersVerification WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try (ResultSet rs = ps.executeQuery()){
                 return rs.next();
@@ -133,17 +115,8 @@ public class DatabaseManager {
         }
     }
 
-    public boolean isCodeRight(String discordId, int code) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT code FROM verificationCodes WHERE discordId = ?")){
-            ps.setString(1, discordId);
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next() && rs.getInt("code") == code;
-            }
-        }
-    }
-
     //This is for Minecraft
-    public boolean isCodeExpiredMC(UUID uuid) throws SQLException {
+    public boolean isCodeExpired(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT expire_at FROM verificationCodes WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
@@ -155,30 +128,21 @@ public class DatabaseManager {
         }
     }
 
-    //This is for discord
-    public boolean isCodeExpiredDiscord(String discordId) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT expire_at FROM verificationCodes WHERE discordId = ?")){
-            ps.setString(1, discordId);
-            try(ResultSet rs = ps.executeQuery()){
-                if(!rs.next()) return false;
-
-                long expireTime = rs.getLong("expire_at");
-                return expireTime < System.currentTimeMillis();
-            }
-        }
-    }
-
-    public void deleteExpiredCodeMC(UUID uuid) throws SQLException {
+    public void deleteExpiredCode(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("DELETE FROM verificationCodes WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             ps.executeUpdate();
         }
     }
 
-    public void deleteExpiredCodeDc(String discordId) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("DELETE FROM verificationCodes WHERE discordId = ?")){
-            ps.setString(1, discordId);
-            ps.executeUpdate();
+    public UUID getUuidFromCode(int code) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("SELECT uuid FROM verificationCodes WHERE code = ?")){
+            ps.setInt(1, code);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return null;
+
+                return UUID.fromString(rs.getString("uuid"));
+            }
         }
     }
 

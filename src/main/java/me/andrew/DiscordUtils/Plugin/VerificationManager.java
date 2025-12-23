@@ -20,9 +20,29 @@ public class VerificationManager{
     }
 
     public void verificationProcess(Player player) throws SQLException {
+        //Inserts the player into the playersVerification table if the doesn't exit already
+        if(!plugin.getDatabaseManager().playerAlreadyExits(player.getUniqueId())){
+            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO playersVerification (uuid, discordId, verified, hasVerified) values (?, null, false, false)")){
+                ps.setString(1, player.getUniqueId().toString());
+                ps.executeUpdate();
+            }
+        }
         Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.villager.no"));
-        //Check if the player is verified
-        if(plugin.getDatabaseManager().isVerifiedMC(player.getUniqueId())){
+
+        //Check if the player has verified
+        if(plugin.getDatabaseManager().hasPlayerVerified(player.getUniqueId())){
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aCongrats! You have officially been verified. Meriti un cartof."));
+
+            //Deletes the hasVerified boolean from the table
+            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("UPDATE playersVerification SET hasVerified=null WHERE uuid = ?")){
+                ps.setString(1, player.getUniqueId().toString());
+                ps.executeUpdate();
+            }
+            return;
+        }
+
+        //Check if the player has been verified
+        if(plugin.getDatabaseManager().isVerified(player.getUniqueId())){
             String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-is-already-verified-message"));
             player.sendMessage(message);
             player.playSound(player.getLocation(), invalid, 1f, 1f);
@@ -30,8 +50,8 @@ public class VerificationManager{
         }
 
         //Check if the code expired
-        if(plugin.getDatabaseManager().isCodeExpiredMC(player.getUniqueId())){
-            plugin.getDatabaseManager().deleteExpiredCodeMC(player.getUniqueId());
+        if(plugin.getDatabaseManager().isCodeExpired(player.getUniqueId())){
+            plugin.getDatabaseManager().deleteExpiredCode(player.getUniqueId());
             String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("code-expired-message"));
             player.sendMessage(message);
             player.playSound(player.getLocation(), invalid, 1f, 1f);
