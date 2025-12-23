@@ -32,12 +32,4 @@ public class YMLFiles {
     public FileConfiguration getConfig(){
         return config;
     }
-
-    public void saveConfig(){
-        try{
-            config.save(file);
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
 }

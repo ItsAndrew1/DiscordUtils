@@ -99,9 +99,30 @@ discord-gui:
       -
 
 
-#Configure the verification codes task
+#Configure the verification codes task. For messages use '&' for styles.
 verification-code-length: 6 #How many digits the verification code will have
 verification-code-expire-time: 300 #In seconds!!!
+player-already-verifying-message: "&cPlease finish this verification before starting a new one!"
+player-is-already-verified-message: "&cYou are already verified!"
+error-giving-rewards-message: "&cThere was a problem giving you the rewards. Contact the server administrators about this."
+code-expired-message: "&cVerification code expired. Please run &l/verify &cagain."
+# %code% -> display the code ; %expire_at% -> display the duration of the code (in minutes)
+use-verification-code-message: #You can have more lines
+  - "&aYour code is &e&l%code%&a! Do &e&l/verify <code> &ain our discord server to complete the verification."
+  - "&cThe code will expire in &l%expire_at% minutes&c!"
+
+player-verified-message: #You can have more lines.
+  - "&aCongrats! You have officially been verified."
+
+#Give rewards to the player when the player verifies.
+rewards:
+  toggle-giving-rewards: true #Whether you want to give rewards when a player verifies or not
+  exp: 1 #In levels. It cannot be < 0!
+  items: #Items, you have an example here of how to write them. You can add as many rewards as you want.
+    bread:
+      material: bread
+      quantity: 32
+
 
 #Configure all the messages for DiscordUtils.
 error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
@@ -110,14 +131,6 @@ block-no-permission-message: "&cYou don't have permission to get the link."
 fetching-data-task-in-progress-message: "&cYou must wait before attempting again!"
 fetching-data-chat-message: "&8Fetching data..."
 error-task-message: "&cThere was an error giving the discord link. Contact the server administrators about this."
-
-player-already-verifying-message: "&cPlease finish this verification before starting a new one!"
-player-is-already-verified-message: "&cYou are already verified!"
-code-expired-message: "&cVerification code expired. Please run &l/verify &cagain."
-# %code% -> display the code ; %expire_at% -> display the duration of the code (in minutes)
-use-verification-code-message:
-  - "&aYour code is &e&l%code%&a! Do &e&l/verify <code> &ain our discord server to complete the verification."
-  - "&cThe code will expire in &l%expire_at% minutes&c!"
 
 #Configure all the SOUNDS for DiscordUtils. The default value for volume and sound is 1!
 #TIP: do /playsound ... in Minecraft to HEAR the sound and see the sound's NAME.
@@ -128,6 +141,10 @@ eis-pitch: 1
 give-verification-code-sound: "block.note_block.pling"
 gvcs-volume: 1
 gvcs-pitch: 1
+
+player-has-verified-sound: "entity.player.levelup"
+phvs-volume: 1
+phvs-pitch: 1.4
 
 boardcast-message-sound: "block.note_block.pling"
 bms-volume: 1

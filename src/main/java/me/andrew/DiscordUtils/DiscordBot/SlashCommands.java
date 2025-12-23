@@ -3,10 +3,9 @@ package me.andrew.DiscordUtils.DiscordBot;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.jspecify.annotations.NonNull;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.UUID;
 
@@ -19,7 +18,7 @@ public class SlashCommands extends ListenerAdapter{
 
     @Override
     public void onSlashCommandInteraction(@NonNull SlashCommandInteractionEvent event){
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        FileConfiguration botConfig = plugin.botFile().getConfig();
 
         switch(event.getName()) {
             //The 'verify' command
@@ -34,7 +33,9 @@ public class SlashCommands extends ListenerAdapter{
                 }
 
                 if(uuid == null){
-                    event.reply("**Invalid** or **expired** verification code!").setEphemeral(true).queue();
+                    boolean ephemeral = botConfig.getBoolean("iecm-set-ephemeral");
+                    String message = botConfig.getString("invalid-expired-code-message");
+                    event.reply(message).setEphemeral(ephemeral).queue();
                     return;
                 }
 
@@ -42,7 +43,10 @@ public class SlashCommands extends ListenerAdapter{
                     plugin.getDatabaseManager().setPlayerVerified(uuid, userId);
                     plugin.getDatabaseManager().setPlayerHasVerified(uuid);
                     plugin.getDatabaseManager().deleteExpiredCode(uuid);
-                    event.reply("✅ You are now verified! Run /verify again in Minecraft!").setEphemeral(true).queue();
+
+                    String message = botConfig.getString("player-verified-message");
+                    boolean ephemeral = botConfig.getBoolean("pvm-set-ephemeral");
+                    event.reply(message).setEphemeral(ephemeral).queue();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
