@@ -1,4 +1,4 @@
-name: DiscordUtils-1.0
+name: DiscordUtils
 version: '1.0.1'
 main: me.andrew.DiscordUtils.Plugin.DiscordUtils
 api-version: '1.21'
@@ -15,7 +15,7 @@ commands:
     permission: discordutils.staff
 
   verify:
-    description: Handles the verification of the players
+    description: Handles the verification for the players
     permission: discordutils.use
 
 permissions:

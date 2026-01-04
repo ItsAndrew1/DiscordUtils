@@ -1,8 +1,14 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
+import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+
 import java.io.File;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 //This class handles the database. It also has all the helper methods that I need
@@ -49,13 +55,17 @@ public class DatabaseManager {
         //Creates the punishments table
         String punishmentsTable = """
                 CREATE TABLE IF NOT EXISTS punishments(
-                    discordID PRIMARY KEY,
-                    uuid TEXT,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid,
                     type TEXT,
+                    scope TEXT,
                     reason TEXT,
                     staff TEXT,
-                    duration BIGINT,
-                    active BOOL DEFAULT TRUE
+                    created_at BIGINT,
+                    expire_at BIGINT,
+                    active BOOLEAN DEFAULT TRUE,
+                    removed BOOLEAN,
+                    removed_at BIGINT
                 );
         """;
         try(Statement statement = connection.createStatement()){
@@ -63,7 +73,7 @@ public class DatabaseManager {
         }
     }
 
-    //This is for minecraft (UUID)
+    //Helper methods for verification
     public boolean isVerified(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT verified FROM playersVerification WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
@@ -115,7 +125,6 @@ public class DatabaseManager {
         }
     }
 
-    //This is for Minecraft
     public boolean isCodeExpired(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT expire_at FROM verificationCodes WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
@@ -142,6 +151,224 @@ public class DatabaseManager {
                 if(!rs.next()) return null;
 
                 return UUID.fromString(rs.getString("uuid"));
+            }
+        }
+    }
+
+
+
+
+    //Helper methods for punishments
+    public boolean playerHasPunishments(UUID uuid, boolean active) throws SQLException {
+        String sql = "SELECT 1 FROM punishments WHERE uuid = ?";
+        if(active) sql+=" AND active = 1";
+
+        try(PreparedStatement ps = connection.prepareStatement(sql)){
+            ps.setString(1, uuid.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next();
+            }
+        }
+    }
+
+    public int getPlayerActivePunishmentsNr(UUID uuid) throws SQLException {
+        int activePunishments = 0;
+        try(PreparedStatement ps = connection.prepareStatement("SELECT active FROM punishments WHERE uuid = ?")){
+            ps.setString(1, uuid.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                while(rs.next()){
+                    boolean activePunishment = rs.getBoolean("active");
+                    if(activePunishment) activePunishments++;
+                }
+                return activePunishments;
+            }
+        }
+    }
+
+    public int getPlayerExpiredPunishmentsNr(UUID uuid) throws SQLException {
+        int inactivePunishments = 0;
+        try(PreparedStatement ps = connection.prepareStatement("SELECT active FROM punishments WHERE uuid = ?")){
+            ps.setString(1, uuid.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                while(rs.next()){
+                    boolean activePunishment = rs.getBoolean("active");
+                    if(!activePunishment) inactivePunishments++;
+                }
+                return inactivePunishments;
+            }
+        }
+    }
+
+    public List<Punishment> getPlayerPunishments(UUID uuid, PunishmentsFilter filter, int limit, int offset) throws SQLException {
+        String sql = "SELECT * FROM punishments WHERE uuid = ?";
+        if(filter.equals(PunishmentsFilter.ACTIVE)){
+            sql += " AND active = 1";
+        }
+        else if(filter.equals(PunishmentsFilter.EXPIRED)){
+            sql += " AND active = 0";
+        }
+
+        sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        try(PreparedStatement ps = connection.prepareStatement(sql)){
+            ps.setString(1, uuid.toString());
+            ps.setInt(2, limit);
+            ps.setInt(3, offset);
+
+            try(ResultSet rs = ps.executeQuery()){
+                List<Punishment> punishments = new ArrayList<>();
+                while(rs.next()){
+                    punishments.add(mapPunishment(rs));
+                }
+                return punishments;
+            }
+        }
+    }
+
+    private Punishment mapPunishment(ResultSet rs) throws SQLException {
+        return new Punishment(
+                PunishmentType.valueOf(rs.getString("type")),
+                rs.getInt("id"),
+                UUID.fromString(rs.getString("uuid")),
+                PunishmentScopes.valueOf(rs.getString("scope")),
+                rs.getString("reason"),
+                rs.getString("staff"),
+                rs.getLong("created_at"),
+                rs.getLong("expire_at"),
+                rs.getBoolean("active"),
+                rs.getBoolean("removed"),
+                rs.getLong("removed_at")
+        );
+    }
+
+    public Punishment getPunishment(UUID uuid, PunishmentType type) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("SELECT * FROM punishments WHERE uuid = ? AND type = ? AND active = 1 ORDER BY created_at DESC LIMIT 1")){
+            ps.setString(1, uuid.toString());
+            ps.setString(2, type.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) return mapPunishment(rs);
+            }
+        }
+        return null;
+    }
+
+    public void expirePunishmentById(int id) throws SQLException{
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE punishments SET active = false WHERE id = ?")){
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
+    }
+
+    public boolean isPlayerBanned(UUID uuid, PunishmentScopes scope) throws SQLException {
+        boolean permBanned = false;
+        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+            ps.setString(1, uuid.toString());
+            ps.setString(2, PunishmentType.PERM_BAN.toString());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) permBanned = true;
+            }
+        }
+
+        boolean tempBanned = false;
+        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+            ps.setString(1, uuid.toString());
+            ps.setString(2, PunishmentType.TEMP_BAN.toString());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) tempBanned = true;
+            }
+        }
+
+        return  tempBanned || permBanned;
+    }
+
+    public boolean isPlayerMuted(UUID uuid, PunishmentScopes scope) throws SQLException {
+        boolean tempMuted = false;
+        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+            ps.setString(1, uuid.toString());
+            ps.setString(2, PunishmentType.TEMP_MUTE.name());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) tempMuted = true;
+            }
+        }
+
+        boolean permMuted = false;
+        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+            ps.setString(1, uuid.toString());
+            ps.setString(2, PunishmentType.PERM_MUTE.name());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) permMuted = true;
+            }
+        }
+
+        return permMuted || tempMuted;
+    }
+
+    public void removePunishment(PunishmentType type, UUID targetPlayerUUID) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        long removed_at = System.currentTimeMillis();
+
+        try(PreparedStatement ps = dbConnection.prepareStatement("UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE uuid = ? AND type = ? AND active = true")){
+            ps.setLong(1, removed_at);
+            ps.setString(2, targetPlayerUUID.toString());
+            ps.setString(3, type.toString());
+            ps.executeUpdate();
+        }
+    }
+
+    public boolean playerHasTheNrOfWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
+        int warnNr = 0;
+        int maxWarns = plugin.getConfig().getInt("warns-amount");
+
+        try(PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
+            ps.setString(1, targetPlayer.getUniqueId().toString());
+            ps.setString(2, warnType.toString());
+            ps.setString(3, warnScope.toString());
+
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) warnNr = rs.getInt("warn_count");
+            }
+        }
+
+        return warnNr == maxWarns;
+    }
+
+    public int getNrOfWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
+            ps.setString(1, targetPlayer.getUniqueId().toString());
+            ps.setString(2, warnType.toString());
+            ps.setString(3, warnScope.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.getInt("warn_count");
+            }
+        }
+    }
+
+    public void expireAllWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE punishments SET active = 0 WHERE uuid = ? AND type =? AND scope = ?")){
+            ps.setString(1, targetPlayer.getUniqueId().toString());
+            ps.setString(2, warnType.toString());
+            ps.setString(3, warnScope.toString());
+            ps.executeUpdate();
+        }
+    }
+
+    public void debugging() throws SQLException { //Delete after everything is done
+        try(PreparedStatement ps = connection.prepareStatement("SELECT * FROM punishments")){
+            try(ResultSet rs = ps.executeQuery()){
+                while(rs.next()){
+                    int id = rs.getInt("id");
+                    String type =  rs.getString("type");
+                    String scope = rs.getString("scope");
+                    boolean active = rs.getBoolean("active");
+                    long created_ad =  rs.getLong("created_at");
+                    long expire_at = rs.getLong("expire_at");
+
+                    Bukkit.getLogger().warning("ID: "+id+" Type: "+type+" Scope: "+scope+" Active: "+ active +" Created At: "+created_ad+" Expires At: "+expire_at);
+                    Bukkit.getLogger().warning(" ");
+                }
             }
         }
     }

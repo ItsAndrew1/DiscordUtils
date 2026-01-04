@@ -11,9 +11,13 @@ import org.bukkit.inventory.meta.BookMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-public class Commands implements CommandExecutor {
+public class Commands implements CommandExecutor{
     private final DiscordUtils plugin;
 
     public Commands(DiscordUtils plugin){
@@ -24,6 +28,66 @@ public class Commands implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
         Player player = (Player) sender;
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
+
+        try {
+            //Check if the player is muted temporarily
+            Punishment tempMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
+            if(tempMute != null){
+                if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getId());
+                else{
+                    //Sends the player a message (if the messages are toggled)
+                    boolean toggleMessage = plugin.getConfig().getBoolean("player-punishments-messages.toggle");
+                    if(toggleMessage){
+                        //Getting the reason
+                        String reason = tempMute.getReason();
+
+                        //Getting the scope
+                        String scope =  getColoredScope(tempMute.getScope());
+
+                        //Getting the durations
+                        long expiresAt = tempMute.getExpiresAt();
+                        Instant expiresAtInstant = Instant.ofEpochMilli(expiresAt);
+                        LocalDateTime time = LocalDateTime.ofInstant(expiresAtInstant, ZoneId.systemDefault());
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss"); //Make configurable!!!
+                        String expiresAtString = time.format(formatter);
+
+                        long timeLeft = expiresAt - System.currentTimeMillis();
+                        String timeLeftString =  plugin.formatTime(timeLeft);
+
+                        //Sends the message to the player
+                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-message");
+                        for(String messageLine : message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
+                                .replace("%scope%", scope)
+                                .replace("%reason%", reason)
+                                .replace("%time_left%", timeLeftString)
+                                .replace("%expiration_time%", expiresAtString)
+                        ));
+                    }
+                    return true;
+                }
+            }
+
+            //Check if the player is muted permanently
+            Punishment permMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.PERM_MUTE);
+            if(permMute != null){
+                if(permMute.isActive()){
+                    //Sends the target player a message (if the messages are toggled)
+                    //Getting the reason and scope
+                    String reason = permMute.getReason();
+                    String scope = getColoredScope(permMute.getScope());
+
+                    //Sending the message
+                    List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
+                    for(String messageLine: message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
+                            .replace("%scope%", scope)
+                            .replace("%reason%", reason)
+                    ));
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
         //Get the sounds
         Sound good = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
@@ -38,14 +102,23 @@ public class Commands implements CommandExecutor {
 
             if(strings.length == 0){
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils <configuration | reload | help>"));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils <blockConfig | punishments | reload | help>"));
                 return true;
             }
 
             switch(strings[0]){
-                case "configuration":
+                case "blockConfig":
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
                     plugin.getMainConfigGUI().showGUI(player);
+                    break;
+
+                case "punishments":
+                    player.playSound(player.getLocation(), good, 1f, 1.4f);
+                    try {
+                        plugin.getPlayerHeadsGUIs().showGui(player, 1);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
                     break;
 
                 case "help":
@@ -122,5 +195,16 @@ public class Commands implements CommandExecutor {
         }
 
         return false;
+    }
+
+    private boolean isPunishmentExpired(Punishment p){
+        return p.getExpiresAt() <= System.currentTimeMillis();
+    }
+    private String getColoredScope(PunishmentScopes scope){
+        return switch(scope){
+            case PunishmentScopes.DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
+            case PunishmentScopes.GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
+            case PunishmentScopes.MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
+        };
     }
 }

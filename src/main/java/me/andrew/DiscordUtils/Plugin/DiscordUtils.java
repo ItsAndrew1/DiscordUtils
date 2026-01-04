@@ -3,6 +3,10 @@ package me.andrew.DiscordUtils.Plugin;
 
 import me.andrew.DiscordUtils.DiscordBot.*;
 import me.andrew.DiscordUtils.Plugin.GUIs.*;
+import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.BlockConfigurationGUI;
+import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.FacingChoiceGUI;
+import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.MainConfigGUI;
+import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.*;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public final class DiscordUtils extends JavaPlugin implements Listener{
@@ -32,6 +37,16 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private VerificationManager verificationManager;
     private DatabaseManager databaseManager;
     private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
+
+    //Punishments GUIs
+    private PlayerHeadsGUIs playerHeadsGUIs;
+    private AddRemoveHistoryGUI addRemovePunishmentsGUI;
+    private PunishmentsGUI PunishmentsGUI;
+    private ChoosePunishTypeGUI choosePunishTypeGUI;
+    private ChoosePunishScopeGUI choosePunishScopeGUI;
+    private FinalPunishmentGUI finalPunishmentGUI;
+    private RemovePunishmentsGUI removePunishmentsGUI;
+
 
     private BukkitTask broadcastTask; //Task for broadcasting
     private BotMain discordBot;
@@ -53,6 +68,14 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         Commands commands = new Commands(this);
         databaseManager = new DatabaseManager(this);
         verificationManager = new VerificationManager(this);
+        playerHeadsGUIs = new PlayerHeadsGUIs(this);
+        addRemovePunishmentsGUI = new AddRemoveHistoryGUI(this);
+        PunishmentsGUI = new PunishmentsGUI(this);
+        choosePunishTypeGUI = new ChoosePunishTypeGUI(this);
+        choosePunishScopeGUI = new  ChoosePunishScopeGUI(this);
+        finalPunishmentGUI = new FinalPunishmentGUI(this);
+        removePunishmentsGUI = new RemovePunishmentsGUI(this);
+        CheckPlayerBanMute checkPlayerBanMute = new CheckPlayerBanMute(this);
         discordGUI = new DiscordGUI(this);
         discordBlockManager = new DiscordBlock(this);
         botConfig = new YMLFiles(this, "botconfig.yml");
@@ -72,6 +95,14 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         getServer().getPluginManager().registerEvents(blockConfigurationGUI, this);
         getServer().getPluginManager().registerEvents(discordBlockManager, this);
         getServer().getPluginManager().registerEvents(appearanceChoiceGUI, this);
+        getServer().getPluginManager().registerEvents(playerHeadsGUIs, this);
+        getServer().getPluginManager().registerEvents(addRemovePunishmentsGUI, this);
+        getServer().getPluginManager().registerEvents(PunishmentsGUI, this);
+        getServer().getPluginManager().registerEvents(choosePunishTypeGUI, this);
+        getServer().getPluginManager().registerEvents(choosePunishScopeGUI, this);
+        getServer().getPluginManager().registerEvents(finalPunishmentGUI, this);
+        getServer().getPluginManager().registerEvents(checkPlayerBanMute, this);
+        getServer().getPluginManager().registerEvents(removePunishmentsGUI, this);
         getServer().getPluginManager().registerEvents(facingChoiceGUI, this);
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -177,6 +208,30 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         }, 20L*interval, 20L*interval);
     }
 
+    //Helps to format the time
+    public String formatTime(long millis){
+        long days =  TimeUnit.MILLISECONDS.toDays(millis);
+        millis -= TimeUnit.DAYS.toMillis(days);
+
+        long hours =  TimeUnit.MILLISECONDS.toHours(millis);
+        millis -=  TimeUnit.HOURS.toMillis(hours);
+
+        long minutes =  TimeUnit.MILLISECONDS.toMinutes(millis);
+        millis -= TimeUnit.MINUTES.toMillis(minutes);
+
+        long seconds =  TimeUnit.MILLISECONDS.toSeconds(millis);
+
+        StringBuilder sb = new StringBuilder();
+        if(minutes > 0) seconds = 0;
+
+        if(days > 0) sb.append(days).append("d ");
+        if(hours > 0) sb.append(hours).append("h ");
+        if(minutes > 0) sb.append(minutes).append("m ");
+        if(seconds > 0 || sb.isEmpty()) sb.append(seconds).append("s");
+
+        return sb.toString().trim();
+    }
+
     //Message that runs on the first setup
     private void firstRunSetup(){
         Bukkit.getLogger().info("=========================================================================");
@@ -215,6 +270,27 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public YMLFiles botFile() {
         return botConfig;
+    }
+    public PlayerHeadsGUIs getPlayerHeadsGUIs() {
+        return playerHeadsGUIs;
+    }
+    public AddRemoveHistoryGUI getAddRemovePunishGUI() {
+        return addRemovePunishmentsGUI;
+    }
+    public PunishmentsGUI getPunishmentsGUI() {
+        return PunishmentsGUI;
+    }
+    public ChoosePunishTypeGUI getChoosePunishTypeGUI() {
+        return choosePunishTypeGUI;
+    }
+    public FinalPunishmentGUI getFinalPunishmentGUI() {
+        return finalPunishmentGUI;
+    }
+    public ChoosePunishScopeGUI getChoosePunishScopeGUI() {
+        return choosePunishScopeGUI;
+    }
+    public RemovePunishmentsGUI getRemovePunishmentsGUI() {
+        return removePunishmentsGUI;
     }
     public FacingChoiceGUI getFacingChoiceGUI() {
         return facingChoiceGUI;

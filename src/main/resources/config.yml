@@ -1,7 +1,20 @@
 #Developed by _ItsAndrew_
 #This file is for configuring the main settings of DiscordUtils.
 
-chat-prefix: "&9&lDU &8>>" #The chat prefix shown to players.
+chat-prefix: "&9&lDU &8>>" #The chat prefix displayed in chat.
+
+#Configure the database system. As you can see, by default the plugin is configured for SQLite.
+database-system:
+  #This is the type of the database. If you run a network with multiple servers, use 'mysql'! If you run only 1 server, use 'sqlite'!
+  type: sqlite
+  file-name: "database.db" #This is ONLY for SQLite, and it is ONLY a name for the file
+
+  #These are the settings for the MySQL database. If you don't use MySQL, you can ignore this.
+  host:
+  port:
+  database:
+  username:
+  password:
 
 #Broadcast custom message configuration
 autobroadcast:
@@ -116,15 +129,119 @@ player-verified-message: #You can have more lines.
 
 #Give rewards to the player when the player verifies.
 rewards:
-  toggle-giving-rewards: true #Whether you want to give rewards when a player verifies or not
-  exp: 1 #In levels. It cannot be < 0!
+  toggle-giving-rewards: false #Whether you want to give rewards when a player verifies or not
+  exp: 0 #In levels. It cannot be < 0!
   items: #Items, you have an example here of how to write them. You can add as many rewards as you want.
     bread:
       material: bread
       quantity: 32
 
+#Configure the punishment messages.
+player-punishments-messages:
+  toggle: true #Whether you want to use these messages or not. This will toggle only CHAT MESSAGES!
 
-#Configure all the messages for DiscordUtils.
+  #The message when a player gets kicked. Use '\n' for line breaks. THIS IS NOT TRIGGERED BY THE 'toggle' BOOLEAN!!!
+  #Placeholders: %scope% -> The scope for the kick
+  #              %reason% -> The reason for the kick
+  kick-message: "&cYou have been kicked from this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%"
+
+  #The message when a player is permanently banned. Use '\n' for line breaks. THIS IS NOT TRIGGERED BY THE 'toggle' BOOLEAN!!!
+  #Placeholders: %scope% -> The scope of the ban (Minecraft/Discord/Global)
+  #              %reason% -> The reason for the ban
+  perm-ban-message: "&cYou are permanently banned from this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%"
+
+  #The message when a player gets a perm-ban-warn.
+  #Placeholders: %scope% -> The scope of the warning (Minecraft/Discord/Global)
+  #              %reason% -> The reason of the warning
+  perm-ban-warn-message:
+    - "&4&l------------------------------------------"
+    - " "
+    - "&cYou got a permanent ban warning."
+    - " "
+    - "&7Scope: %scope%"
+    - "&7Reason: &f%reason%"
+    - " "
+    - "&4&l------------------------------------------"
+
+  #The message when a player is temporarily banned. Use '\n' for line breaks. THIS IS NOT TRIGGERED BY THE 'toggle' BOOLEAN!
+  #Placeholders: %time_left% -> The duration of the ban
+  #              %scope% -> The scope of the ban (Minecraft/Discord/Global)
+  #              %reason% -> The reason for the ban
+  #              %expiration_time% -> The date when the ban will expire
+  temp-ban-message: "&cYou are temporarily banned for &f%time_left% &cfrom this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%\n&7Expires at: &f%expiration_time%"
+
+  #The message when a player gets a temporary ban warning. Use '&' for styles.
+  #Placeholders: %scope% -> The scope of the warning (Minecraft/Discord/Global)
+  #              %reason% -> The reason of the warning
+  temp-ban-warn-message:
+    - "&4&l------------------------------------------"
+    - " "
+    - "&cYou got a temporary ban warning."
+    - " "
+    - "&7Scope: %scope%"
+    - "&7Reason: &f%reason%"
+    - " "
+    - "&4&l------------------------------------------"
+
+  #The message when a player is permanently muted. Use '&' for styles.
+  #Placeholders: %scope% -> The scope of the mute (Minecraft/Discord/Global)
+  #              %reason% -> The reason of the mute
+  perm-mute-message:
+    - "&4&l------------------------------------------"
+    - " "
+    - "&cYou are permanently muted on this server."
+    - " "
+    - "&7Scope: %scope%"
+    - "&7Reason: &f%reason%"
+    - " "
+    - "&4&l------------------------------------------"
+
+  #The message when a player gets a permanent mute warning. Use '&' for styles.
+  #Placeholders: %scope% -> The scope of the warning (Minecraft/Discord/Global)
+  #              %reason% -> The reason of the warning
+  perm-mute-warn-message:
+    - "&4&l------------------------------------------"
+    - " "
+    - "&cYou got a permanent mute warning."
+    - " "
+    - "&7Scope: %scope%"
+    - "&7Reason: &f%reason%"
+    - " "
+    - "&4&l------------------------------------------"
+
+  #The message when a player is temporarily muted. Use '%' for styles.
+  #Placeholders: %scope% -> The scope of the mute (Minecraft/Discord/Global)
+  #              %reason% -> The reason of the mute
+  #              %time% -> Displays the time of the mute
+  #              %expiration_date% -> Displays the date when the mute expires
+  temp-mute-message:
+    - "&4&l------------------------------------------"
+    - " "
+    - "&cYou are temporarily muted for &f%time_left% &con this server."
+    - " "
+    - "&7Scope: %scope%"
+    - "&7Reason: &f%reason%"
+    - "&7Expires at: &f%expiration_time%"
+    - " "
+    - "&4&l------------------------------------------"
+
+  #The message when a player gets a temp mute warning.
+  #Placeholders: %scope% -> The scope of the mute warning (Minecraft/Discord/Global)
+  #              %reason% -> The reason for the mute warning.
+  temp-mute-warn-message:
+    - "&4&l------------------------------------------"
+    - " "
+    - "&cYou got a temporary mute warning."
+    - " "
+    - "&7Scope: %scope%"
+    - "&7Reason: &f%reason%"
+    - " "
+    - "&4&l------------------------------------------"
+
+#Set the amount of warns that a player must have to trigger a punishment.
+warns-amount: 3
+
+#Configure all the chat-messages for DiscordUtils.
 error-gui-message: "&cThere was error opening the GUI. Contact the server administrators about this."
 command-no-permission-message: "&cYou don't have permission to run this command."
 block-no-permission-message: "&cYou don't have permission to get the link."

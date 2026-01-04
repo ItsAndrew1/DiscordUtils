@@ -1,5 +1,5 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils.Plugin.GUIs;
+package me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import org.bukkit.*;
