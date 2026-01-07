@@ -11,11 +11,17 @@ import org.bukkit.Bukkit;
 public class BotMain{
     private final JDA jda;
     private final Guild discordServer;
+    private final PunishmentHistory punishmentHistory;
+    private final SlashCommands slashCommands;
 
     public BotMain(String token, String guildId, DiscordUtils plugin) throws Exception{
+        slashCommands = new SlashCommands(plugin, this);
+        punishmentHistory = new PunishmentHistory(plugin);
+
         //Creating the bot itself
         this.jda = JDABuilder.createDefault(token)
-                .addEventListeners(new SlashCommands(plugin))
+                .addEventListeners(slashCommands)
+                .addEventListeners(punishmentHistory)
                 .build()
                 .awaitReady();
 
@@ -27,7 +33,9 @@ public class BotMain{
 
         discordServer.updateCommands().addCommands(
                 Commands.slash("verify", "Verify your minecraft account!")
-                        .addOption(OptionType.INTEGER, "code", "Enter the code you were given.", true)
+                        .addOption(OptionType.INTEGER, "code", "Enter the code you were given.", true),
+                Commands.slash("pshistory", "View the history of a player!")
+                        .addOption(OptionType.STRING, "ign", "Enter the player's IGN!", true)
         ).queue();
     }
 
@@ -36,5 +44,11 @@ public class BotMain{
     }
     public Guild getDiscordServer() {
         return discordServer;
+    }
+    public SlashCommands getSlashCommands() {
+        return slashCommands;
+    }
+    public PunishmentHistory getPunishmentHistory() {
+        return punishmentHistory;
     }
 }

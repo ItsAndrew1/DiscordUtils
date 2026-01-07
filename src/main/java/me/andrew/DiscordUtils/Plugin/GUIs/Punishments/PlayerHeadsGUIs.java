@@ -15,6 +15,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class PlayerHeadsGUIs implements Listener{
@@ -143,8 +144,30 @@ public class PlayerHeadsGUIs implements Listener{
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the &lexact name &aof the player:"));
 
             plugin.waitForPlayerInput(player, input->{
-                try{
-                    OfflinePlayer inputPlayer = Bukkit.getOfflinePlayer(input);
+                    OfflinePlayer inputPlayer;
+                    try{
+                        inputPlayer = Bukkit.getOfflinePlayer(input);
+                    } catch(Exception e){
+                        throw new RuntimeException();
+                    }
+
+                    if(!inputPlayer.hasPlayedBefore()){
+                        player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUnknown player with name &l"+input+"&c!"));
+
+                        //Reopens the gui after 1/2 seconds
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    showGui(player, 1);
+                                } catch (SQLException ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                            }
+                        }.runTaskLater(plugin, 10L);
+                        return;
+                    }
 
                     if(inputPlayer == player){
                         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
@@ -166,22 +189,6 @@ public class PlayerHeadsGUIs implements Listener{
 
                     clickedPlayer = inputPlayer;
                     plugin.getAddRemovePunishGUI().showGui(player);
-                } catch (Exception e){
-                    player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUnknown player with name &l"+input+"&c!"));
-
-                    //Reopens the gui after 1/2 seconds
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                showGui(player, 1);
-                            } catch (SQLException ex) {
-                                throw new RuntimeException(ex);
-                            }
-                        }
-                    }.runTaskLater(plugin, 10L);
-                }
             });
         }
 

@@ -57,7 +57,7 @@ public class RemovePunishmentsGUI implements Listener {
 
         //If the player does not have any punishments
         OfflinePlayer targetPlayer = plugin.getPlayerHeadsGUIs().getClickedPlayer();
-        if(!plugin.getDatabaseManager().playerHasPunishments(targetPlayer.getUniqueId(), true)) gui.setItem(31, createButton(Material.BARRIER, ChatColor.translateAlternateColorCodes('&', "&cPlayer &e"+targetPlayer.getName()+" &cdoesn't have any active punishments at the moment!")));
+        if(!plugin.getDatabaseManager().playerHasPunishments(targetPlayer.getUniqueId())) gui.setItem(31, createButton(Material.BARRIER, ChatColor.translateAlternateColorCodes('&', "&cPlayer &e"+targetPlayer.getName()+" &cdoesn't have any active punishments at the moment!")));
 
         //If the player only has warns, still create the no punishments item
         else if(playerHasOnlyWarns(targetPlayer)) gui.setItem(31, createButton(Material.BARRIER, ChatColor.translateAlternateColorCodes('&', "&cPlayer &e"+targetPlayer.getName()+" &cdoesn't have any active punishments at the moment!")));

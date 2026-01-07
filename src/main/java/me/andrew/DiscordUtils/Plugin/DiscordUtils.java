@@ -119,10 +119,12 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
         //Creates the database
         try {
-            databaseManager.createDb();
+            databaseManager.connectDb();
             Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            Bukkit.getLogger().warning("[DISCORDUTILS] Failed to create database connection. See message: ");
+            Bukkit.getLogger().warning("[DISCORDUTILS]: "+e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
         }
 
         //Starts the discord bot if everything is ok
@@ -135,7 +137,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             }
             else discordBot = new BotMain(botToken, guildId, this);
         } catch (Exception e){
-            Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. See message:");
+            Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. The bot won't start. See message:");
             Bukkit.getLogger().warning(e.getMessage());
         }
     }

@@ -73,7 +73,7 @@ public class PunishmentsGUI implements Listener{
         gui.setItem(49, returnButton);
 
         //Setting the punishments
-        if(!plugin.getDatabaseManager().playerHasPunishments(clickedPlayerUUID,  false)){
+        if(!plugin.getDatabaseManager().playerHasPunishments(clickedPlayerUUID)){
             //No punishments item
             ItemStack noPunish = new ItemStack(Material.BARRIER);
             ItemMeta noPunishMeta = noPunish.getItemMeta();

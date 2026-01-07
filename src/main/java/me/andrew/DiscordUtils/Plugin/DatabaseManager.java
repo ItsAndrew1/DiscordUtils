@@ -21,19 +21,40 @@ public class DatabaseManager {
     }
 
     //Creates the database
-    public void createDb() throws SQLException {
-        //Creates the 'database.db' inside the DiscordUtils folder
-        File dbFile = new File(plugin.getDataFolder(), "database.db");
-        String connectionString = "jdbc:sqlite:" + dbFile.getAbsolutePath();
-        connection = DriverManager.getConnection(connectionString);
+    public void connectDb() throws SQLException {
+        //Gets the database type (SQLite or MySQL)
+        String databaseType = plugin.getConfig().getString("database-system.type");
+
+        //If the type is 'sqlite', creates the database file in DiscordUtils folder
+        if(databaseType.equals("sqlite")){
+            String fileName = plugin.getConfig().getString("database-system.file-name");
+            File dbFile = new File(plugin.getDataFolder(), fileName);
+
+            String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
+            connection = DriverManager.getConnection(url);
+        }
+
+        //If the type is 'mysql', sets up the connection with the data from config.yml
+        if(databaseType.equals("mysql")){
+            String host = plugin.getConfig().getString("database-system.host");
+            String port = plugin.getConfig().getString("database-system.port");
+            String database = plugin.getConfig().getString("database-system.database");
+            String username = plugin.getConfig().getString("database-system.username");
+            String password = plugin.getConfig().getString("database-system.password");
+
+            String url = "jdbc:mysql://" + host + ":" + port + "/" + database +
+                    "?useSSL=false&autoReconnect=true&characterEncoding=utf8";
+            connection = DriverManager.getConnection(url, username, password);
+        }
 
         //Creates the playersVerification table
         String playersTable = """
              CREATE TABLE IF NOT EXISTS playersVerification(
-                uuid TEXT PRIMARY KEY,
-                discordId TEXT,
-                verified BOOLEAN DEFAULT FALSE,
-                hasVerified BOOLEAN DEFAULT FALSE
+                uuid TEXT UNIQUE PRIMARY KEY,
+                ign TEXT UNIQUE,
+                discordId TEXT UNIQUE,
+                verified TINYINT(1) DEFAULT 0,
+                hasVerified TINYINT(1) DEFAULT 0
              );
              """;
         try(Statement statement = connection.createStatement()){
@@ -63,8 +84,8 @@ public class DatabaseManager {
                     staff TEXT,
                     created_at BIGINT,
                     expire_at BIGINT,
-                    active BOOLEAN DEFAULT TRUE,
-                    removed BOOLEAN,
+                    active TINYINT(1) DEFAULT 1,
+                    removed TINYINT(1) DEFAULT 0,
                     removed_at BIGINT
                 );
         """;
@@ -159,9 +180,8 @@ public class DatabaseManager {
 
 
     //Helper methods for punishments
-    public boolean playerHasPunishments(UUID uuid, boolean active) throws SQLException {
+    public boolean playerHasPunishments(UUID uuid) throws SQLException {
         String sql = "SELECT 1 FROM punishments WHERE uuid = ?";
-        if(active) sql+=" AND active = 1";
 
         try(PreparedStatement ps = connection.prepareStatement(sql)){
             ps.setString(1, uuid.toString());
@@ -224,7 +244,7 @@ public class DatabaseManager {
         }
     }
 
-    private Punishment mapPunishment(ResultSet rs) throws SQLException {
+    public Punishment mapPunishment(ResultSet rs) throws SQLException {
         return new Punishment(
                 PunishmentType.valueOf(rs.getString("type")),
                 rs.getInt("id"),

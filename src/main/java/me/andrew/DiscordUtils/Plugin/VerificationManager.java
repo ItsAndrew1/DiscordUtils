@@ -22,8 +22,9 @@ public class VerificationManager{
     public void verificationProcess(Player player) throws SQLException {
         //Inserts the player into the playersVerification table if the doesn't exit already
         if(!plugin.getDatabaseManager().playerAlreadyExits(player.getUniqueId())){
-            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO playersVerification (uuid, discordId, verified, hasVerified) values (?, null, false, false)")){
+            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO playersVerification (uuid, ign, discordId, verified, hasVerified) values (?, ?, null, false, false)")){
                 ps.setString(1, player.getUniqueId().toString());
+                ps.setString(2, player.getName());
                 ps.executeUpdate();
             }
         }
