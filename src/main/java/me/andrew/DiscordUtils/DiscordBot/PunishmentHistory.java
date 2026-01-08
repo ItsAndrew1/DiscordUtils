@@ -81,9 +81,12 @@ public class PunishmentHistory extends ListenerAdapter{
         //Creating the buttons needed
         Button prevPage = Button.primary("page_prev", "◀").withDisabled(state.page == 1);
         Button nextPage = Button.primary("page_next", "▶").withDisabled(punishments.size() <= limit);
+        Button filterAll = Button.secondary("filter_all", "ALL").withDisabled(state.filter == PunishmentsFilter.ALL);
+        Button filterActive = Button.secondary("filter_active", "ACTIVE").withDisabled(state.filter == PunishmentsFilter.ACTIVE);
+        Button filterExpired = Button.secondary("filter_expired", "EXPIRED").withDisabled(state.filter == PunishmentsFilter.EXPIRED);
 
         hook.editOriginalEmbeds(embedBuilder.build())
-                .setComponents(ActionRow.of(prevPage, nextPage))
+                .setComponents(ActionRow.of(prevPage, filterAll, filterActive, filterExpired, nextPage))
                 .queue();
     }
 
@@ -93,14 +96,18 @@ public class PunishmentHistory extends ListenerAdapter{
         if(!states.containsKey(userId)) return;
 
         PaginationState state = states.get(userId);
-        if(event.getComponentId().equals("page_next")) state.page++;
-        else if(event.getComponentId().equals("page_prev")) state.page--;
+        try{
+            switch(event.getComponentId()){
+                case "page_prev" -> state.page--;
+                case "page_next" -> state.page++;
+                case "filter_all" -> state.filter = PunishmentsFilter.ALL;
+                case "filter_active" -> state.filter = PunishmentsFilter.ACTIVE;
+                case "filter_expired" -> state.filter = PunishmentsFilter.EXPIRED;
+            }
 
-        states.put(userId, state);
-        try {
             sendPage(event.getHook(), state);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e){
+            throw new RuntimeException();
         }
 
         event.deferEdit().queue();
