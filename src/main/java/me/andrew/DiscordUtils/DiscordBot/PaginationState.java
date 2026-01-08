@@ -8,10 +8,12 @@ public class PaginationState {
     UUID targetUUID;
     PunishmentsFilter filter;
     int page;
+    boolean self;
 
-    public PaginationState(UUID targetUUID, PunishmentsFilter filter, int page) {
+    public PaginationState(UUID targetUUID, PunishmentsFilter filter, int page, boolean self) {
         this.targetUUID = targetUUID;
         this.filter = filter;
         this.page = page;
+        this.self = self;
     }
 }

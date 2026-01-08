@@ -12,6 +12,9 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.jspecify.annotations.NonNull;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -64,16 +67,49 @@ public class SlashCommands extends ListenerAdapter{
                 }
             }
 
+            //pshistory command
             case "pshistory" -> {
-                //Getting the target player
-                String ign = event.getOption("ign").getAsString();
-                OfflinePlayer targetPlayer;
-                try{
-                    targetPlayer = Bukkit.getOfflinePlayer(ign);
-                } catch (Exception e){
+                OfflinePlayer userPlayer;
+                try {
+                    userPlayer = getUserPlayer(event.getUser().getId());
+                } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
-                if(!Arrays.stream(Bukkit.getOfflinePlayers()).toList().contains(targetPlayer)){
+
+                //Check if the user is verified
+                if(userPlayer == null){
+                    event.reply("You **are not** verified! Please run */verify* on our server and try again.").setEphemeral(true).queue();
+                    return;
+                }
+
+                if(event.getOption("ign") == null){
+                    try {
+                        //Check if the user has any punishments
+                        if(!plugin.getDatabaseManager().playerHasPunishments(userPlayer.getUniqueId())){
+                            event.reply("You **do not have** any punishments yet!").setEphemeral(true).queue();
+                            return;
+                        }
+
+                        event.deferReply().setEphemeral(true).queue();
+                        botMain.getPunishmentHistory().displayPunishments(event, userPlayer.getUniqueId(), PunishmentsFilter.ALL, true);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return;
+                }
+
+                //Getting the target player
+                String ign = event.getOption("ign").getAsString();
+                OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
+
+                //Check if the target player is the user player
+                if(targetPlayer == userPlayer){
+                    event.reply("You **cannot** do this! Use */pshistory* to view **your own** punishments.").setEphemeral(true).queue();
+                    return;
+                }
+
+                //Checking if the player exists on the server.
+                if(!targetPlayer.hasPlayedBefore()){
                     event.reply("Player "+targetPlayer.getName()+" doesn't exist on this server! Please enter a valid name.").setEphemeral(true).queue();
                     return;
                 }
@@ -81,53 +117,32 @@ public class SlashCommands extends ListenerAdapter{
                 //Check if the target player has any punishments
                 try {
                     if(!plugin.getDatabaseManager().playerHasPunishments(targetPlayer.getUniqueId())){
-                        event.reply("Player **\\"+targetPlayer.getName()+"** does not have any punishments yet!").queue();
+                        event.reply("Player **\\"+targetPlayer.getName()+"** does not have any punishments yet!").setEphemeral(true).queue();
                         return;
                     }
+
+                    //Adding the user to the requests and showing the punishments
+                    pendingHistoryRequests.put(event.getUser().getIdLong(), targetPlayer.getUniqueId());
+
+                    event.deferReply().setEphemeral(true).queue(); //Getting the interaction hook
+                    botMain.getPunishmentHistory().displayPunishments(event, targetPlayer.getUniqueId(), PunishmentsFilter.ALL, false);
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
-
-                //Adding the user to the requests.
-                pendingHistoryRequests.put(event.getUser().getIdLong(), targetPlayer.getUniqueId());
-
-                //Getting the scope with a dropdown menu
-                StringSelectMenu filterMenu = StringSelectMenu.create("filter_select")
-                        .setPlaceholder("All/Active/Expired Punishments")
-                        .setRequiredRange(1, 1)
-                        .addOption("All", "ALL")
-                        .addOption("Active", "ACTIVE")
-                        .addOption("Expired", "EXPIRED")
-                        .build();
-                event.reply("Choose the filter type").setEphemeral(true).addComponents(ActionRow.of(filterMenu)).queue();
             }
         }
     }
 
+    private OfflinePlayer getUserPlayer(String userId) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        OfflinePlayer userPlayer = null;
 
-    @Override
-    public void onStringSelectInteraction(@NonNull StringSelectInteractionEvent event){
-        if(!event.getComponentId().equals("filter_select")) return;
-
-        String option = event.getValues().getFirst();
-        PunishmentsFilter filter = switch(option){
-            case "ALL" -> PunishmentsFilter.ALL;
-            case "ACTIVE" -> PunishmentsFilter.ACTIVE;
-            case "EXPIRED" -> PunishmentsFilter.EXPIRED;
-            default -> null;
-        };
-
-        UUID targetUUID = pendingHistoryRequests.remove(event.getUser().getIdLong());
-        if(targetUUID == null){
-            event.reply("❌ Context expired. Please run the command again!").setEphemeral(true).queue();
-            return;
+        try(PreparedStatement ps = dbConnection.prepareStatement("SELECT ign FROM playersVerification WHERE discordId = ?")){
+            ps.setString(1, userId);
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) userPlayer = Bukkit.getOfflinePlayer(rs.getString("ign"));
+            }
         }
-
-        event.deferEdit().queue();
-        try {
-            botMain.getPunishmentHistory().displayPunishments(event, targetUUID, filter);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        return userPlayer;
     }
 }

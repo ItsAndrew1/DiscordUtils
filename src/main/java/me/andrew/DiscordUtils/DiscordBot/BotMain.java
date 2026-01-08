@@ -35,7 +35,7 @@ public class BotMain{
                 Commands.slash("verify", "Verify your minecraft account!")
                         .addOption(OptionType.INTEGER, "code", "Enter the code you were given.", true),
                 Commands.slash("pshistory", "View the history of a player!")
-                        .addOption(OptionType.STRING, "ign", "Enter the player's IGN!", true)
+                        .addOption(OptionType.STRING, "ign", "Enter the player's IGN!", false)
         ).queue();
     }
 

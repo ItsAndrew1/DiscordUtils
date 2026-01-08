@@ -36,11 +36,12 @@ public class PunishmentHistory extends ListenerAdapter{
         this.plugin = plugin;
     }
 
-    public void displayPunishments(StringSelectInteractionEvent event , UUID targetUUID, PunishmentsFilter filter) throws SQLException{
+    public void displayPunishments(SlashCommandInteractionEvent event , UUID targetUUID, PunishmentsFilter filter, boolean self) throws SQLException{
         PaginationState initialState = new PaginationState(
                 targetUUID,
                 filter,
-                1
+                1,
+                self
         );
 
         states.put(event.getUser().getIdLong(), initialState);
@@ -54,7 +55,10 @@ public class PunishmentHistory extends ListenerAdapter{
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setTitle("\\"+targetPlayer.getName()+"'s Punishments ("+state.filter.name()+")");
+
+        //If the player does /pshistory, displays their punishments
+        if(state.self) embedBuilder.setTitle("Your Punishments ("+state.filter.name()+")");
+        else embedBuilder.setTitle("\\"+targetPlayer.getName()+"'s Punishments ("+state.filter.name()+")");
         embedBuilder.setColor(Color.RED.asRGB());
         embedBuilder.setFooter("Page "+state.page);
 
@@ -73,7 +77,7 @@ public class PunishmentHistory extends ListenerAdapter{
                     + "\n" + "**Reason**: "+p.getReason()+"\n"
                     + "**Staff**: \\"+p.getStaff()+"\n";
 
-            if(isPsTemporary(p)) fieldValue += "**Expires At**: "+formatTime(p.getExpiresAt())+"\n";
+            if(isPsTemporary(p) && p.isActive()) fieldValue += "**Expires At**: "+formatTime(p.getExpiresAt())+"\n";
 
             embedBuilder.addField(fieldTitle,fieldValue,true);
         }
@@ -100,9 +104,18 @@ public class PunishmentHistory extends ListenerAdapter{
             switch(event.getComponentId()){
                 case "page_prev" -> state.page--;
                 case "page_next" -> state.page++;
-                case "filter_all" -> state.filter = PunishmentsFilter.ALL;
-                case "filter_active" -> state.filter = PunishmentsFilter.ACTIVE;
-                case "filter_expired" -> state.filter = PunishmentsFilter.EXPIRED;
+                case "filter_all" -> {
+                    state.page = 1;
+                    state.filter = PunishmentsFilter.ALL;
+                }
+                case "filter_active" ->{
+                    state.page = 1;
+                    state.filter = PunishmentsFilter.ACTIVE;
+                }
+                case "filter_expired" ->{
+                    state.page = 1;
+                    state.filter = PunishmentsFilter.EXPIRED;
+                }
             }
 
             sendPage(event.getHook(), state);
