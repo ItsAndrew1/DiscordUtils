@@ -24,7 +24,6 @@ import java.util.UUID;
 public class SlashCommands extends ListenerAdapter{
     private final DiscordUtils plugin;
     private final BotMain botMain;
-    private final Map<Long, UUID> pendingHistoryRequests = new HashMap<>();
 
     public SlashCommands(DiscordUtils plugin, BotMain botMain){
         this.plugin = plugin;
@@ -32,10 +31,10 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     @Override
-    public void onSlashCommandInteraction(@NonNull SlashCommandInteractionEvent event){
+    public void onSlashCommandInteraction(@NonNull SlashCommandInteractionEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
-        switch(event.getName()) {
+        switch (event.getName()) {
             //The 'verify' command
             case "verify" -> {
                 String userId = event.getUser().getId();
@@ -47,7 +46,7 @@ public class SlashCommands extends ListenerAdapter{
                     throw new RuntimeException(e);
                 }
 
-                if(uuid == null){
+                if (uuid == null) {
                     boolean ephemeral = botConfig.getBoolean("iecm-set-ephemeral");
                     String message = botConfig.getString("invalid-expired-code-message");
                     event.reply(message).setEphemeral(ephemeral).queue();
@@ -77,15 +76,15 @@ public class SlashCommands extends ListenerAdapter{
                 }
 
                 //Check if the user is verified
-                if(userPlayer == null){
+                if (userPlayer == null) {
                     event.reply("You **are not** verified! Please run */verify* on our server and try again.").setEphemeral(true).queue();
                     return;
                 }
 
-                if(event.getOption("ign") == null){
+                if (event.getOption("ign") == null) {
                     try {
                         //Check if the user has any punishments
-                        if(!plugin.getDatabaseManager().playerHasPunishments(userPlayer.getUniqueId())){
+                        if (!plugin.getDatabaseManager().playerHasPunishments(userPlayer.getUniqueId())) {
                             event.reply("You **do not have** any punishments yet!").setEphemeral(true).queue();
                             return;
                         }
@@ -103,26 +102,23 @@ public class SlashCommands extends ListenerAdapter{
                 OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
 
                 //Check if the target player is the user player
-                if(targetPlayer == userPlayer){
+                if (targetPlayer == userPlayer) {
                     event.reply("You **cannot** do this! Use */pshistory* to view **your own** punishments.").setEphemeral(true).queue();
                     return;
                 }
 
                 //Checking if the player exists on the server.
-                if(!targetPlayer.hasPlayedBefore()){
-                    event.reply("Player "+targetPlayer.getName()+" doesn't exist on this server! Please enter a valid name.").setEphemeral(true).queue();
+                if (!targetPlayer.hasPlayedBefore()) {
+                    event.reply("Player " + targetPlayer.getName() + " doesn't exist on this server! Please enter a valid name.").setEphemeral(true).queue();
                     return;
                 }
 
                 //Check if the target player has any punishments
                 try {
-                    if(!plugin.getDatabaseManager().playerHasPunishments(targetPlayer.getUniqueId())){
-                        event.reply("Player **\\"+targetPlayer.getName()+"** does not have any punishments yet!").setEphemeral(true).queue();
+                    if (!plugin.getDatabaseManager().playerHasPunishments(targetPlayer.getUniqueId())) {
+                        event.reply("Player **\\" + targetPlayer.getName() + "** does not have any punishments yet!").setEphemeral(true).queue();
                         return;
                     }
-
-                    //Adding the user to the requests and showing the punishments
-                    pendingHistoryRequests.put(event.getUser().getIdLong(), targetPlayer.getUniqueId());
 
                     event.deferReply().setEphemeral(true).queue(); //Getting the interaction hook
                     botMain.getPunishmentHistory().displayPunishments(event, targetPlayer.getUniqueId(), PunishmentsFilter.ALL, false);
@@ -134,17 +130,17 @@ public class SlashCommands extends ListenerAdapter{
             case "punish" -> {
                 try {
                     //Getting the player from the ign
-                    String ign =  event.getOption("ign").getAsString();
+                    String ign = event.getOption("ign").getAsString();
                     OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
 
-                    if(targetPlayer == getUserPlayer(event.getUser().getId())){
+                    if (targetPlayer == getUserPlayer(event.getUser().getId())) {
                         event.reply("You cannot punish yourself!").setEphemeral(true).queue();
                         return;
                     }
 
                     //Check if the target player has played on the server
-                    if(!targetPlayer.hasPlayedBefore()){
-                        event.reply("Player **\\"+targetPlayer.getName()+"** does not exist on the server. Please enter a valid name!").setEphemeral(true).queue();
+                    if (!targetPlayer.hasPlayedBefore()) {
+                        event.reply("Player **\\" + targetPlayer.getName() + "** does not exist on the server. Please enter a valid name!").setEphemeral(true).queue();
                         return;
                     }
 

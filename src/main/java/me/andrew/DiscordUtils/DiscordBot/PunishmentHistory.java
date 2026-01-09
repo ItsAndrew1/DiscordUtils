@@ -195,3 +195,19 @@ public class PunishmentHistory extends ListenerAdapter{
         return p.getPunishmentType() == PunishmentType.TEMP_BAN || p.getPunishmentType() == PunishmentType.TEMP_MUTE;
     }
 }
+
+class PaginationState{
+    UUID targetUUID;
+    PunishmentsFilter filter;
+    int page;
+    boolean self;
+    long lastInteraction;
+
+    public PaginationState(UUID targetUUID, PunishmentsFilter filter, int page, boolean self, long lastInteraction) {
+        this.targetUUID = targetUUID;
+        this.filter = filter;
+        this.page = page;
+        this.self = self;
+        this.lastInteraction = lastInteraction;
+    }
+}

@@ -1,6 +1,7 @@
 package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import me.andrew.DiscordUtils.Plugin.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentType;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
@@ -10,17 +11,35 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import org.bukkit.OfflinePlayer;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class AddPunishments extends ListenerAdapter{
     private final DiscordUtils plugin;
-    private PunishmentType type;
+    private final Map<Long, AddingState> addingStateMap = new HashMap<>();
 
     public AddPunishments(DiscordUtils plugin, OfflinePlayer targetPlayer, SlashCommandInteractionEvent event) {
         this.plugin = plugin;
-        handleTask(targetPlayer, event.getHook());
+
+        //Creating the state
+        AddingState newState = new AddingState(
+                targetPlayer,
+                null,
+                null,
+                null,
+                0,
+                System.currentTimeMillis()
+        );
+
+        //Attaching each user the state (into a map)
+        addingStateMap.put(event.getUser().getIdLong(), newState);
+
+        handleTask(event.getHook(), newState);
     }
 
-    private void handleTask(OfflinePlayer targetPlayer, InteractionHook hook) {
-        StringSelectMenu menu = StringSelectMenu.create("punishment:type")
+    private void handleTask(InteractionHook hook, AddingState state) {
+        //Menu for punishment type
+        StringSelectMenu setTypeMenu = StringSelectMenu.create("punishment:type")
                 .setPlaceholder("Choose punishment type")
                 .setRequiredRange(1, 1)
                 .addOption("Permanent Ban", "PERM_BAN")
@@ -34,7 +53,17 @@ public class AddPunishments extends ListenerAdapter{
                 .addOption("Temporary Mute Warning", "TEMP_MUTE_WARN")
                 .build();
 
-        hook.setEphemeral(true).sendMessage("Choose Punishment Type").addComponents(ActionRow.of(menu));
+        hook.setEphemeral(true).sendMessage("Choose Punishment Type").addComponents(ActionRow.of(setTypeMenu)).queue();
+
+        //Menu for punishment scope
+        StringSelectMenu setScopeMenu = StringSelectMenu.create("punishment:scope")
+                .setPlaceholder("Choose punishment scope")
+                .setRequiredRange(1, 1)
+                .addOption("Minecraft Scope", "MINECRAFT")
+                .addOption("Discord Scope", "DISCORD")
+                .addOption("Global Scope", "GLOBAL")
+                .build();
+        hook.setEphemeral(true).sendMessage("Choose Punishment Scope").addComponents(ActionRow.of(setScopeMenu)).queue();
     }
 
     @Override
@@ -47,5 +76,29 @@ public class AddPunishments extends ListenerAdapter{
                 case "PERM_MUTE" -> type = PunishmentType.PERM_MUTE;
             }
         }
+
+        if(event.getInteraction().getId().equalsIgnoreCase("punishment:scope")){
+            switch(event.getInteraction().getValues().getFirst()){
+                case "MINECRAFT" -> scope
+            }
+        }
+    }
+}
+
+class AddingState{
+    OfflinePlayer targetPlayer;
+    PunishmentType type;
+    PunishmentScopes scope;
+    String reason;
+    long expiresAt;
+    long lastInteraction;
+
+    public AddingState(OfflinePlayer targetPlayer, PunishmentType type, PunishmentScopes scope, String reason, long expiresAt, long lastInteraction){
+        this.targetPlayer = targetPlayer;
+        this.type = type;
+        this.scope = scope;
+        this.reason = reason;
+        this.expiresAt = expiresAt;
+        this.lastInteraction = lastInteraction;
     }
 }
