@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class PunishmentHistory extends ListenerAdapter{
     private final DiscordUtils plugin;
@@ -34,6 +35,12 @@ public class PunishmentHistory extends ListenerAdapter{
 
     public PunishmentHistory(DiscordUtils plugin){
         this.plugin = plugin;
+
+        //Task for auto removing users from the states map
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, ()->{
+            long now = System.currentTimeMillis();
+            states.entrySet().removeIf(entry -> now - entry.getValue().lastInteraction > TimeUnit.MINUTES.toMillis(1));
+        },0L, 20L*60); //Runs each minute
     }
 
     public void displayPunishments(SlashCommandInteractionEvent event , UUID targetUUID, PunishmentsFilter filter, boolean self) throws SQLException{
@@ -41,7 +48,8 @@ public class PunishmentHistory extends ListenerAdapter{
                 targetUUID,
                 filter,
                 1,
-                self
+                self,
+                System.currentTimeMillis()
         );
 
         states.put(event.getUser().getIdLong(), initialState);
@@ -49,6 +57,12 @@ public class PunishmentHistory extends ListenerAdapter{
     }
 
     private void sendPage(InteractionHook hook, PaginationState state) throws SQLException{
+        //Check if user still has the interaction going
+        if(!states.containsKey(hook.getInteraction().getUser().getIdLong())){
+            hook.setEphemeral(true).editOriginal("The connection *timed out*! Please run **/pshistory** again.").queue();
+            return;
+        }
+
         int limit = 6;
         int offset = (state.page-1) * limit;
         List<Punishment> punishments = getPunishmentsFromDB(state.targetUUID, state.filter, limit, offset);
@@ -118,6 +132,7 @@ public class PunishmentHistory extends ListenerAdapter{
                 }
             }
 
+            state.lastInteraction = System.currentTimeMillis();
             sendPage(event.getHook(), state);
         } catch (Exception e){
             throw new RuntimeException();

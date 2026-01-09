@@ -130,6 +130,30 @@ public class SlashCommands extends ListenerAdapter{
                     throw new RuntimeException(e);
                 }
             }
+
+            case "punish" -> {
+                try {
+                    //Getting the player from the ign
+                    String ign =  event.getOption("ign").getAsString();
+                    OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
+
+                    if(targetPlayer == getUserPlayer(event.getUser().getId())){
+                        event.reply("You cannot punish yourself!").setEphemeral(true).queue();
+                        return;
+                    }
+
+                    //Check if the target player has played on the server
+                    if(!targetPlayer.hasPlayedBefore()){
+                        event.reply("Player **\\"+targetPlayer.getName()+"** does not exist on the server. Please enter a valid name!").setEphemeral(true).queue();
+                        return;
+                    }
+
+                    event.deferReply().setEphemeral(true).queue();
+                    new AddPunishments(plugin, targetPlayer, event);
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 
