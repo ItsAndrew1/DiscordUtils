@@ -9,18 +9,28 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class AddPunishments extends ListenerAdapter{
     private final DiscordUtils plugin;
     private final Map<Long, AddingState> addingStateMap = new HashMap<>();
 
-    public AddPunishments(DiscordUtils plugin, OfflinePlayer targetPlayer, SlashCommandInteractionEvent event) {
+    public AddPunishments(DiscordUtils plugin) {
         this.plugin = plugin;
 
+        //Task for auto deleting users from the map
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+            long now = System.currentTimeMillis();
+            addingStateMap.entrySet().removeIf(entry -> now - entry.getValue().lastInteraction > TimeUnit.MINUTES.toMillis(2));
+        }, 0L, 20L*60); //Task runs every minute
+    }
+
+    public void punishPlayer(SlashCommandInteractionEvent event, OfflinePlayer targetPlayer) {
         //Creating the state
         AddingState newState = new AddingState(
                 targetPlayer,
@@ -34,10 +44,6 @@ public class AddPunishments extends ListenerAdapter{
         //Attaching each user the state (into a map)
         addingStateMap.put(event.getUser().getIdLong(), newState);
 
-        handleTask(event.getHook(), newState);
-    }
-
-    private void handleTask(InteractionHook hook, AddingState state) {
         //Menu for punishment type
         StringSelectMenu setTypeMenu = StringSelectMenu.create("punishment:type")
                 .setPlaceholder("Choose punishment type")
@@ -53,33 +59,33 @@ public class AddPunishments extends ListenerAdapter{
                 .addOption("Temporary Mute Warning", "TEMP_MUTE_WARN")
                 .build();
 
-        hook.setEphemeral(true).sendMessage("Choose Punishment Type").addComponents(ActionRow.of(setTypeMenu)).queue();
-
-        //Menu for punishment scope
-        StringSelectMenu setScopeMenu = StringSelectMenu.create("punishment:scope")
-                .setPlaceholder("Choose punishment scope")
-                .setRequiredRange(1, 1)
-                .addOption("Minecraft Scope", "MINECRAFT")
-                .addOption("Discord Scope", "DISCORD")
-                .addOption("Global Scope", "GLOBAL")
-                .build();
-        hook.setEphemeral(true).sendMessage("Choose Punishment Scope").addComponents(ActionRow.of(setScopeMenu)).queue();
+        event.reply("Choose punishment type: ").setEphemeral(true).addComponents(ActionRow.of(setTypeMenu)).queue();
     }
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event){
+        long userId = event.getUser().getIdLong();
+        AddingState state = addingStateMap.get(userId);
+
         if(event.getInteraction().getId().equalsIgnoreCase("punishment:type")){
             switch(event.getInteraction().getValues().getFirst()){
-                case "PERM_BAN" -> type = PunishmentType.PERM_BAN;
-                case "TEMP_BAN" -> type = PunishmentType.TEMP_BAN;
-                case "PERM_BAN_WARN" -> type = PunishmentType.PERM_BAN_WARN;
-                case "PERM_MUTE" -> type = PunishmentType.PERM_MUTE;
+                case "PERM_BAN" -> state.type = PunishmentType.PERM_BAN;
+                case "TEMP_BAN" -> state.type = PunishmentType.TEMP_BAN;
+                case "PERM_BAN_WARN" -> state.type = PunishmentType.PERM_BAN_WARN;
+                case "TEMP_BAN_WARN" -> state.type = PunishmentType.TEMP_BAN_WARN;
+                case "KICK" -> state.type = PunishmentType.KICK;
+                case "PERM_MUTE" -> state.type = PunishmentType.PERM_MUTE;
+                case "TEMP_MUTE" -> state.type = PunishmentType.TEMP_MUTE;
+                case "PERM_MUTE_WARN" -> state.type = PunishmentType.PERM_MUTE_WARN;
+                case "TEMP_MUTE_WARN" -> state.type = PunishmentType.TEMP_MUTE_WARN;
             }
         }
 
         if(event.getInteraction().getId().equalsIgnoreCase("punishment:scope")){
             switch(event.getInteraction().getValues().getFirst()){
-                case "MINECRAFT" -> scope
+                case "MINECRAFT" -> state.scope = PunishmentScopes.MINECRAFT;
+                case "DISCORD" -> state.scope = PunishmentScopes.DISCORD;
+                case "GLOBAL" -> state.scope = PunishmentScopes.GLOBAL;
             }
         }
     }

@@ -12,10 +12,12 @@ public class BotMain{
     private final JDA jda;
     private final Guild discordServer;
     private final PunishmentHistory punishmentHistory;
+    private final AddPunishments addPunishments;
 
     public BotMain(String token, String guildId, DiscordUtils plugin) throws Exception{
         SlashCommands slashCommands = new SlashCommands(plugin, this);
         punishmentHistory = new PunishmentHistory(plugin);
+        addPunishments = new AddPunishments(plugin);
 
         //Creating the bot itself
         this.jda = JDABuilder.createDefault(token)
@@ -49,5 +51,8 @@ public class BotMain{
     }
     public PunishmentHistory getPunishmentHistory() {
         return punishmentHistory;
+    }
+    public AddPunishments getAddPunishments() {
+        return addPunishments;
     }
 }
