@@ -23,6 +23,7 @@ public class BotMain{
         this.jda = JDABuilder.createDefault(token)
                 .addEventListeners(slashCommands)
                 .addEventListeners(punishmentHistory)
+                .addEventListeners(addPunishments)
                 .build()
                 .awaitReady();
 

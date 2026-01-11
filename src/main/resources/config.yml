@@ -124,6 +124,9 @@ use-verification-code-message: #You can have more lines
   - "&aYour code is &e&l%code%&a! Do &e&l/verify <code> &ain our discord server to complete the verification."
   - "&cThe code will expire in &l%expire_at% minutes&c!"
 
+#Set the number of digits for the Punishment IDs.
+punishment-id-length: 6 #The ID structure is '#'+the digits!
+
 player-verified-message: #You can have more lines.
   - "&aCongrats! You have officially been verified."
 
@@ -148,7 +151,8 @@ player-punishments-messages:
   #The message when a player is permanently banned. Use '\n' for line breaks. THIS IS NOT TRIGGERED BY THE 'toggle' BOOLEAN!!!
   #Placeholders: %scope% -> The scope of the ban (Minecraft/Discord/Global)
   #              %reason% -> The reason for the ban
-  perm-ban-message: "&cYou are permanently banned from this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%"
+  #              %id% -> The ID of the ban. Useful for players to appeal!
+  perm-ban-message: "&cYou are permanently banned from this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%\n\n&7Ban ID: &f%id%\n&7Use this ID to appeal."
 
   #The message when a player gets a perm-ban-warn.
   #Placeholders: %scope% -> The scope of the warning (Minecraft/Discord/Global)
@@ -167,8 +171,9 @@ player-punishments-messages:
   #Placeholders: %time_left% -> The duration of the ban
   #              %scope% -> The scope of the ban (Minecraft/Discord/Global)
   #              %reason% -> The reason for the ban
+  #              %id% -> The ID of the ban. Useful for players to appeal.
   #              %expiration_time% -> The date when the ban will expire
-  temp-ban-message: "&cYou are temporarily banned for &f%time_left% &cfrom this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%\n&7Expires at: &f%expiration_time%"
+  temp-ban-message: "&cYou are temporarily banned for &f%time_left% &cfrom this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%\n&7Expires at: &f%expiration_time%\n\n&7Ban ID: &f%id%\n&7Use this ID to appeal."
 
   #The message when a player gets a temporary ban warning. Use '&' for styles.
   #Placeholders: %scope% -> The scope of the warning (Minecraft/Discord/Global)
@@ -186,6 +191,7 @@ player-punishments-messages:
   #The message when a player is permanently muted. Use '&' for styles.
   #Placeholders: %scope% -> The scope of the mute (Minecraft/Discord/Global)
   #              %reason% -> The reason of the mute
+  #              %id% -> The id of the mute. Useful for players to appeal.
   perm-mute-message:
     - "&4&l------------------------------------------"
     - " "
@@ -193,6 +199,9 @@ player-punishments-messages:
     - " "
     - "&7Scope: %scope%"
     - "&7Reason: &f%reason%"
+    - " "
+    - "&7 Ban ID: &f%id%"
+    - "&7 Use this ID to appeal!"
     - " "
     - "&4&l------------------------------------------"
 
@@ -212,6 +221,7 @@ player-punishments-messages:
   #The message when a player is temporarily muted. Use '%' for styles.
   #Placeholders: %scope% -> The scope of the mute (Minecraft/Discord/Global)
   #              %reason% -> The reason of the mute
+  #              %id% -> The id of the mute. Useful for players to appeal.
   #              %time% -> Displays the time of the mute
   #              %expiration_date% -> Displays the date when the mute expires
   temp-mute-message:
@@ -222,6 +232,9 @@ player-punishments-messages:
     - "&7Scope: %scope%"
     - "&7Reason: &f%reason%"
     - "&7Expires at: &f%expiration_time%"
+    - " "
+    - "&7Mute ID: &f%id%"
+    - "&7Use this ID to appeal!"
     - " "
     - "&4&l------------------------------------------"
 

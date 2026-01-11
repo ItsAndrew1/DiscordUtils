@@ -47,6 +47,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private FinalPunishmentGUI finalPunishmentGUI;
     private RemovePunishmentsGUI removePunishmentsGUI;
 
+    private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
 
     private BukkitTask broadcastTask; //Task for broadcasting
     private BotMain discordBot;
@@ -140,6 +141,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. The bot won't start. See message:");
             Bukkit.getLogger().warning(e.getMessage());
         }
+
+        //Starting a task to auto delete players from the addingState map
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, punishmentsAddingStates::clear, 0L, 20L * 300); //Runs every 5 minutes
     }
 
     @Override
@@ -311,5 +315,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public String getGuiTitle() {
         return guiTitle;
+    }
+    public Map<UUID, AddingState> getPunishmentsAddingStates(){
+        return punishmentsAddingStates;
     }
 }

@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -23,8 +24,6 @@ import java.util.regex.Pattern;
 
 public class ChoosePunishTypeGUI implements Listener{
     private final DiscordUtils plugin;
-    private PunishmentType punishmentType;
-    private String punishReason;
     private long durationMillis;
 
     public ChoosePunishTypeGUI(DiscordUtils plugin) {
@@ -33,7 +32,8 @@ public class ChoosePunishTypeGUI implements Listener{
 
     public void showGui(Player player){
         int invSize = 54;
-        String title = "Choose punishment type";
+
+        String title = "Choose Punishment Type";
         Inventory gui =  Bukkit.createInventory(player, invSize, title);
 
         //Return button
@@ -93,28 +93,15 @@ public class ChoosePunishTypeGUI implements Listener{
         return item;
     }
 
-    public PunishmentType getPunishmentType(){
-        return punishmentType;
-    }
-    public void setPunishmentType(PunishmentType punishmentType){
-        this.punishmentType = punishmentType;
-    }
-    public long getDurationMillis(){
-        return durationMillis;
-    }
-    public String getPunishReason(){
-        return punishReason;
-    }
-
     //Method for entering the duration of the punishment
-    private void enterDuration(Player player){
+    private void enterDuration(Player player, AddingState state){
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the &lduration &afor the punishment. Type &c&lcancel &ato return."));
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aExample: &e2d 5h 10m 35s"));
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&ld &f-> &adays | &f&lh &f-> &ahours | &f&lm &f-> &aminutes | &f&ls-> &aseconds"));
 
         plugin.waitForPlayerInput(player, input -> {
             if(input.equalsIgnoreCase("cancel")){
-                setPunishmentType(null);
+                plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                 plugin.getAddRemovePunishGUI().showGui(player);
                 return;
@@ -122,7 +109,7 @@ public class ChoosePunishTypeGUI implements Listener{
             durationMillis = parseCooldown(input);
 
             if(durationMillis == 0){
-                setPunishmentType(null);
+                plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cInvalid duration."));
                 //Reopens the gui after 1/2 seconds
@@ -135,22 +122,24 @@ public class ChoosePunishTypeGUI implements Listener{
                 return;
             }
 
-            enterReason(player);
+            state.duration = durationMillis;
+
+            enterReason(player, state);
         });
     }
 
     //Method for entering the reason for the punishment
-    private void enterReason(Player player){
+    private void enterReason(Player player, AddingState state){
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the reason for the punishment. Type &c&lcancel &ato return."));
         plugin.waitForPlayerInput(player, input -> {
             if(input.equalsIgnoreCase("cancel")){
-                setPunishmentType(null);
+                plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                 plugin.getAddRemovePunishGUI().showGui(player);
                 return;
             }
 
-            punishReason = input;
+            state.reason = input;
             plugin.getChoosePunishScopeGUI().showGui(player);
         });
     }
@@ -175,7 +164,7 @@ public class ChoosePunishTypeGUI implements Listener{
     @EventHandler
     public void onClick(InventoryClickEvent event){
         if(!(event.getWhoClicked() instanceof Player player)) return;
-        if(!event.getView().getTitle().equalsIgnoreCase("Choose punishment type")) return;
+        if(!event.getView().getTitle().equalsIgnoreCase("Choose Punishment Type")) return;
         event.setCancelled(true);
 
         ItemStack item = event.getCurrentItem();
@@ -185,10 +174,12 @@ public class ChoosePunishTypeGUI implements Listener{
         ItemMeta meta = item.getItemMeta();
         if(meta == null) return;
 
+        AddingState state = plugin.getPunishmentsAddingStates().get(player.getUniqueId());
+
         //If the player clicks on return button
         if(clickedMat.equals(Material.SPECTRAL_ARROW)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(null);
+            plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
             plugin.getAddRemovePunishGUI().showGui(player);
             return;
         }
@@ -196,73 +187,73 @@ public class ChoosePunishTypeGUI implements Listener{
         //If the player clicks on the following buttons
         if(meta.getDisplayName().contains("PERMANENT BAN WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.PERM_BAN_WARN);
+            state.type = PunishmentType.PERM_BAN_WARN;
             player.closeInventory();
-            enterReason(player);
+            enterReason(player, state);
             return;
         }
 
         if(clickedMat.equals(Material.NETHERITE_AXE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.PERM_BAN);
+            state.type = PunishmentType.PERM_BAN;
             player.closeInventory();
-            enterReason(player);
+            enterReason(player, state);
             return;
         }
 
         if(meta.getDisplayName().contains("TEMPORARY BAN WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.TEMP_BAN_WARN);
+            state.type = PunishmentType.TEMP_BAN_WARN;
             player.closeInventory();
-            enterReason(player);
+            enterReason(player, state);
             return;
         }
 
         if(clickedMat.equals(Material.IRON_AXE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.TEMP_BAN);
+            state.type = PunishmentType.TEMP_BAN;
             player.closeInventory();
-            enterDuration(player);
+            enterDuration(player, state);
             return;
         }
 
         if(clickedMat.equals(Material.LEATHER_BOOTS)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.KICK);
+            state.type = PunishmentType.KICK;
             player.closeInventory();
-            enterReason(player);
+            enterReason(player, state);
             return;
         }
 
         if(meta.getDisplayName().contains("TEMPORARY MUTE WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.TEMP_MUTE_WARN);
+            state.type = PunishmentType.TEMP_MUTE_WARN;
             player.closeInventory();
-            enterReason(player);
+            enterReason(player, state);
             return;
         }
 
         if(clickedMat.equals(Material.LANTERN)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.TEMP_MUTE);
+            state.type = PunishmentType.TEMP_MUTE;
             player.closeInventory();
-            enterDuration(player);
+            enterDuration(player, state);
             return;
         }
 
         if(meta.getDisplayName().contains("PERMANENT MUTE WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.PERM_MUTE_WARN);
+            state.type = PunishmentType.PERM_MUTE_WARN;
             player.closeInventory();
-            enterReason(player);
+            enterReason(player, state);
             return;
         }
 
         if(clickedMat.equals(Material.SOUL_LANTERN)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            setPunishmentType(PunishmentType.PERM_MUTE);
+            state.type = PunishmentType.PERM_MUTE;
             player.closeInventory();
-            enterReason(player);
+            enterReason(player, state);
         }
     }
 }

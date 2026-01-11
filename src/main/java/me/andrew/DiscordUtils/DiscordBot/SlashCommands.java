@@ -144,7 +144,6 @@ public class SlashCommands extends ListenerAdapter{
                         return;
                     }
 
-                    event.deferReply().setEphemeral(true).queue();
                     botMain.getAddPunishments().punishPlayer(event, targetPlayer);
                 } catch (SQLException e) {
                     throw new RuntimeException(e);

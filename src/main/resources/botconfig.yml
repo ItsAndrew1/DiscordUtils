@@ -14,3 +14,11 @@ pvm-set-ephemeral: true
 
 #Set the minutes for the interactions
 interaction-minutes: 2 #If a user is having an interaction and he doesn't do anything for some minutes, it removes the user from it.
+
+#Set the Minimum and Maximum length for the reason modal (In characters!)
+minimum-length-reason: 10
+maximum-length-reason: 2000
+
+#Set the Minimum and Maximum length for the duration modal (In Characters!)
+minimum-length-duration: 2
+maximum-length-duration: 15

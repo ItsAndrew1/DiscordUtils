@@ -76,7 +76,8 @@ public class DatabaseManager {
         //Creates the punishments table
         String punishmentsTable = """
                 CREATE TABLE IF NOT EXISTS punishments(
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    crt INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id TEXT UNIQUE,
                     uuid,
                     type TEXT,
                     scope TEXT,
@@ -247,6 +248,7 @@ public class DatabaseManager {
     public Punishment mapPunishment(ResultSet rs) throws SQLException {
         return new Punishment(
                 PunishmentType.valueOf(rs.getString("type")),
+                rs.getInt("crt"),
                 rs.getInt("id"),
                 UUID.fromString(rs.getString("uuid")),
                 PunishmentScopes.valueOf(rs.getString("scope")),
@@ -271,9 +273,9 @@ public class DatabaseManager {
         return null;
     }
 
-    public void expirePunishmentById(int id) throws SQLException{
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE punishments SET active = false WHERE id = ?")){
-            ps.setInt(1, id);
+    public void expirePunishmentById(int crt) throws SQLException{
+        try(PreparedStatement ps = connection.prepareStatement("UPDATE punishments SET active = false WHERE crt = ?")){
+            ps.setInt(1, crt);
             ps.executeUpdate();
         }
     }

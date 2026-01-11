@@ -14,6 +14,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.UUID;
 
@@ -94,6 +95,18 @@ public class AddRemoveHistoryGUI implements Listener{
         //If the player clicks on add punishment button
         if(clickedItemMeta.getDisplayName().contains("Add")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+
+            //Inserts the staff into the addingStates map
+            AddingState newState = new AddingState(
+                    createId(),
+                    plugin.getPlayerHeadsGUIs().getClickedPlayer().getUniqueId(),
+                    null,
+                    null,
+                    null,
+                    0
+            );
+            plugin.getPunishmentsAddingStates().put(player.getUniqueId(), newState);
+
             plugin.getChoosePunishTypeGUI().showGui(player);
         }
 
@@ -102,5 +115,17 @@ public class AddRemoveHistoryGUI implements Listener{
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             plugin.getRemovePunishmentsGUI().showGui(player, 1);
         }
+    }
+
+    private String createId(){
+        int idLength = plugin.getConfig().getInt("punishment-id-length");
+        StringBuilder id = new StringBuilder(idLength);
+        SecureRandom random = new SecureRandom();
+
+        for(int i = 0; i < idLength; i++){
+            id.append(random.nextInt(10)); //Generates everytime a number from 0-9
+        }
+
+        return id.toString();
     }
 }

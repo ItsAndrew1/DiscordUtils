@@ -30,7 +30,7 @@ public class CheckPlayerBanMute implements Listener{
         Punishment permBan = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.PERM_BAN);
         if(permBan != null){
             if(!permBan.isActive()){
-                plugin.getDatabaseManager().expirePunishmentById(permBan.getId());
+                plugin.getDatabaseManager().expirePunishmentById(permBan.getCrt());
                 e.allow();
             }
             else{
@@ -52,7 +52,7 @@ public class CheckPlayerBanMute implements Listener{
         Punishment tempBan = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_BAN);
         if(tempBan != null){
             if(isPunishmentExpired(tempBan)){
-                plugin.getDatabaseManager().expirePunishmentById(tempBan.getId());
+                plugin.getDatabaseManager().expirePunishmentById(tempBan.getCrt());
                 e.allow();
             }
             else{
@@ -123,7 +123,7 @@ public class CheckPlayerBanMute implements Listener{
         //Check if the player is temp muted
         Punishment tempMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
         if(tempMute != null){
-            if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getId());
+            if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getCrt());
             else{
                 e.setCancelled(true);
 

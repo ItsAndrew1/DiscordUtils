@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -26,7 +27,6 @@ import java.util.regex.Pattern;
 
 public class ChoosePunishScopeGUI implements Listener {
     private final DiscordUtils plugin;
-    private PunishmentScopes scope;
     private long durationFromWarnings;
 
     public ChoosePunishScopeGUI(DiscordUtils plugin) {
@@ -66,18 +66,14 @@ public class ChoosePunishScopeGUI implements Listener {
         player.openInventory(gui);
     }
 
-    public String getStringScope() {
-        return switch(scope){
+    public String getStringScope(Player staff) {
+        AddingState state = plugin.getPunishmentsAddingStates().get(staff.getUniqueId());
+
+        return switch(state.scope){
             case PunishmentScopes.DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
             case PunishmentScopes.MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
             case PunishmentScopes.GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
         };
-    }
-    public PunishmentScopes getPunishmentScope() {
-        return scope;
-    }
-    public long getDurationFromWarnings() {
-        return durationFromWarnings;
     }
     private ItemStack createButton(Material mat, String displayName, List<String> lore, String customHeadValue){
         ItemStack item = new ItemStack(mat);
@@ -171,9 +167,9 @@ public class ChoosePunishScopeGUI implements Listener {
         player.sendMessage(message);
     }
 
-    private void checkForWarns(Player staff, OfflinePlayer targetPlayer) throws SQLException {
-        PunishmentType type = plugin.getChoosePunishTypeGUI().getPunishmentType();
-        int currentNrOfWarns = plugin.getDatabaseManager().getNrOfWarns(targetPlayer, plugin.getChoosePunishTypeGUI().getPunishmentType(), getPunishmentScope());
+    private void checkForWarns(Player staff, OfflinePlayer targetPlayer, AddingState state) throws SQLException {
+        PunishmentType type = state.type;
+        int currentNrOfWarns = plugin.getDatabaseManager().getNrOfWarns(targetPlayer, type, state.scope);
         int designatedNrWarns = plugin.getConfig().getInt("warns-amount");
 
         if(currentNrOfWarns == designatedNrWarns - 1 && (type == PunishmentType.TEMP_BAN_WARN || type == PunishmentType.TEMP_MUTE_WARN)){
@@ -185,7 +181,7 @@ public class ChoosePunishScopeGUI implements Listener {
             plugin.waitForPlayerInput(staff, input -> {
                 if(input.equalsIgnoreCase("cancel")){
                     staff.playSound(staff.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
-                    plugin.getAddRemovePunishGUI().showGui(staff);
+                    showGui(staff);
                     return;
                 }
                 durationFromWarnings = parseCooldown(input);
@@ -198,9 +194,13 @@ public class ChoosePunishScopeGUI implements Listener {
                         @Override
                         public void run() {
                             showGui(staff);
+                            state.scope = null;
                         }
                     }.runTaskLater(plugin, 10L);
-                } else plugin.getFinalPunishmentGUI().showGui(staff);
+                } else{
+                    state.duration = durationFromWarnings;
+                    plugin.getFinalPunishmentGUI().showGui(staff);
+                }
             });
         } else plugin.getFinalPunishmentGUI().showGui(staff);
     }
@@ -233,10 +233,12 @@ public class ChoosePunishScopeGUI implements Listener {
         ItemMeta clickedMeta = clickedItem.getItemMeta();
         if(clickedMeta == null) return;
 
+        AddingState state = plugin.getPunishmentsAddingStates().get(player.getUniqueId());
+
         //If the player clicks on return button
         if(clickedMaterial.equals(Material.SPECTRAL_ARROW)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            if(scope != null) scope = null; //Resets the saved scope
+            if(state.scope != null) state.scope = null; //Resets the saved scope
             plugin.getChoosePunishTypeGUI().showGui(player);
             return;
         }
@@ -246,60 +248,60 @@ public class ChoosePunishScopeGUI implements Listener {
         if(clickedMaterial.equals(Material.PLAYER_HEAD) && clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD"))){
             //Check if the target player is banned on discord
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.DISCORD, state.type);
                 return;
             }
 
             //Check if the target player is banned globally
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.GLOBAL, state.type);
                 return;
             }
 
             //Check if the target player is muted on discord
             if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.DISCORD, state.type);
                 return;
             }
 
             //Check if the target player is muted globally
             if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.GLOBAL, state.type);
                 return;
             }
 
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            scope = PunishmentScopes.DISCORD;
+            state.scope = PunishmentScopes.DISCORD;
         }
 
         //If the player clicks on minecraft scope button
         if(clickedMaterial.equals(Material.PLAYER_HEAD) && clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&2&lMINECRAFT"))){
             //Check if the target player is banned on minecraft
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.MINECRAFT, state.type);
                 return;
             }
 
             //Check if the target player is banned globally
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.GLOBAL, state.type);
                 return;
             }
 
             //Check if the target player is muted on minecraft
             if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.MINECRAFT, state.type);
                 return;
             }
 
             //Check if the target player is muted globally
             if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.GLOBAL, state.type);
                 return;
             }
 
             player.playSound(player.getLocation(),  Sound.UI_BUTTON_CLICK, 1f, 1f);
-            scope = PunishmentScopes.MINECRAFT;
+            state.scope = PunishmentScopes.MINECRAFT;
         }
 
         //If the player clicks on global scope button
@@ -307,48 +309,48 @@ public class ChoosePunishScopeGUI implements Listener {
         if(clickedMaterial.equals(Material.PLAYER_HEAD) && clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&6&lGLOBAL"))){
             //Check if the player is banned globally
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)) {
-                error(player, PunishmentScopes.GLOBAL, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.GLOBAL, state.type);
                 return;
             }
 
             //Check if the player is banned on discord
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.DISCORD, state.type);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &a&lMINECRAFT &coption instead!"));
                 return;
             }
 
             //Check if the player is banned on minecraft
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.MINECRAFT, state.type);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &9&lDISCORD &coption instead!"));
                 return;
             }
 
             //Check if the player is muted globally
             if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)) {
-                error(player, PunishmentScopes.GLOBAL, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.GLOBAL, state.type);
                 return;
             }
 
             //Check if the target player is muted on discord
             if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.DISCORD, state.type);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &a&lMINECRAFT &coption instead!"));
                 return;
             }
 
             //Check if the target player is muted on minecraft
             if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT,  plugin.getChoosePunishTypeGUI().getPunishmentType());
+                error(player, PunishmentScopes.MINECRAFT, state.type);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &9&lDISCORD &coption instead!"));
                 return;
             }
 
             player.playSound(player.getLocation(),  Sound.UI_BUTTON_CLICK, 1f, 1f);
-            scope = PunishmentScopes.GLOBAL;
+            state.scope = PunishmentScopes.GLOBAL;
         }
 
-        checkForWarns(player, targetPlayer);
+        checkForWarns(player, targetPlayer, state);
     }
 }

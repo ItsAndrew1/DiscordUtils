@@ -33,7 +33,7 @@ public class Commands implements CommandExecutor{
             //Check if the player is muted temporarily
             Punishment tempMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
             if(tempMute != null){
-                if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getId());
+                if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getCrt());
                 else{
                     //Sends the player a message (if the messages are toggled)
                     boolean toggleMessage = plugin.getConfig().getBoolean("player-punishments-messages.toggle");
