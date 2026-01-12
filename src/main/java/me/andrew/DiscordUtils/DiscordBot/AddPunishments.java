@@ -20,13 +20,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 
 import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,10 +48,11 @@ public class AddPunishments extends ListenerAdapter{
         }, 0L, 20L*60); //Task runs every minute
     }
 
-    public void punishPlayer(SlashCommandInteractionEvent event, OfflinePlayer targetPlayer) {
+    public void punishPlayer(SlashCommandInteractionEvent event, OfflinePlayer targetPlayer) throws SQLException {
         //Creating the state
         AddingState newState = new AddingState(
                 targetPlayer,
+                getStaffName(event.getUser().getId()),
                 null,
                 null,
                 null,
@@ -75,6 +79,19 @@ public class AddPunishments extends ListenerAdapter{
                 .build();
 
         event.reply("Choose punishment type: ").setEphemeral(true).addComponents(ActionRow.of(setTypeMenu)).queue();
+    }
+
+    private String getStaffName(String userId) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+
+        String sql = "SELECT uuid FROM playersVerification WHERE discordId = ?";
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, userId);
+            try(ResultSet rs = ps.executeQuery()){
+                Player staff = Bukkit.getPlayer(UUID.fromString(rs.getString("uuid")));
+                return staff.getName();
+            }
+        }
     }
 
     @Override
@@ -121,6 +138,10 @@ public class AddPunishments extends ListenerAdapter{
             //Setting the punishment scope
             state.scope = PunishmentScopes.valueOf(event.getValues().getFirst());
 
+            //Checking various cases if the user is already banned/muted
+
+
+
             //Updating the last interaction
             state.lastInteraction = System.currentTimeMillis();
 
@@ -140,11 +161,13 @@ public class AddPunishments extends ListenerAdapter{
                 event.replyModal(durationModal).queue();
             }
             else{
-                event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
                 try {
+                    event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
                     insertPunishment(state);
+                    addingStateMap.remove(userId);
                 } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                    event.reply("There was a problem applying the punishment. "+e.getMessage()).setEphemeral(true).queue();
+                    addingStateMap.remove(userId);
                 }
             }
         }
@@ -194,11 +217,12 @@ public class AddPunishments extends ListenerAdapter{
             //Inserts the punishment into the database
             try {
                 insertPunishment(state);
+                event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *\\"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
+                addingStateMap.remove(userId);
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                event.reply("There was a problem applying the punishment. **"+e.getMessage()+"**").setEphemeral(true).queue();
+                addingStateMap.remove(userId);
             }
-
-            event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *\\"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
         }
     }
 
@@ -242,6 +266,7 @@ public class AddPunishments extends ListenerAdapter{
         //Data for the punishment
         OfflinePlayer targetPlayer = state.targetPlayer;
         String reason = state.reason;
+        String staffName = state.staff;
         PunishmentType type = state.type;
         PunishmentScopes scope = state.scope;
         long expiresAt = state.expiresAt;
@@ -250,8 +275,44 @@ public class AddPunishments extends ListenerAdapter{
                 INSERT INTO punishments (id, uuid, type, scope, reason, staff, created_at, expire_at, active, removed, removed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """)){
+            ps.setString(1, createId());
+            ps.setString(2, targetPlayer.getUniqueId().toString());
+            ps.setString(3, type.name());
+            ps.setString(4, scope.name());
+            ps.setString(5, reason);
+            ps.setString(6, staffName);
+            ps.setLong(7, System.currentTimeMillis());
 
+            //Handling various cases
+            if(state.type.equals(PunishmentType.KICK)){
+                ps.setLong(8, 0);
+                ps.setBoolean(9, false);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            else if(state.type.toString().contains("WARN")){
+                ps.setLong(8, 0);
+                ps.setBoolean(9, true);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            else if(state.type.name().contains("TEMP")){
+                ps.setLong(8, expiresAt);
+                ps.setBoolean(9, true);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            else if(state.type.toString().contains("PERM")){
+                ps.setLong(8, 0);
+                ps.setBoolean(9, true);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            ps.executeUpdate();
         }
+
+        //Checking each type of punishment to apply them in game/in discord
+
     }
 
     private String createId(){
@@ -269,14 +330,16 @@ public class AddPunishments extends ListenerAdapter{
 
 class AddingState{
     OfflinePlayer targetPlayer;
+    String staff;
     PunishmentType type;
     PunishmentScopes scope;
     String reason;
     long expiresAt;
     long lastInteraction;
 
-    public AddingState(OfflinePlayer targetPlayer, PunishmentType type, PunishmentScopes scope, String reason, long expiresAt, long lastInteraction){
+    public AddingState(OfflinePlayer targetPlayer, String staff, PunishmentType type, PunishmentScopes scope, String reason, long expiresAt, long lastInteraction){
         this.targetPlayer = targetPlayer;
+        this.staff = staff;
         this.type = type;
         this.scope = scope;
         this.reason = reason;
