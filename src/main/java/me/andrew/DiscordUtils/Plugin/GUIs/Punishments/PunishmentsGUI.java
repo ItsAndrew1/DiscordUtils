@@ -250,9 +250,9 @@ public class PunishmentsGUI implements Listener{
         itemLore.add(status);
 
         if(p.isRemoved()) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Removed at &l"+removedFormatedTime));
-        if(p.isActive()){
+        if(p.isActive() && !p.getPunishmentType().toString().contains("WARN")){
             itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aID: &8"+p.getId()));
-            if(!p.getPunishmentType().toString().contains("WARN") && !isPermanent(p)) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Expires at &l"+expireFormatedTime));
+            if(!isPermanent(p)) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Expires at &l"+expireFormatedTime));
         }
 
         punishmentItemMeta.setLore(itemLore);

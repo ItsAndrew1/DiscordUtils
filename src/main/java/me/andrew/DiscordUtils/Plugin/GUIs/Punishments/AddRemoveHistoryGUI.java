@@ -108,7 +108,7 @@ public class AddRemoveHistoryGUI implements Listener{
 
             //Inserts the staff into the addingStates map
             AddingState newState = new AddingState(
-                    createId(),
+                    null,
                     plugin.getPlayerHeadsGUIs().getClickedPlayer().getUniqueId(),
                     null,
                     null,
@@ -126,17 +126,5 @@ public class AddRemoveHistoryGUI implements Listener{
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             plugin.getRemovePunishmentsGUI().showGui(player, 1);
         }
-    }
-
-    private String createId(){
-        int idLength = plugin.getConfig().getInt("punishment-id-length");
-        StringBuilder id = new StringBuilder(idLength);
-        SecureRandom random = new SecureRandom();
-
-        for(int i = 0; i < idLength; i++){
-            id.append(random.nextInt(10)); //Generates everytime a number from 0-9
-        }
-
-        return id.toString();
     }
 }

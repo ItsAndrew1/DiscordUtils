@@ -43,6 +43,7 @@ public class CheckPlayerBanMute implements Listener{
                 e.disallow(PlayerLoginEvent.Result.KICK_BANNED, message
                         .replace("%scope%", getColoredScope(permBan.getScope()))
                         .replace("%reason%", reason)
+                        .replace("%id%", permBan.getId())
                 );
             }
             return;
@@ -77,6 +78,7 @@ public class CheckPlayerBanMute implements Listener{
                         .replace("%reason%", reason)
                         .replace("%time_left%", durationString)
                         .replace("%expiration_time%", expiresAt)
+                        .replace("%id%", tempBan.getId())
                 );
             }
             return;
@@ -116,6 +118,7 @@ public class CheckPlayerBanMute implements Listener{
                 for(String messageLine: message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
                         .replace("%scope%", scope)
                         .replace("%reason%", reason)
+                        .replace("%id%", permMute.getId())
                 ));
             }
         }
@@ -153,6 +156,7 @@ public class CheckPlayerBanMute implements Listener{
                             .replace("%reason%", reason)
                             .replace("%time_left%", timeLeftString)
                             .replace("%expiration_time%", expiresAtString)
+                            .replace("%id%", tempMute.getId())
                     ));
                 }
             }

@@ -249,7 +249,7 @@ public class DatabaseManager {
         return new Punishment(
                 PunishmentType.valueOf(rs.getString("type")),
                 rs.getInt("crt"),
-                rs.getInt("id"),
+                rs.getString("id"),
                 UUID.fromString(rs.getString("uuid")),
                 PunishmentScopes.valueOf(rs.getString("scope")),
                 rs.getString("reason"),

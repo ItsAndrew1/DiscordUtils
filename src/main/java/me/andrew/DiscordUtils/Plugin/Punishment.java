@@ -6,7 +6,7 @@ import java.util.UUID;
 public class Punishment{
     private final PunishmentType punishmentType;
     private final int crt;
-    private final int id;
+    private final String id;
     private final UUID uuid;
     private final String reason;
     private final String staff;
@@ -18,7 +18,7 @@ public class Punishment{
     private final long removedAt;
 
 
-    public Punishment(PunishmentType type, int crt, int id, UUID uuid, PunishmentScopes scope, String reason, String staff, long issuedAt, long expiresAt, boolean active, boolean removed, long removedAt) {
+    public Punishment(PunishmentType type, int crt, String id, UUID uuid, PunishmentScopes scope, String reason, String staff, long issuedAt, long expiresAt, boolean active, boolean removed, long removedAt) {
         this.punishmentType = type;
         this.crt = crt;
         this.id = id;
@@ -40,7 +40,7 @@ public class Punishment{
     public int getCrt() {
         return crt;
     }
-    public int getId() {
+    public String getId() {
         return id;
     }
     public UUID getUuid() {
