@@ -184,8 +184,10 @@ public class FinalPunishmentGUI implements Listener {
         //If the staff clicks on return button
         if(clickedMaterial.equals(Material.SPECTRAL_ARROW)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            plugin.getChoosePunishScopeGUI().showGui(player);
+
             state.scope = null;
+            state.lastInteraction = System.currentTimeMillis();
+            plugin.getChoosePunishScopeGUI().showGui(player);
             return;
         }
 

@@ -17,12 +17,22 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class AddRemoveHistoryGUI implements Listener{
     private final DiscordUtils plugin;
 
     public AddRemoveHistoryGUI(DiscordUtils plugin){
         this.plugin = plugin;
+
+        //Start a task which removes a user from the AddingState map after a period of time of inactivity.
+        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, ()->{
+            long now = System.currentTimeMillis();
+            int inactivityMinutes = plugin.getConfig().getInt("inactivity-minutes");
+            plugin.getPunishmentsAddingStates().entrySet().removeIf(entry ->
+                    now - entry.getValue().lastInteraction > TimeUnit.MINUTES.toMillis(inactivityMinutes)
+            );
+        }, 0L, 20L * 180); //Runs every 3 minutes
     }
 
     public void showGui(Player player){
@@ -103,7 +113,8 @@ public class AddRemoveHistoryGUI implements Listener{
                     null,
                     null,
                     null,
-                    0
+                    0,
+                    System.currentTimeMillis()
             );
             plugin.getPunishmentsAddingStates().put(player.getUniqueId(), newState);
 

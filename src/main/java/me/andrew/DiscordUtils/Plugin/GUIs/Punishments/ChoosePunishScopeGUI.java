@@ -181,6 +181,7 @@ public class ChoosePunishScopeGUI implements Listener {
             plugin.waitForPlayerInput(staff, input -> {
                 if(input.equalsIgnoreCase("cancel")){
                     staff.playSound(staff.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
+                    state.scope = null;
                     showGui(staff);
                     return;
                 }
@@ -199,10 +200,14 @@ public class ChoosePunishScopeGUI implements Listener {
                     }.runTaskLater(plugin, 10L);
                 } else{
                     state.duration = durationFromWarnings;
+                    state.lastInteraction = System.currentTimeMillis();
                     plugin.getFinalPunishmentGUI().showGui(staff);
                 }
             });
-        } else plugin.getFinalPunishmentGUI().showGui(staff);
+        } else{
+            state.lastInteraction = System.currentTimeMillis();
+            plugin.getFinalPunishmentGUI().showGui(staff);
+        }
     }
     private long parseCooldown(String cooldown){
         long millis = 0;
@@ -239,6 +244,7 @@ public class ChoosePunishScopeGUI implements Listener {
         if(clickedMaterial.equals(Material.SPECTRAL_ARROW)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             if(state.scope != null) state.scope = null; //Resets the saved scope
+            state.lastInteraction = System.currentTimeMillis();
             plugin.getChoosePunishTypeGUI().showGui(player);
             return;
         }
@@ -347,7 +353,7 @@ public class ChoosePunishScopeGUI implements Listener {
                 return;
             }
 
-            player.playSound(player.getLocation(),  Sound.UI_BUTTON_CLICK, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.scope = PunishmentScopes.GLOBAL;
         }
 

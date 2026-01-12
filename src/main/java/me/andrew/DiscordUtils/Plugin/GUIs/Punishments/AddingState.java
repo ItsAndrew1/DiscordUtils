@@ -12,13 +12,15 @@ public class AddingState {
     PunishmentScopes scope;
     String reason;
     long duration;
+    long lastInteraction;
 
-    public AddingState(String ID, UUID targetUUID, PunishmentType type, PunishmentScopes scope, String reason, long duration) {
+    public AddingState(String ID, UUID targetUUID, PunishmentType type, PunishmentScopes scope, String reason, long duration,  long lastInteraction) {
         this.ID = ID;
         this.targetUUID = targetUUID;
         this.type = type;
         this.scope = scope;
         this.reason = reason;
         this.duration = duration;
+        this.lastInteraction = lastInteraction;
     }
 }

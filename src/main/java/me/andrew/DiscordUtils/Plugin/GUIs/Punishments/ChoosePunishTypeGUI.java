@@ -139,6 +139,7 @@ public class ChoosePunishTypeGUI implements Listener{
                 return;
             }
 
+            state.lastInteraction = System.currentTimeMillis();
             state.reason = input;
             plugin.getChoosePunishScopeGUI().showGui(player);
         });

@@ -124,11 +124,14 @@ use-verification-code-message: #You can have more lines
   - "&aYour code is &e&l%code%&a! Do &e&l/verify <code> &ain our discord server to complete the verification."
   - "&cThe code will expire in &l%expire_at% minutes&c!"
 
+player-verified-message: #You can have more lines.
+  - "&aCongrats! You have officially been verified."
+
 #Set the number of digits for the Punishment IDs.
 punishment-id-length: 6 #The ID structure is '#'+the digits!
 
-player-verified-message: #You can have more lines.
-  - "&aCongrats! You have officially been verified."
+#Set the MINUTES for the inactivity. Helps to clean the AddingState map.
+inactivity-minutes: 1
 
 #Give rewards to the player when the player verifies.
 rewards:
