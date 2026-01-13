@@ -8,6 +8,8 @@ import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -36,10 +38,12 @@ import java.util.regex.Pattern;
 
 public class AddPunishments extends ListenerAdapter{
     private final DiscordUtils plugin;
+    private final BotMain bot;
     private final Map<Long, AddingState> addingStateMap = new HashMap<>();
 
-    public AddPunishments(DiscordUtils plugin) {
+    public AddPunishments(DiscordUtils plugin, BotMain bot) {
         this.plugin = plugin;
+        this.bot = bot;
 
         //Task for auto deleting users from the map
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
@@ -139,8 +143,112 @@ public class AddPunishments extends ListenerAdapter{
             state.scope = PunishmentScopes.valueOf(event.getValues().getFirst());
 
             //Checking various cases if the user is already banned/muted
+            try{
+                if(state.scope == PunishmentScopes.DISCORD){
+                    //Checking if the user/player is already banned in the dc server
+                    if(plugin.getDatabaseManager().isPlayerBanned(state.targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already banned on Discord!").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
 
+                    //Checking if the user/player is already banned globally
+                    if(plugin.getDatabaseManager().isPlayerBanned(state.targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already banned Globally.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
 
+                    //Checking if the user/player is already muted on discord
+                    if(plugin.getDatabaseManager().isPlayerMuted(state.targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already muted on Discord!").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already muted globally
+                    if(plugin.getDatabaseManager().isPlayerMuted(state.targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already muted Globally.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+                }
+
+                if(state.scope == PunishmentScopes.MINECRAFT){
+                    //Checking if the user/player is already banned on Minecraft
+                    if(plugin.getDatabaseManager().isPlayerBanned(state.targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already banned on Minecraft.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already banned globally
+                    if(plugin.getDatabaseManager().isPlayerBanned(state.targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already banned Globally.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already muted on Minecraft
+                    if(plugin.getDatabaseManager().isPlayerMuted(state.targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already muted on Minecraft!").setEphemeral(true).queue();
+                        return;
+                    }
+
+                    //Checking if the user/player is already muted Globally
+                    if(plugin.getDatabaseManager().isPlayerMuted(state.targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already muted Globally.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+                }
+
+                if(state.scope == PunishmentScopes.GLOBAL){
+                    //Checking if the user/player is already muted on discord
+                    if(plugin.getDatabaseManager().isPlayerMuted(state.targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already muted on Discord. Use the *Minecraft Scope* instead.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already muted on Minecraft
+                    if(plugin.getDatabaseManager().isPlayerMuted(state.targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already muted on Minecraft. Use the *Discord Scope* instead.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already muted Globally
+                    if(plugin.getDatabaseManager().isPlayerMuted(state.targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already muted Globally.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already banned on Discord
+                    if(plugin.getDatabaseManager().isPlayerBanned(state.targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already banned on Discord. Use the *Minecraft Scope* instead.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already banned on Minecraft
+                    if(plugin.getDatabaseManager().isPlayerBanned(state.targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already banned on Minecraft. Use the *Discord Scope* instead.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+
+                    //Checking if the user/player is already banned Globally
+                    if(plugin.getDatabaseManager().isPlayerBanned(state.targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is already banned Globally.").setEphemeral(true).queue();
+                        addingStateMap.remove(event.getUser().getIdLong());
+                        return;
+                    }
+                }
+            } catch (SQLException e){
+                throw new RuntimeException(e);
+            }
 
             //Updating the last interaction
             state.lastInteraction = System.currentTimeMillis();
@@ -216,11 +324,51 @@ public class AddPunishments extends ListenerAdapter{
 
             //Inserts the punishment into the database
             try {
+                FileConfiguration botConfig = plugin.botFile().getConfig();
+
+                //Checking each type of punishment to apply them in game/in discord
+                //If the punishment is a kick
+                if(state.type == PunishmentType.KICK){
+                    //Check if the player is online
+                    if(!state.targetPlayer.isOnline()){
+                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is not online at the moment!").setEphemeral(true).queue();
+                        return;
+                    }
+                    String messageMC = plugin.getConfig().getString("player-punishments-messages.kick-message");
+                    Player targetPlayer = (Player) state.targetPlayer;
+
+                    //Handles each scope
+                    switch(state.scope){
+                        case MINECRAFT:
+                            targetPlayer.kickPlayer(messageMC
+                                    .replace("%reason%", state.reason)
+                                    .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(getPlayerStaff(event.getUser().getId())))
+                            );
+                            break;
+
+                        case DISCORD:
+                            String messageDC = botConfig.getString("user-punishments-messages.kick-message");
+                            Guild dcServer = bot.getDiscordServer();
+
+                            break;
+                    }
+                }
+
+                //If the punishment is a permanent ban
+                if(state.type == PunishmentType.PERM_BAN){
+                    switch(state.scope){
+                        case MINECRAFT:
+                            String kickMessage = plugin.getConfig().getString("kick-message");
+                            break;
+                    }
+                }
+
                 insertPunishment(state);
                 event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *\\"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
+
                 addingStateMap.remove(userId);
             } catch (SQLException e) {
-                event.reply("There was a problem applying the punishment. **"+e.getMessage()+"**").setEphemeral(true).queue();
+                event.reply("There was a problem applying the punishment.\n **"+e.getMessage()+"**").setEphemeral(true).queue();
                 addingStateMap.remove(userId);
             }
         }
@@ -228,6 +376,19 @@ public class AddPunishments extends ListenerAdapter{
 
     private boolean isTemporary(PunishmentType type){
         return type == PunishmentType.TEMP_BAN || type == PunishmentType.TEMP_MUTE;
+    }
+
+    private Player getPlayerStaff(String userId) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT ign FROM playersVerification WHERE discordId = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, userId);
+            try(ResultSet rs = ps.executeQuery()){
+                String staffIgn = rs.getString("ign");
+                return Bukkit.getPlayer(staffIgn);
+            }
+        }
     }
 
     private String getPunishmentString(PunishmentType type){
@@ -310,8 +471,9 @@ public class AddPunishments extends ListenerAdapter{
             }
             ps.executeUpdate();
         }
+    }
 
-        //Checking each type of punishment to apply them in game/in discord
+    private void applyPunishment(AddingState state){
 
     }
 

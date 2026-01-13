@@ -17,7 +17,7 @@ public class BotMain{
     public BotMain(String token, String guildId, DiscordUtils plugin) throws Exception{
         SlashCommands slashCommands = new SlashCommands(plugin, this);
         punishmentHistory = new PunishmentHistory(plugin);
-        addPunishments = new AddPunishments(plugin);
+        addPunishments = new AddPunishments(plugin, this);
 
         //Creating the bot itself
         this.jda = JDABuilder.createDefault(token)

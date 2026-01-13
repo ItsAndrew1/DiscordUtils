@@ -22,3 +22,13 @@ maximum-length-reason: 2000
 #Set the Minimum and Maximum length for the duration modal (In Characters!)
 minimum-length-duration: 2
 maximum-length-duration: 15
+
+#Punishments Messages in user's DM. These trigger when you apply a punishment.
+user-punishments-messages:
+
+  #This is the message when a user gets kicked from your server. Use '\n' for line breaks. It supports MARKDOWN!!
+  #Placeholders: %user% -> Displays the user's name.
+  #              %server_name% -> Displays the discord server's name.
+  #              %scope% -> Displays the scope of the punishment
+  #              %reason% -> Displays the reason of the punishment
+  kick-message: "Dear **\\%user%**,\n\nYou *have been kicked* from **%server_name%**. See more info below:\n**Reason**: %reason%\n**Scope**: %scope%"
