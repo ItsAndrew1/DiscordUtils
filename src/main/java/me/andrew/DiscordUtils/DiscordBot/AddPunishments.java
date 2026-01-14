@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -270,6 +271,111 @@ public class AddPunishments extends ListenerAdapter{
             }
             else{
                 try {
+                    final Guild dcServer = bot.getDiscordServer();
+
+                    //Checking each type of punishment to apply them in game/in discord
+                    //If the punishment is a kick
+                    if(state.type == PunishmentType.KICK){
+                        String messageMC = plugin.getConfig().getString("player-punishments-messages.kick-message");
+                        OfflinePlayer targetPlayer = state.targetPlayer;
+                        final User targetUser = (User) User.fromId(getTargetUserID(targetPlayer.getName()));
+
+                        //Handles each scope
+                        switch(state.scope){
+                            case MINECRAFT:
+                                //Check if the player is online
+                                if(!state.targetPlayer.isOnline()){
+                                    event.reply("Player **\\"+state.targetPlayer.getName()+"** is not online at the moment!").setEphemeral(true).queue();
+                                    return;
+                                }
+
+                                ((Player) targetPlayer).kickPlayer(messageMC
+                                        .replace("%reason%", state.reason)
+                                        .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(getPlayerStaff(event.getUser().getId())))
+                                );
+                                break;
+
+                            case DISCORD:
+                                String messageDC1 = botConfig.getString("user-punishments-messages.kick-message");
+
+                                targetUser.openPrivateChannel().queue(channel -> {
+                                    //Sends the user a DM
+                                    channel.sendMessage(messageDC1
+                                            .replace("%user%", targetUser.getName())
+                                            .replace("%reason%", state.reason)
+                                            .replace("%scope%", getPunishmentString(state.type))
+                                            .replace("%server_name%", dcServer.getName())
+                                    ).queue(success -> {
+                                        //Kicks the user from the discord server.
+                                        dcServer.kick(targetUser)
+                                                .reason(state.reason)
+                                                .queue();
+                                    }, failure -> {
+                                        //If the DM failed to send, it still kicks the user
+                                        dcServer.kick(targetUser)
+                                                .reason(state.reason)
+                                                .queue();
+                                    });
+                                }, failure -> {
+                                    //If the DM couldn't be opened, still kicks the user
+                                    dcServer.kick(targetUser)
+                                            .reason(state.reason)
+                                            .queue();
+                                });
+                                break;
+
+                            case GLOBAL:
+                                //If the target player isn't online, returns with a message
+                                if(!targetPlayer.isOnline()){
+                                    event.reply("Player **\\"+targetPlayer.getName()+"** is not online on the *Minecraft Server* at the moment.\nUse the **Discord Scope** instead!").setEphemeral(true).queue();
+                                    return;
+                                }
+
+                                //Kicks the player from the mc server
+                                ((Player) targetPlayer).kickPlayer(messageMC
+                                        .replace("%reason%", state.reason)
+                                        .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(getPlayerStaff(event.getUser().getId())))
+                                );
+
+                                //And kicks them from the discord server
+                                String messageDC2 = botConfig.getString("user-punishments-messages.kick-message");
+                                targetUser.openPrivateChannel().queue(channel -> {
+                                    //Sends the user a DM
+                                    channel.sendMessage(messageDC2
+                                            .replace("%user%", targetUser.getName())
+                                            .replace("%reason%", state.reason)
+                                            .replace("%scope%", getPunishmentString(state.type))
+                                            .replace("%server_name%", dcServer.getName())
+                                    ).queue(success -> {
+                                        //Kicks the user from the discord server.
+                                        dcServer.kick(targetUser)
+                                                .reason(state.reason)
+                                                .queue();
+                                    }, failure -> {
+                                        //If the DM failed to send, it still kicks the user
+                                        dcServer.kick(targetUser)
+                                                .reason(state.reason)
+                                                .queue();
+                                    });
+                                }, failure -> {
+                                    //If the DM couldn't be opened, still kicks the user
+                                    dcServer.kick(targetUser)
+                                            .reason(state.reason)
+                                            .queue();
+                                });
+                                break;
+                        }
+                    }
+
+                    //If the punishment is a permanent ban
+                    if(state.type == PunishmentType.PERM_BAN){
+                        switch(state.scope){
+                            case MINECRAFT:
+                                String kickMessage = plugin.getConfig().getString("kick-message");
+                                break;
+                        }
+                    }
+
                     event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
                     insertPunishment(state);
                     addingStateMap.remove(userId);
@@ -324,44 +430,6 @@ public class AddPunishments extends ListenerAdapter{
 
             //Inserts the punishment into the database
             try {
-                FileConfiguration botConfig = plugin.botFile().getConfig();
-
-                //Checking each type of punishment to apply them in game/in discord
-                //If the punishment is a kick
-                if(state.type == PunishmentType.KICK){
-                    //Check if the player is online
-                    if(!state.targetPlayer.isOnline()){
-                        event.reply("Player **\\"+state.targetPlayer.getName()+"** is not online at the moment!").setEphemeral(true).queue();
-                        return;
-                    }
-                    String messageMC = plugin.getConfig().getString("player-punishments-messages.kick-message");
-                    Player targetPlayer = (Player) state.targetPlayer;
-
-                    //Handles each scope
-                    switch(state.scope){
-                        case MINECRAFT:
-                            targetPlayer.kickPlayer(messageMC
-                                    .replace("%reason%", state.reason)
-                                    .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(getPlayerStaff(event.getUser().getId())))
-                            );
-                            break;
-
-                        case DISCORD:
-                            String messageDC = botConfig.getString("user-punishments-messages.kick-message");
-                            Guild dcServer = bot.getDiscordServer();
-
-                            break;
-                    }
-                }
-
-                //If the punishment is a permanent ban
-                if(state.type == PunishmentType.PERM_BAN){
-                    switch(state.scope){
-                        case MINECRAFT:
-                            String kickMessage = plugin.getConfig().getString("kick-message");
-                            break;
-                    }
-                }
 
                 insertPunishment(state);
                 event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *\\"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
@@ -378,6 +446,20 @@ public class AddPunishments extends ListenerAdapter{
         return type == PunishmentType.TEMP_BAN || type == PunishmentType.TEMP_MUTE;
     }
 
+    private String getPunishmentTypeString(PunishmentType type){
+        return switch(type){
+            case PERM_BAN -> "PERMANENT BAN";
+            case TEMP_BAN -> "TEMPORARY BAN";
+            case PERM_MUTE -> "PERMANENT MUTE";
+            case TEMP_MUTE -> "TEMP MUTE";
+            case KICK -> "KICK";
+            case PERM_BAN_WARN -> "PERMANENT BAN WARN";
+            case TEMP_BAN_WARN -> "TEMPORARY BAN WARN";
+            case PERM_MUTE_WARN -> "PERMANENT MUTE WARN";
+            case TEMP_MUTE_WARN -> "TEMPORARY MUTE WARN";
+        };
+    }
+
     private Player getPlayerStaff(String userId) throws SQLException{
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT ign FROM playersVerification WHERE discordId = ?";
@@ -387,6 +469,18 @@ public class AddPunishments extends ListenerAdapter{
             try(ResultSet rs = ps.executeQuery()){
                 String staffIgn = rs.getString("ign");
                 return Bukkit.getPlayer(staffIgn);
+            }
+        }
+    }
+
+    private String getTargetUserID(String ign) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String SQL = "SELECT discordId FROM playersVerification WHERE ign = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
+            ps.setString(1, ign);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.getString("discordId");
             }
         }
     }
