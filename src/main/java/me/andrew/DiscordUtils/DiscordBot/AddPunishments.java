@@ -11,12 +11,11 @@ import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.modals.ModalInteraction;
 import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 import net.dv8tion.jda.api.modals.Modal;
 import org.bukkit.Bukkit;
@@ -30,6 +29,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -56,6 +56,7 @@ public class AddPunishments extends ListenerAdapter{
     public void punishPlayer(SlashCommandInteractionEvent event, OfflinePlayer targetPlayer) throws SQLException {
         //Creating the state
         AddingState newState = new AddingState(
+                createId(),
                 targetPlayer,
                 getStaffName(event.getUser().getId()),
                 null,
@@ -103,6 +104,7 @@ public class AddPunishments extends ListenerAdapter{
     public void onStringSelectInteraction(StringSelectInteractionEvent event){
         long userId = event.getUser().getIdLong();
         AddingState state = addingStateMap.get(userId);
+
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
         if(event.getComponentId().equals("punishment:type")){
@@ -303,7 +305,7 @@ public class AddPunishments extends ListenerAdapter{
                                     channel.sendMessage(messageDC1
                                             .replace("%user%", targetUser.getName())
                                             .replace("%reason%", state.reason)
-                                            .replace("%scope%", getPunishmentString(state.type))
+                                            .replace("%scope%", getPunishmentTypeString(state.type))
                                             .replace("%server_name%", dcServer.getName())
                                     ).queue(success -> {
                                         //Kicks the user from the discord server.
@@ -344,7 +346,7 @@ public class AddPunishments extends ListenerAdapter{
                                     channel.sendMessage(messageDC2
                                             .replace("%user%", targetUser.getName())
                                             .replace("%reason%", state.reason)
-                                            .replace("%scope%", getPunishmentString(state.type))
+                                            .replace("%scope%", getPunishmentTypeString(state.type))
                                             .replace("%server_name%", dcServer.getName())
                                     ).queue(success -> {
                                         //Kicks the user from the discord server.
@@ -371,12 +373,143 @@ public class AddPunishments extends ListenerAdapter{
                     if(state.type == PunishmentType.PERM_BAN){
                         switch(state.scope){
                             case MINECRAFT:
-                                String kickMessage = plugin.getConfig().getString("kick-message");
+                                //Kicks the player with the ban message if the player is online
+                                String banMessageMC1 = plugin.getConfig().getString("player-punishments-messages.perm-ban-message");
+                                if(state.targetPlayer.isOnline()){
+                                    ((Player) state.targetPlayer).kickPlayer(banMessageMC1
+                                            .replace("%reason%", state.reason)
+                                            .replace("%scope%", getPunishmentColoredScope(state.scope))
+                                            .replace("%id%", state.ID)
+                                    );
+                                }
                                 break;
+
+                            case DISCORD:
+                                //Bans the user
+                                String banMessageDC1 = botConfig.getString("user-punishments-messages.perm-ban-message");
+                                final User targetUser = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
+
+                                targetUser.openPrivateChannel().queue(channel -> {
+                                    channel.sendMessage(banMessageDC1
+                                            .replace("%reason%", state.reason)
+                                            .replace("%scope%", getPunishmentNormalScope(state.scope))
+                                    ).queue(success -> {
+                                        dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                    }, failure -> {
+                                        //If it fails to send the DM, still bans the user.
+                                        dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                    });
+                                }, failure -> {
+                                    //If it fails to open the DM, still bans the user
+                                    dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                });
+                                break;
+
+                            case GLOBAL:
+                                //Kicks the player from the MC server if the player is online
+                                String banMessageMC2 = plugin.getConfig().getString("player-punishments-messages.perm-ban-message");
+                                if(state.targetPlayer.isOnline()){
+                                    ((Player) state.targetPlayer).kickPlayer(banMessageMC2
+                                            .replace("%reason%", state.reason)
+                                            .replace("%scope%", getPunishmentColoredScope(state.scope))
+                                            .replace("%id%", state.ID)
+                                    );
+                                }
+
+                                //Bans the user from the DC server
+                                String banMessageDC2 = botConfig.getString("user-punishments-messages.perm-ban-message");
+                                final User targetUser2 = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
+
+                                targetUser2.openPrivateChannel().queue(channel -> {
+                                    channel.sendMessage(banMessageDC2
+                                            .replace("%reason%", state.reason)
+                                            .replace("%scope%", getPunishmentNormalScope(state.scope))
+                                    ).queue(success -> {
+                                        dcServer.ban(targetUser2, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                    }, failure -> {
+                                        //If it fails to send the DM, still bans the user.
+                                        dcServer.ban(targetUser2, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                    });
+                                }, failure -> {
+                                    //If it fails to open the DM, still bans the user
+                                    dcServer.ban(targetUser2, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                });
+                                break;
+                        }
+
+                        //If the punishment is a permanent mute
+                        if(state.type == PunishmentType.PERM_MUTE){
+                            switch(state.scope){
+                                case MINECRAFT:
+                                    //Sends the player a chat message if the player is online
+                                    if(state.targetPlayer.isOnline()){
+                                        String chatMessage1 = plugin.getConfig().getString("player-punishments-messages.perm-mute-message");
+                                        ((Player) state.targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', chatMessage1
+                                                .replace("%reason%", state.reason)
+                                                .replace("%scope%", getPunishmentColoredScope(state.scope))
+                                                .replace("%id%", state.ID)
+                                        ));
+                                    }
+                                    break;
+
+                                case DISCORD:
+                                    //Sends the user a DM message and timeouts the user.
+                                    final User targetUser1 = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
+                                    final Member targetMember1 = dcServer.getMember(targetUser1);
+                                    String dcMessage1 = botConfig.getString("user-punishments-messages.perm-mute-message");
+
+                                    targetUser1.openPrivateChannel().queue(channel -> {
+                                        channel.sendMessage(dcMessage1
+                                                .replace("%reason%", state.reason)
+                                                .replace("%scope%", getPunishmentNormalScope(state.scope))
+                                                .replace("%id%", state.ID)
+                                                .replace("%server_name%", dcServer.getName())
+                                                .replace("%user%", targetUser1.getName())
+                                        ).queue(success -> {
+                                            targetMember1.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
+                                        }, failure -> {
+                                            //If it fails to send the message, it still timeouts the user
+                                            targetMember1.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue(); //100 years should be enough to be permanent :))
+                                        });
+                                    }, failure -> {
+                                        //If it fails to open the DM, still timeouts the user
+                                        targetMember1.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
+                                    });
+                                    break;
+
+                                case GLOBAL:
+                                    //Sends the player a chat message if the player is online
+                                    if(state.targetPlayer.isOnline()){
+                                        String chatMessage2 =  plugin.getConfig().getString("player-punishments-messages.perm-mute-message");
+                                        ((Player) state.targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', chatMessage2
+                                                .replace("%reason%", state.reason)
+                                                .replace("%scope%", getPunishmentColoredScope(state.scope))
+                                                .replace("%id%", state.ID)
+                                        ));
+                                    }
+
+                                    //Timeouts the user for 100 years :) (Permanent)
+                                    final User targetUser2 = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
+                                    final Member targetMember2 = dcServer.getMember(targetUser2);
+                                    String dcMessage2 = botConfig.getString("user-punishments-messages.perm-mute-message");
+
+                                    targetUser2.openPrivateChannel().queue(channel -> {
+                                        channel.sendMessage(dcMessage2
+                                                .replace("%reason%", state.reason)
+                                                .replace("%scope%", getPunishmentNormalScope(state.scope))
+                                                .replace("%id%", state.ID)
+                                                .replace("%server_name%", dcServer.getName())
+                                                .replace("%user%", targetUser2.getName())
+                                        ).queue(success -> {
+                                            targetMember2.
+                                        });
+                                    })
+                                    break;
+                            }
                         }
                     }
 
-                    event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
+                    event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** for player *"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
                     insertPunishment(state);
                     addingStateMap.remove(userId);
                 } catch (SQLException e) {
@@ -432,7 +565,7 @@ public class AddPunishments extends ListenerAdapter{
             try {
 
                 insertPunishment(state);
-                event.reply("Punishment **"+getPunishmentString(state.type)+"** for player *\\"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
+                event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** for player *\\"+state.targetPlayer.getName()+"* applied successfully!").setEphemeral(true).queue();
 
                 addingStateMap.remove(userId);
             } catch (SQLException e) {
@@ -485,17 +618,19 @@ public class AddPunishments extends ListenerAdapter{
         }
     }
 
-    private String getPunishmentString(PunishmentType type){
-        return switch(type){
-            case PunishmentType.KICK -> ChatColor.translateAlternateColorCodes('&', "KICK");
-            case PunishmentType.PERM_BAN -> ChatColor.translateAlternateColorCodes('&', "PERMANENT BAN");
-            case PunishmentType.PERM_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "PERMANENT BAN WARN");
-            case PunishmentType.PERM_MUTE -> ChatColor.translateAlternateColorCodes('&', "PERMANENT MUTE");
-            case PunishmentType.PERM_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "PERMANENT MUTE WARN");
-            case PunishmentType.TEMP_BAN -> ChatColor.translateAlternateColorCodes('&', "TEMPORARY BAN");
-            case PunishmentType.TEMP_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "TEMPORARY BAN WARN");
-            case PunishmentType.TEMP_MUTE -> ChatColor.translateAlternateColorCodes('&', "TEMPORARY MUTE");
-            case PunishmentType.TEMP_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "TEMPORARY MUTE WARN");
+    private String getPunishmentColoredScope(PunishmentScopes scope){
+        return switch(scope){
+            case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
+            case GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
+            case DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
+        };
+    }
+
+    private String getPunishmentNormalScope(PunishmentScopes scope){
+        return switch(scope){
+            case MINECRAFT -> "MINECRAFT";
+            case GLOBAL -> "GLOBAL";
+            case DISCORD -> "DISCORD";
         };
     }
 
@@ -530,7 +665,7 @@ public class AddPunishments extends ListenerAdapter{
                 INSERT INTO punishments (id, uuid, type, scope, reason, staff, created_at, expire_at, active, removed, removed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """)){
-            ps.setString(1, createId());
+            ps.setString(1, state.ID);
             ps.setString(2, targetPlayer.getUniqueId().toString());
             ps.setString(3, type.name());
             ps.setString(4, scope.name());
@@ -585,6 +720,7 @@ public class AddPunishments extends ListenerAdapter{
 }
 
 class AddingState{
+    String ID;
     OfflinePlayer targetPlayer;
     String staff;
     PunishmentType type;
@@ -593,7 +729,8 @@ class AddingState{
     long expiresAt;
     long lastInteraction;
 
-    public AddingState(OfflinePlayer targetPlayer, String staff, PunishmentType type, PunishmentScopes scope, String reason, long expiresAt, long lastInteraction){
+    public AddingState(String ID, OfflinePlayer targetPlayer, String staff, PunishmentType type, PunishmentScopes scope, String reason, long expiresAt, long lastInteraction){
+        this.ID = ID;
         this.targetPlayer = targetPlayer;
         this.staff = staff;
         this.type = type;
