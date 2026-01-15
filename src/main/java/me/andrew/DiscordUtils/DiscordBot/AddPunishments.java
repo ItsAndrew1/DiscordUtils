@@ -274,13 +274,13 @@ public class AddPunishments extends ListenerAdapter{
             else{
                 try {
                     final Guild dcServer = bot.getDiscordServer();
+                    final User targetUser = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
+                    final Member targetMember = dcServer.getMember(targetUser);
 
                     //Checking each type of punishment to apply them in game/in discord
                     //If the punishment is a kick
                     if(state.type == PunishmentType.KICK){
                         String messageMC = plugin.getConfig().getString("player-punishments-messages.kick-message");
-                        OfflinePlayer targetPlayer = state.targetPlayer;
-                        final User targetUser = (User) User.fromId(getTargetUserID(targetPlayer.getName()));
 
                         //Handles each scope
                         switch(state.scope){
@@ -291,7 +291,7 @@ public class AddPunishments extends ListenerAdapter{
                                     return;
                                 }
 
-                                ((Player) targetPlayer).kickPlayer(messageMC
+                                ((Player) state.targetPlayer).kickPlayer(messageMC
                                         .replace("%reason%", state.reason)
                                         .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(getPlayerStaff(event.getUser().getId())))
                                 );
@@ -328,13 +328,13 @@ public class AddPunishments extends ListenerAdapter{
 
                             case GLOBAL:
                                 //If the target player isn't online, returns with a message
-                                if(!targetPlayer.isOnline()){
-                                    event.reply("Player **\\"+targetPlayer.getName()+"** is not online on the *Minecraft Server* at the moment.\nUse the **Discord Scope** instead!").setEphemeral(true).queue();
+                                if(!state.targetPlayer.isOnline()){
+                                    event.reply("Player **\\"+state.targetPlayer.getName()+"** is not online on the *Minecraft Server* at the moment.\nUse the **Discord Scope** instead!").setEphemeral(true).queue();
                                     return;
                                 }
 
                                 //Kicks the player from the mc server
-                                ((Player) targetPlayer).kickPlayer(messageMC
+                                ((Player) state.targetPlayer).kickPlayer(messageMC
                                         .replace("%reason%", state.reason)
                                         .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(getPlayerStaff(event.getUser().getId())))
                                 );
@@ -387,7 +387,6 @@ public class AddPunishments extends ListenerAdapter{
                             case DISCORD:
                                 //Bans the user
                                 String banMessageDC1 = botConfig.getString("user-punishments-messages.perm-ban-message");
-                                final User targetUser = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
 
                                 targetUser.openPrivateChannel().queue(channel -> {
                                     channel.sendMessage(banMessageDC1
@@ -418,21 +417,20 @@ public class AddPunishments extends ListenerAdapter{
 
                                 //Bans the user from the DC server
                                 String banMessageDC2 = botConfig.getString("user-punishments-messages.perm-ban-message");
-                                final User targetUser2 = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
 
-                                targetUser2.openPrivateChannel().queue(channel -> {
+                                targetUser.openPrivateChannel().queue(channel -> {
                                     channel.sendMessage(banMessageDC2
                                             .replace("%reason%", state.reason)
                                             .replace("%scope%", getPunishmentNormalScope(state.scope))
                                     ).queue(success -> {
-                                        dcServer.ban(targetUser2, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                        dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue();
                                     }, failure -> {
                                         //If it fails to send the DM, still bans the user.
-                                        dcServer.ban(targetUser2, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                        dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue();
                                     });
                                 }, failure -> {
                                     //If it fails to open the DM, still bans the user
-                                    dcServer.ban(targetUser2, 0, TimeUnit.SECONDS).reason(state.reason).queue();
+                                    dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue();
                                 });
                                 break;
                         }
@@ -454,26 +452,24 @@ public class AddPunishments extends ListenerAdapter{
 
                                 case DISCORD:
                                     //Sends the user a DM message and timeouts the user.
-                                    final User targetUser1 = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
-                                    final Member targetMember1 = dcServer.getMember(targetUser1);
                                     String dcMessage1 = botConfig.getString("user-punishments-messages.perm-mute-message");
 
-                                    targetUser1.openPrivateChannel().queue(channel -> {
+                                    targetUser.openPrivateChannel().queue(channel -> {
                                         channel.sendMessage(dcMessage1
                                                 .replace("%reason%", state.reason)
                                                 .replace("%scope%", getPunishmentNormalScope(state.scope))
                                                 .replace("%id%", state.ID)
                                                 .replace("%server_name%", dcServer.getName())
-                                                .replace("%user%", targetUser1.getName())
+                                                .replace("%user%", targetUser.getName())
                                         ).queue(success -> {
-                                            targetMember1.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
+                                            targetMember.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
                                         }, failure -> {
                                             //If it fails to send the message, it still timeouts the user
-                                            targetMember1.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue(); //100 years should be enough to be permanent :))
+                                            targetMember.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue(); //100 years should be enough to be permanent :))
                                         });
                                     }, failure -> {
                                         //If it fails to open the DM, still timeouts the user
-                                        targetMember1.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
+                                        targetMember.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
                                     });
                                     break;
 
@@ -489,21 +485,25 @@ public class AddPunishments extends ListenerAdapter{
                                     }
 
                                     //Timeouts the user for 100 years :) (Permanent)
-                                    final User targetUser2 = (User) User.fromId(getTargetUserID(state.targetPlayer.getName()));
-                                    final Member targetMember2 = dcServer.getMember(targetUser2);
                                     String dcMessage2 = botConfig.getString("user-punishments-messages.perm-mute-message");
 
-                                    targetUser2.openPrivateChannel().queue(channel -> {
+                                    targetUser.openPrivateChannel().queue(channel -> {
                                         channel.sendMessage(dcMessage2
                                                 .replace("%reason%", state.reason)
                                                 .replace("%scope%", getPunishmentNormalScope(state.scope))
                                                 .replace("%id%", state.ID)
                                                 .replace("%server_name%", dcServer.getName())
-                                                .replace("%user%", targetUser2.getName())
+                                                .replace("%user%", targetUser.getName())
                                         ).queue(success -> {
-                                            targetMember2.
+                                            targetMember.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
+                                        }, failure -> {
+                                            //If it fails to send the message, still timeouts the user
+                                            targetMember.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
                                         });
-                                    })
+                                    }, failure -> {
+                                        //If it fails to open the DM, still timeouts the user
+                                        targetMember.timeoutUntil(OffsetDateTime.now().plusYears(100)).reason(state.reason).queue();
+                                    });
                                     break;
                             }
                         }

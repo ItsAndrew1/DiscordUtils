@@ -316,4 +316,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     public Map<UUID, AddingState> getPunishmentsAddingStates(){
         return punishmentsAddingStates;
     }
+
+    public BotMain getDiscordBot() {
+        return discordBot;
+    }
 }
