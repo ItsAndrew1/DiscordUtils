@@ -144,12 +144,20 @@ rewards:
 
 #Configure the punishment messages.
 player-punishments-messages:
-  toggle: true #Whether you want to use these messages or not. This will toggle only CHAT MESSAGES!
-
-  #The message when a player gets kicked. Use '\n' for line breaks. THIS IS NOT TRIGGERED BY THE 'toggle' BOOLEAN!!!
+  #The message when a player gets kicked from the MC server. Use '\n' for line breaks.
   #Placeholders: %scope% -> The scope for the kick
   #              %reason% -> The reason for the kick
   kick-message: "&cYou have been kicked from this server.\n\n&7Scope: %scope%\n&7Reason: &f%reason%"
+
+  #The CHAT message when a DC user assigned to the MC player gets kicked from the DC server.
+  #Placeholders: %reason% -> The reason of the kick
+  kick-chat-message:
+    - "&4&l-----------------------------------------"
+    - " "
+    - "&cYou got &lkicked &cfrom the &9&lDISCORD SERVER&c!"
+    - "&7Reason: &f%reason%"
+    - " "
+    - "&4&l-----------------------------------------"
 
   #The message when a player is permanently banned. Use '\n' for line breaks. THIS IS NOT TRIGGERED BY THE 'toggle' BOOLEAN!!!
   #Placeholders: %scope% -> The scope of the ban (Minecraft/Discord/Global)

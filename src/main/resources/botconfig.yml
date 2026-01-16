@@ -41,6 +41,13 @@ user-punishments-messages:
   #              %id% -> Displays the punishment ID. Handy for appealing.
   permanent-ban-message: "Dear **\\%user%**, \n\nYou *have been banned* from **%server_name%**. See more info below:\n**Reason**: %reason%\n**Scope**: %scope%\n**Ban ID**: %id%\nUse this ID to *appeal* your punishment!"
 
+  #The message when a user gets a permanent ban warning on the server. Use '\n' for line breaks. It supports MARKDOWN!!
+  #Placeholders: %user% -> Displays the target user's name
+  #              %server_name% -> Displays the discord server's name
+  #              %reason% -> The reason of the warning
+  #              %scope% -> The scope of the warning
+  permanent-ban-warn-message: "Dear **\\%user%**, \n\nYou *got* a **permanent ban warning** on *%server_name%. See more info below:\n**Reason: %reason%\n**Scope**: %scope%"
+
   #This is the message when a player gets a timeout. Use '\n' for line breaks. It supports MARKDOWN!!
   #Placeholders: %user% -> Displays the user's name
   #              %server_name% -> Displays your discord server's name
