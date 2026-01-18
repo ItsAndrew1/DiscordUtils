@@ -1,6 +1,8 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

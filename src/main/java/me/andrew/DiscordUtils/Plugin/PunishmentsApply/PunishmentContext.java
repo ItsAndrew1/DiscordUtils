@@ -1,0 +1,340 @@
+//Developed by _ItsAndrew_
+package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
+
+import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
+
+import java.security.SecureRandom;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+/*
+This class helps with applying the punishment in game/in discord server
+and inserting them inside the database.
+ */
+public class PunishmentContext {
+    private final DiscordUtils plugin;
+    private final AddingState state;
+    private final OfflinePlayer staff;
+    private final OfflinePlayer targetPlayer;
+
+    private final Guild dcServer;
+    private final Member targetMember;
+    private final JDA jda;
+
+    private FileConfiguration botConfig;
+
+    public PunishmentContext(DiscordUtils plugin, OfflinePlayer staff, AddingState state) throws SQLException {
+        this.plugin = plugin;
+        this.state = state;
+        this.staff = staff;
+
+        //Getting the target player
+        this.targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
+
+        //Getting the discord server
+        this.dcServer = plugin.getDiscordBot().getDiscordServer();
+        this.targetMember = dcServer.getMember(User.fromId(getTargetUserID(targetPlayer.getName())));
+        this.jda = plugin.getDiscordBot().getJda();
+
+        this.botConfig = plugin.botFile().getConfig();
+    }
+
+    //Helper method to get the discordId of the target player. Useful for DISCORD/GLOBAL scope
+    private String getTargetUserID(String ign) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String SQL = "SELECT discordId FROM playersVerification WHERE ign = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
+            ps.setString(1, ign);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.getString("discordId");
+            }
+        }
+    }
+
+    //Method for inserting the punishment into the db
+    private void insertPunishment(){
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String playerName = staff.getName();
+        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
+
+        try(PreparedStatement ps = dbConnection.prepareStatement("""
+                INSERT INTO punishments (id, uuid, type, scope, reason, staff, created_at, expire_at, active, removed, removed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """)){
+            ps.setString(1, state.ID);
+            ps.setString(2, targetPlayer.getUniqueId().toString());
+            ps.setString(3, state.type.name());
+            ps.setString(4, state.scope.name());
+            ps.setString(5, state.reason);
+            ps.setString(6, playerName);
+            ps.setLong(7, System.currentTimeMillis());
+
+            //Handling various cases
+            if(state.type == PunishmentType.KICK){
+                ps.setLong(8, 0);
+                ps.setBoolean(9, false);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            else if(state.type.toString().contains("WARN")){
+                ps.setLong(8, 0);
+                ps.setBoolean(9, true);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            else if(state.type.name().contains("TEMP")){
+                ps.setLong(8, System.currentTimeMillis() + state.duration);
+                ps.setBoolean(9, true);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            else if(state.type.toString().contains("PERM")){
+                ps.setLong(8, 0);
+                ps.setBoolean(9, true);
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
+            }
+            ps.executeUpdate();
+        } catch (SQLException e){ throw new RuntimeException(e); }
+    }
+    //Colored scope. For displaying the scope in MC
+    private String getColoredStringScope(AddingState state) {
+        return switch(state.scope){
+            case DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
+            case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
+            case GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
+        };
+    }
+    //Formatting the time.
+    private String getFormattedTime(long millis){
+        Instant instant = Instant.ofEpochMilli(millis);
+        LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss");
+        return time.format(formatter);
+    }
+
+    //Helps with creating an ID for each punishment
+    private String createId(){
+        int idLength = plugin.getConfig().getInt("punishment-id-length");
+        StringBuilder id = new StringBuilder(idLength);
+        SecureRandom random = new SecureRandom();
+
+        id.append("#");
+        for(int i = 0; i < idLength; i++){
+            id.append(random.nextInt(10)); //Generates everytime a number from 0-9
+        }
+
+        return id.toString();
+    }
+
+    //Kicks
+    public void applyKick() throws SQLException {
+        switch(state.scope){
+            case MINECRAFT -> {kickMinecraft(); insertPunishment();}
+            case DISCORD ->  {kickDiscord(); insertPunishment();}
+            case GLOBAL ->{kickDiscord(); kickMinecraft(); insertPunishment();}
+        }
+    }
+    private void kickMinecraft(){
+       String kickMessage = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.kick-message"));
+        ((Player) targetPlayer).kickPlayer(kickMessage
+                .replace("%scope%", getColoredStringScope(state))
+                .replace("%reason%", state.reason)
+        );
+    }
+    private void kickDiscord() throws SQLException {
+        //Attempts to send a DM to the target user about the kick
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+            user.openPrivateChannel().queue(channel -> {
+                String message = botConfig.getString("user-punishments-messages.kick-message");
+                channel.sendMessage(message
+                        .replace("%scope%", state.scope.name())
+                        .replace("%reason%", state.reason)
+                        .replace("%user%", user.getName())
+                        .replace("%server_name%", dcServer.getName())
+                ).queue(success -> dcServer.kick(user).reason(state.reason).queue(), failure -> dcServer.kick(user).reason(state.reason).queue());
+            }, failure -> dcServer.kick(user).reason(state.reason).queue());
+        });
+    }
+
+    //Permanent Bans
+    public void applyPermBan() throws SQLException {
+        state.ID = createId();
+
+        switch(state.scope){
+            case MINECRAFT ->{
+                permBanMC();
+                insertPunishment();
+            }
+            case DISCORD -> {
+                permBanDC();
+                insertPunishment();
+            }
+            case GLOBAL -> {permBanDC(); permBanMC(); insertPunishment();}
+        }
+    }
+    private void permBanMC(){
+        //Kicks the target player if he is online, then marks him as banned
+        String permBanMessage = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.perm-ban-message"));
+        if(targetPlayer.isOnline()){
+            ((Player) targetPlayer).kickPlayer(permBanMessage
+                    .replace("%scope%", getColoredStringScope(state))
+                    .replace("%reason%", state.reason)
+                    .replace("%id%", state.ID)
+            );
+        }
+    }
+    private void permBanDC() throws SQLException {
+        //Attempts to send a DM to the target user about the perm ban
+        jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+            targetUser.openPrivateChannel().queue(privateChannel -> {
+                String message = botConfig.getString("user-punishments-messages.permanent-ban-message");
+                privateChannel.sendMessage(message
+                                .replace("%scope%", state.scope.name())
+                                .replace("%reason%", state.reason)
+                                .replace("%id%", state.ID)
+                                .replace("%user%", targetUser.getName())
+                                .replace("%server_name%", dcServer.getName())
+
+                        //If it fails to send the message, still bans the target user
+                ).queue(success -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue(), failure -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue());
+            }, failure ->  dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue()); //If it fails to open the DM, still bans the target user
+        });
+    }
+
+    //Permanent Ban Warnings
+    public void applyPermBanWarn() throws SQLException {
+        state.ID = createId();
+
+        switch(state.scope){
+            case MINECRAFT -> {
+                //Inserts the warning, then checks if the target player reached the number of warns.
+                insertPunishment();
+                if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, PunishmentScopes.MINECRAFT)){
+                    //Expires the warns
+                    plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, PunishmentScopes.MINECRAFT);
+
+                    applyPermBan();
+                }
+                else sendPermBanWarnMessages();
+            }
+
+            case DISCORD -> {
+                //Inserts the warning, then checks if the target user reached the number of warns
+                insertPunishment();
+                if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, PunishmentScopes.DISCORD)){
+                    //Expires the warns
+                    plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, PunishmentScopes.DISCORD);
+
+                    applyPermBan();
+                }
+                else sendPermBanWarnMessages();
+            }
+
+            case GLOBAL -> {
+                //Inserts the warning, then checks if the target user reached the number of warns
+                insertPunishment();
+                if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, PunishmentScopes.GLOBAL)){
+                    //Expires the warns
+                    plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, PunishmentScopes.GLOBAL);
+
+                    applyPermBan();
+                }
+                else sendPermBanWarnMessages();
+            }
+        }
+    }
+    private void sendPermBanWarnMessages() throws SQLException {
+        //If the target player is online, sends him a chat message
+        if(targetPlayer.isOnline()){
+            List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-ban-warn-message");
+            for(String line : message){
+                String coloredLine =  ChatColor.translateAlternateColorCodes('&', line
+                        .replace("%scope%", getColoredStringScope(state))
+                        .replace("%reason%", state.reason)
+                );
+                ((Player) targetPlayer).sendMessage(coloredLine);
+            }
+        }
+
+        //Attempts to send the target user a DM about the warning
+        jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+            targetUser.openPrivateChannel().queue(privateChannel -> {
+                String message = botConfig.getString("user-punishments-messages.permanent-ban-warn-message");
+                privateChannel.sendMessage(message
+                        .replace("%scope%", state.scope.name())
+                        .replace("%reason%", state.reason)
+                        .replace("%server_name%", dcServer.getName())
+                        .replace("%user%", targetUser.getName())
+                ).queue();
+            });
+        });
+    }
+
+    //Temporary Bans
+    public void applyTempBan() throws SQLException {
+        state.ID = createId();
+
+        switch(state.scope){
+            case MINECRAFT -> {
+                tempBanMC();
+                insertPunishment();
+            }
+            case DISCORD -> {
+                tempBanDC();
+                insertPunishment();
+            }
+            case GLOBAL -> {tempBanDC(); tempBanMC(); insertPunishment();}
+        }
+    }
+    private void tempBanMC(){
+        //Kick the target player if he is online
+        if(targetPlayer.isOnline()){
+            String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.temp-ban-message"));
+            ((Player) targetPlayer).kickPlayer(message
+                    .replace("%scope%", getColoredStringScope(state))
+                    .replace("%reason%", state.reason)
+                    .replace("%id%", state.ID)
+                    .replace("%time_left%", plugin.formatTime(state.duration))
+                    .replace("%expiration_time%", getFormattedTime(System.currentTimeMillis() + state.duration))
+            );
+        }
+    }
+    private void tempBanDC() throws SQLException {
+        //Attempts to send the target user a DM
+        jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+            targetUser.openPrivateChannel().queue(privateChannel -> {
+                String message = botConfig.getString("user-punishments-messages.temporary-ban-message");
+                privateChannel.sendMessage(message
+                        .replace("%scope%", state.scope.name())
+                        .replace("%reason%", state.reason)
+                        .replace("%id%", state.ID)
+                        .replace("%time_left%", plugin.formatTime(state.duration))
+                        .replace("%expiration_time%", getFormattedTime(System.currentTimeMillis() + state.duration))
+                        .replace("%server_name%", dcServer.getName())
+                        .replace("%user%", targetUser.getName())
+                ).queue(success -> dcServer.ban(targetUser, Math.toIntExact(state.duration), TimeUnit.MILLISECONDS).reason(state.reason).queue(),
+                        failure -> dcServer.ban(targetUser, Math.toIntExact(state.duration), TimeUnit.MILLISECONDS).reason(state.reason).queue()
+                        );
+            }, failure -> dcServer.ban(targetUser, Math.toIntExact(state.duration), TimeUnit.MILLISECONDS).reason(state.reason).queue());
+        });
+    }
+}

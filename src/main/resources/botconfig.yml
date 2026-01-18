@@ -25,13 +25,12 @@ maximum-length-duration: 15
 
 #Punishments Messages in user's DM. These trigger when you apply a punishment.
 user-punishments-messages:
-
   #This is the message when a user gets kicked from your server. Use '\n' for line breaks. It supports MARKDOWN!!
   #Placeholders: %user% -> Displays the user's name.
   #              %server_name% -> Displays the discord server's name.
   #              %scope% -> Displays the scope of the punishment
   #              %reason% -> Displays the reason of the punishment
-  kick-message: "Dear **\\%user%**,\n\nYou *have been kicked* from **%server_name%**. See more info below:\n**Reason**: %reason%\n**Scope**: %scope%"
+  kick-message: "Dear **%user%**,\n\nYou *have been kicked* from **%server_name%**.\n**Scope**: %scope%\n**Reason**: %reason%"
 
   #This is the message when a user is banned from the server. Use '\n' for line breaks. It supports MARKDOWN!!
   #Placeholders: %user% -> Displays the user's name.
@@ -39,14 +38,24 @@ user-punishments-messages:
   #              %scope% -> Displays the scope of the punishment.
   #              %reason% -> Displays the reason of the punishment.
   #              %id% -> Displays the punishment ID. Handy for appealing.
-  permanent-ban-message: "Dear **\\%user%**, \n\nYou *have been banned* from **%server_name%**. See more info below:\n**Reason**: %reason%\n**Scope**: %scope%\n**Ban ID**: %id%\nUse this ID to *appeal* your punishment!"
+  permanent-ban-message: "Dear **%user%**, \n\nYou *have been **permanently** banned* from **%server_name%**.\n**Reason**: %reason%\n**Scope**: %scope%\n\n**Ban ID**: %id%\nUse this ID to *appeal* your punishment!"
 
   #The message when a user gets a permanent ban warning on the server. Use '\n' for line breaks. It supports MARKDOWN!!
   #Placeholders: %user% -> Displays the target user's name
   #              %server_name% -> Displays the discord server's name
   #              %reason% -> The reason of the warning
   #              %scope% -> The scope of the warning
-  permanent-ban-warn-message: "Dear **\\%user%**, \n\nYou *got* a **permanent ban warning** on *%server_name%. See more info below:\n**Reason: %reason%\n**Scope**: %scope%"
+  permanent-ban-warn-message: "Dear **%user%**, \n\nYou *got* a **permanent ban warning** on *%server_name%.\n**Reason: %reason%\n**Scope**: %scope%"
+
+  #The message when a user gets a temporary ban on the server. Use '\n' for line breaks. It supports MARKDOWN!!
+  #Placeholders: %user% -> Displays the target user's name
+  #              %server_name% -> Displays the discord server's name
+  #              %reason% -> Displays the reason of the ban
+  #              %scope% -> Displays the scope of the ban
+  #              %time_left% -> Displays the duration of the ban
+  #              %expiration_date% -> Displays the time when the ban will expire
+  #              %id% -> Displays the ID of the ban. Useful for appealing.
+  temporary-ban-message: "Dear **%user%**, \n\nYou *have been **temporarily** banned* for **%time_left%** from **%server_name%**.\n**Reason**: %reason%\n**Scope**: %scope%\n**Expires At**: %expiration_date%\n\n**Ban ID**: %id%\nUse this ID to *appeal* your punishment!"
 
   #This is the message when a player gets a timeout. Use '\n' for line breaks. It supports MARKDOWN!!
   #Placeholders: %user% -> Displays the user's name

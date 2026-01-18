@@ -1,18 +1,15 @@
-package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
-
-import me.andrew.DiscordUtils.Plugin.PunishmentScopes;
-import me.andrew.DiscordUtils.Plugin.PunishmentType;
+package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
 import java.util.UUID;
 
 public class AddingState {
-    String ID;
-    UUID targetUUID;
-    PunishmentType type;
-    PunishmentScopes scope;
-    String reason;
-    long duration;
-    long lastInteraction;
+    public String ID;
+    public UUID targetUUID;
+    public PunishmentType type;
+    public PunishmentScopes scope;
+    public String reason;
+    public long duration;
+    public long lastInteraction;
 
     public AddingState(String ID, UUID targetUUID, PunishmentType type, PunishmentScopes scope, String reason, long duration,  long lastInteraction) {
         this.ID = ID;

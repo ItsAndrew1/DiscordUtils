@@ -2,6 +2,8 @@
 package me.andrew.DiscordUtils.Plugin;
 
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
