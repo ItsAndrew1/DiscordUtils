@@ -185,257 +185,103 @@ public class FinalPunishmentGUI implements Listener {
         }
 
         //If the staff clicks on Approve Punishment button
-        if(clickedMaterial.equals(Material.GREEN_CONCRETE)){
+        if(clickedMaterial.equals(Material.GREEN_CONCRETE)) {
             player.closeInventory();
             FileConfiguration botConfig = plugin.botFile().getConfig();
 
             OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
             String clickedPlayerName = targetPlayer.getName();
             String chatPrefix = plugin.getConfig().getString("chat-prefix");
-            PunishmentScopes scope =  state.scope;
+            PunishmentScopes scope = state.scope;
             PunishmentType punishmentType = state.type;
             String reason = state.reason;
 
-            final Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-            final JDA jda = plugin.getDiscordBot().getJda();
-            int nrOfWarns = plugin.getConfig().getInt("warns-amount");
+            //Checking if the target player is verified (if the scope is DISCORD)
+            if (scope == PunishmentScopes.DISCORD && !plugin.getDatabaseManager().isVerified(targetPlayer.getUniqueId())) {
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &cPlayer &e" + clickedPlayerName + " &cis not verified!"));
+                return;
+            }
 
             //Creating the context for the punishment
             PunishmentContext ctx = new PunishmentContext(plugin, player, state);
 
             //If the punishment is a kick
-            if(punishmentType.equals(PunishmentType.KICK)){
-                //Checking various cases. First one is if the player is online or not.
-                if(!targetPlayer.isOnline()){
+            if (punishmentType.equals(PunishmentType.KICK)) {
+                //Checking if the target player is online or not
+                if (!targetPlayer.isOnline() && (scope == PunishmentScopes.MINECRAFT || scope == PunishmentScopes.GLOBAL)) {
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                    if(scope == PunishmentScopes.MINECRAFT) player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+clickedPlayerName+" &cis not online!"));
-                    if(scope == PunishmentScopes.GLOBAL) player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+clickedPlayerName+" &cis not online! You may use &9&lDISCORD &cscope instead."));
-                    return;
-                }
-
-                //Checking if the target player is verified (if the scope is DISCORD)
-                if(scope == PunishmentScopes.DISCORD && !plugin.getDatabaseManager().isVerified(targetPlayer.getUniqueId())){
-                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+clickedPlayerName+" &cis not verified!"));
+                    if (scope == PunishmentScopes.MINECRAFT)
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &cPlayer &e" + clickedPlayerName + " &cis not online!"));
+                    if (scope == PunishmentScopes.GLOBAL)
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &cPlayer &e" + clickedPlayerName + " &cis not online! You may use &9&lDISCORD &cscope instead."));
                     return;
                 }
 
                 //Applying the punishment
                 scope.applyPunishment(ctx, PunishmentType.KICK);
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment "+getPunishmentString(PunishmentType.KICK)+" &awith scope, "+getPunishmentColoredScope(state.scope)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
-
-                //Removing the staff player from the AddingStateMap
-                plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.KICK) + " &awith scope, " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
             }
 
             //If the punishment is a perm ban warn
-            if(punishmentType.equals(PunishmentType.PERM_BAN_WARN)){
-                //Checking if the target player is verified (if the scope is DISCORD)
-                if(scope == PunishmentScopes.DISCORD && !plugin.getDatabaseManager().isVerified(targetPlayer.getUniqueId())){
-                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+clickedPlayerName+" &cis not verified!"));
-                    return;
-                }
-
+            if (punishmentType.equals(PunishmentType.PERM_BAN_WARN)) {
                 scope.applyPunishment(ctx, PunishmentType.PERM_BAN_WARN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" "+getPunishmentString(PunishmentType.PERM_BAN_WARN)+ " &awith scope "+getPunishmentColoredScope(state.scope)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " " + getPunishmentString(PunishmentType.PERM_BAN_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
             }
 
             //If punishment is a perm ban
-            if(punishmentType.equals(PunishmentType.PERM_BAN)){
-                //Checking if the target player is verified (if the scope is DISCORD)
-                if(scope == PunishmentScopes.DISCORD && !plugin.getDatabaseManager().isVerified(targetPlayer.getUniqueId())){
-                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+clickedPlayerName+" &cis not verified!"));
-                    return;
-                }
-
+            if (punishmentType.equals(PunishmentType.PERM_BAN)) {
                 scope.applyPunishment(ctx, PunishmentType.PERM_BAN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment "+getPunishmentString(PunishmentType.PERM_BAN)+" &awith scope "+getPunishmentColoredScope(state.scope)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
-                player.playSound(player.getLocation(),  Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.PERM_BAN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
             }
 
             //If punishment is a temp ban warn
-            if(punishmentType.equals(PunishmentType.TEMP_BAN_WARN) && (scope.equals(PunishmentScopes.GLOBAL) || scope.equals(PunishmentScopes.MINECRAFT))){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', getPunishmentString(state.type)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
+            if (punishmentType.equals(PunishmentType.TEMP_BAN_WARN)) {
+                scope.applyPunishment(ctx, PunishmentType.TEMP_BAN_WARN);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_BAN_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-
-                //Check if the player has the designated amount of warns
-                if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.TEMP_BAN_WARN, state.scope)){
-                    long duration = state.duration;
-                    long createdAt = System.currentTimeMillis();
-                    long expiresAt = createdAt + duration;
-
-                    state.ID = createId();
-                    state.type = PunishmentType.TEMP_BAN;
-                    if(targetPlayer.isOnline()){
-                        Instant expireInstant = Instant.ofEpochMilli(createdAt + duration);
-                        LocalDateTime time = LocalDateTime.ofInstant(expireInstant, ZoneId.systemDefault());
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss");
-                        String expiresAtString = time.format(formatter);
-
-                        String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.temp-ban-message"));
-                        ((Player) targetPlayer).kickPlayer(message
-                                .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(player))
-                                .replace("%reason%", reason)
-                                .replace("%expiration_time%", expiresAtString)
-                                .replace("%time_left%", plugin.formatTime(duration))
-                                .replace("%id%", state.ID)
-                        );
-                    }
-                    plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.TEMP_BAN_WARN,  state.scope);
-                }
-                else{
-                    //Sends the target player a message if he is online
-                    if (targetPlayer.isOnline()) {
-                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-ban-warn-message");
-                        for (String messageLine : message) ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                                .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(player))
-                                .replace("%reason%", reason)
-                        ));
-                    }
-                }
             }
 
             //If punishment is a temp ban
-            if(punishmentType.equals(PunishmentType.TEMP_BAN)){
-                //Checking if the target player is verified (if the scope is DISCORD)
-                if(scope == PunishmentScopes.DISCORD && !plugin.getDatabaseManager().isVerified(targetPlayer.getUniqueId())){
-                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+clickedPlayerName+" &cis not verified!"));
-                    return;
-                }
-
+            if (punishmentType.equals(PunishmentType.TEMP_BAN)) {
                 scope.applyPunishment(ctx, PunishmentType.TEMP_BAN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment "+getPunishmentString(PunishmentType.TEMP_BAN)+" &awith scope "+getPunishmentColoredScope(state.scope)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
-                player.playSound(player.getLocation(),Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_BAN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
             }
 
             //If punishment is a perm mute
-            if(punishmentType == PunishmentType.PERM_MUTE && (scope.equals(PunishmentScopes.MINECRAFT) || scope.equals(PunishmentScopes.GLOBAL))){
-                //Sends the player a chat message if he is online
-                state.ID = createId();
-                boolean toggleMessage = plugin.getConfig().getBoolean("player-punishments-messages.toggle");
-                if(targetPlayer.isOnline() && toggleMessage){
-                    List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
-                    for(String messageLine : message) ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                            .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(player))
-                            .replace("%reason%", reason)
-                            .replace("%id%", state.ID)
-                    ));
-                }
-
+            if (punishmentType == PunishmentType.PERM_MUTE) {
+                scope.applyPunishment(ctx, PunishmentType.PERM_MUTE);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.PERM_MUTE) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aPunishment &e&l"+getPunishmentString(punishmentType)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
             }
 
             //If punishment is a perm mute warning
-            if(punishmentType == PunishmentType.PERM_MUTE_WARN && (scope == PunishmentScopes.MINECRAFT || scope == PunishmentScopes.GLOBAL)){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', getPunishmentString(state.type)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
+            if (punishmentType == PunishmentType.PERM_MUTE_WARN) {
+                scope.applyPunishment(ctx, PunishmentType.PERM_MUTE_WARN);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.PERM_MUTE_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-
-                //Check if the player reached the designated amount of warns
-                if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.PERM_MUTE_WARN, state.scope)){
-                    state.ID = createId();
-                    state.type = PunishmentType.PERM_MUTE;
-                    if(targetPlayer.isOnline()){
-                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
-                        for(String messageLine : message) ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                                .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(player))
-                                .replace("%reason%", reason)
-                                .replace("%id%", state.ID)
-                        ));
-                    }
-
-                    plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.PERM_MUTE_WARN,  state.scope);
-                }
-                else{
-                    //Sends the target player a message if he is online
-                    if (targetPlayer.isOnline()) {
-                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-warn-message");
-                        for (String messageLine : message) ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                                .replace("%scope%",  plugin.getChoosePunishScopeGUI().getStringScope(player))
-                                .replace("%reason%", reason)
-                        ));
-                    }
-                }
             }
 
             //If punishment is a temp mute
-            if(punishmentType == PunishmentType.TEMP_MUTE && (scope == PunishmentScopes.MINECRAFT || scope == PunishmentScopes.GLOBAL)){
-                //Sends the target player a chat message if he is online
-                boolean toggleMessage = plugin.getConfig().getBoolean("player-punishments-messages.toggle");
-                state.ID = createId();
-                if(targetPlayer.isOnline() && toggleMessage){
-                    List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-message");
-
-                    //Getting the duration and the expiration date
-                    long duration = state.duration;
-
-                    Instant expireInstant = Instant.ofEpochMilli(expiredAt);
-                    LocalDateTime time = LocalDateTime.ofInstant(expireInstant, ZoneId.systemDefault());
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss");
-                    String expiresAt = time.format(formatter);
-
-                    for(String messageLine : message) ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                            .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(player))
-                            .replace("%reason%", reason)
-                            .replace("%expiration_time%", expiresAt)
-                            .replace("%time_left%", plugin.formatTime(duration))
-                            .replace("%id%", state.ID)
-                    ));
-                }
-
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment &e&l"+getPunishmentString(punishmentType)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
+            if (punishmentType == PunishmentType.TEMP_MUTE) {
+                scope.applyPunishment(ctx, PunishmentType.TEMP_MUTE);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_MUTE) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
             }
 
             //If punishment is a temp mute warning
-            if(punishmentType == PunishmentType.TEMP_MUTE_WARN && (scope == PunishmentScopes.MINECRAFT || scope == PunishmentScopes.GLOBAL)){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', getPunishmentString(state.type)+" &aapplied for player &e"+clickedPlayerName+"&a!"));
+            if (punishmentType == PunishmentType.TEMP_MUTE_WARN && (scope == PunishmentScopes.MINECRAFT || scope == PunishmentScopes.GLOBAL)) {
+                scope.applyPunishment(ctx, PunishmentType.TEMP_MUTE_WARN);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_MUTE_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-
-                //Check if the player has the designated amount of warns
-                if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.TEMP_MUTE_WARN, state.scope)){
-                    long duration = state.duration;
-                    long createdAt = System.currentTimeMillis();
-                    long expiresAt = createdAt + duration;
-
-                    plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.TEMP_MUTE_WARN,  scope);
-
-                    state.ID = createId();
-                    state.type = PunishmentType.TEMP_MUTE;
-                    if(targetPlayer.isOnline()){
-                        Instant expireInstant = Instant.ofEpochMilli(createdAt + duration);
-                        LocalDateTime time = LocalDateTime.ofInstant(expireInstant, ZoneId.systemDefault());
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss");
-                        String expiresAtString = time.format(formatter);
-
-                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-message");
-                        for(String messageLine : message) ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                                .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(player))
-                                .replace("%reason%", reason)
-                                .replace("%expiration_time%", expiresAtString)
-                                .replace("%time_left%", plugin.formatTime(duration))
-                                .replace("%id%", state.ID)
-                        ));
-                    }
-                }
-                else{
-                    //Sends the target player a message if he is online
-                    if (targetPlayer.isOnline()) {
-                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-warn-message");
-                        for (String messageLine : message) ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                                .replace("%scope%", plugin.getChoosePunishScopeGUI().getStringScope(player))
-                                .replace("%reason%", reason)
-                        ));
-                    }
-                }
             }
         }
 
+        //Removing the staff from the adding state map
         plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
     }
 }

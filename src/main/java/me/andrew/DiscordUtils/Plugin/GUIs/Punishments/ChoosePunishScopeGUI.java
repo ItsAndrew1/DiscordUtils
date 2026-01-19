@@ -225,6 +225,13 @@ public class ChoosePunishScopeGUI implements Listener {
         return millis;
     }
 
+    private boolean isBotConfigured(){
+        String guildId = plugin.botFile().getConfig().getString("guild-id");
+        String botToken = plugin.botFile().getConfig().getString("bot-token");
+
+        return guildId != null && botToken != null;
+    }
+
     @EventHandler
     public void onClick(InventoryClickEvent e) throws SQLException {
         if(!(e.getWhoClicked() instanceof Player player)) return;
@@ -252,6 +259,13 @@ public class ChoosePunishScopeGUI implements Listener {
         OfflinePlayer targetPlayer =  plugin.getPlayerHeadsGUIs().getClickedPlayer();
         //If the player clicks on discord scope button
         if(clickedMaterial.equals(Material.PLAYER_HEAD) && clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD"))){
+            //Checking if the bot is configured properly
+            if(!isBotConfigured()){
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThe &9&lDiscord Bot &cis not set up properly!"));
+                return;
+            }
+
             //Check if the target player is banned on discord
             if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
                 error(player, PunishmentScopes.DISCORD, state.type);

@@ -2,8 +2,8 @@
 #This file is for configuring the discord bot.
 
 #Configure the main bot principles
-guild-id: "" #This is the ID your discord server has. To get it, turn on 'Developer Mode', right click on your server and click on 'Copy ID'
-bot-token: "" #This is the token of a bot. To run the bot, you will need to create an app yourself in the Discord Developer Portal.
+guild-id:  #This is the ID your discord server has. To get it, turn on 'Developer Mode', right click on your server and click on 'Copy ID'
+bot-token:  #This is the token of a bot. To run the bot, you will need to create an app yourself in the Discord Developer Portal.
 #After you create an app, go to 'bot' section, copy the token and paste it here. To invite the bot to your server, go to 'OAuth2' section and generate a URL.
 
 #Messages. They support MARKDOWN! 'Set ephemeral' makes the message appear only to that user
@@ -88,3 +88,10 @@ user-punishments-messages:
   #              %scope% ->Displays the scope of the timeout
   #              %id% -> Displays the ID of the timeout.
   temporary-timeout-message: "Dear **%user%**, \n\nYou *got* a **temporary timeout** for *%time_left%* on *%server_name%*. \n**Reason**: %reason%\n**Scope**: %scope%\n**Expires At**: %expiration_time%\n\n**Timeout ID**: %id%\nUse this ID to *appeal*."
+
+  #The message when a target user gets a temporary timeout warning on the server. Use '\n' for line breaks. It supports MARKDOWN!!
+  #Placeholders: %user% -> Displays the target user's name
+  #              %server_name% -> Displays the discord server's name
+  #              %reason% -> Displays the reason of the punishment
+  #              %scope% -> Displays the scope of the punishment
+  temporary-timeout-warn-message: "Dear **%user%**, \n\nYou *got* a **temporary timeout warning** on *%server_name%*. \n**Reason**: %reason%\n**Scope**: %scope%"

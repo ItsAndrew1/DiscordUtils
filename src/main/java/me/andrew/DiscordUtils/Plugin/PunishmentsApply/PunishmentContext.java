@@ -34,11 +34,7 @@ public class PunishmentContext {
     private final OfflinePlayer staff;
     private final OfflinePlayer targetPlayer;
 
-    private final Guild dcServer;
-    private final Member targetMember;
-    private final JDA jda;
-
-    private FileConfiguration botConfig;
+    private final FileConfiguration botConfig;
 
     public PunishmentContext(DiscordUtils plugin, OfflinePlayer staff, AddingState state) throws SQLException {
         this.plugin = plugin;
@@ -47,12 +43,6 @@ public class PunishmentContext {
 
         //Getting the target player
         this.targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
-
-        //Getting the discord server
-        this.dcServer = plugin.getDiscordBot().getDiscordServer();
-        this.targetMember = dcServer.getMember(User.fromId(getTargetUserID(targetPlayer.getName())));
-        this.jda = plugin.getDiscordBot().getJda();
-
         this.botConfig = plugin.botFile().getConfig();
     }
 
@@ -67,6 +57,13 @@ public class PunishmentContext {
                 return rs.getString("discordId");
             }
         }
+    }
+
+    private boolean isBotConfigured(){
+        String guildId = plugin.botFile().getConfig().getString("guild-id");
+        String botToken = plugin.botFile().getConfig().getString("bot-token");
+
+        return guildId != null && botToken != null;
     }
 
     //Method for inserting the punishment into the db
@@ -161,6 +158,8 @@ public class PunishmentContext {
         );
     }
     private void kickDiscord() throws SQLException {
+        Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+
         //Attempts to send a DM to the target user about the kick
         plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
             user.openPrivateChannel().queue(channel -> {
@@ -203,8 +202,10 @@ public class PunishmentContext {
         }
     }
     private void permBanDC() throws SQLException {
+        Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+
         //Attempts to send a DM to the target user about the perm ban
-        jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.permanent-ban-message");
                 privateChannel.sendMessage(message
@@ -230,6 +231,7 @@ public class PunishmentContext {
             //Expires the warns
             plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, state.scope);
 
+            state.type = PunishmentType.PERM_BAN;
             applyPermBan();
         }
         else{ //If he didn't reach the nr of warns, sends him messages.
@@ -245,18 +247,21 @@ public class PunishmentContext {
                 }
             }
 
-            //Attempts to send the target user a DM about the warning
-            jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
-                targetUser.openPrivateChannel().queue(privateChannel -> {
-                    String message = botConfig.getString("user-punishments-messages.permanent-ban-warn-message");
-                    privateChannel.sendMessage(message
-                            .replace("%scope%", state.scope.name())
-                            .replace("%reason%", state.reason)
-                            .replace("%server_name%", dcServer.getName())
-                            .replace("%user%", targetUser.getName())
-                    ).queue();
+            //Attempts to send the target user a DM about the warning (if the bot is configured)
+            if(isBotConfigured()){
+                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                    targetUser.openPrivateChannel().queue(privateChannel -> {
+                        String message = botConfig.getString("user-punishments-messages.permanent-ban-warn-message");
+                        privateChannel.sendMessage(message
+                                .replace("%scope%", state.scope.name())
+                                .replace("%reason%", state.reason)
+                                .replace("%server_name%", dcServer.getName())
+                                .replace("%user%", targetUser.getName())
+                        ).queue();
+                    });
                 });
-            });
+            }
         }
     }
 
@@ -290,8 +295,10 @@ public class PunishmentContext {
         }
     }
     private void tempBanDC() throws SQLException {
+        Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+
         //Attempts to send the target user a DM
-        jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.temporary-ban-message");
                 privateChannel.sendMessage(message
@@ -322,31 +329,38 @@ public class PunishmentContext {
             plugin.getDatabaseManager().expireAllWarns(targetPlayer,  PunishmentType.TEMP_BAN_WARN, state.scope);
 
             //Applies the temporary ban
+            state.type = PunishmentType.TEMP_BAN;
             applyTempBan();
         }
         //If he didn't, sends him some messages
         else{
             //If the target player is online in game, sends a chat message
             if(targetPlayer.isOnline()){
-                String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.temp-ban-warn-message"));
-                ((Player) targetPlayer).sendMessage(message
-                        .replace("%scope%", getColoredStringScope(state))
-                        .replace("%reason%", state.reason)
-                );
+                List<String> message =  plugin.getConfig().getStringList("player-punishments-messages.temp-ban-warn-message");
+                for(String line : message){
+                    String coloredLine = ChatColor.translateAlternateColorCodes('&', line
+                            .replace("%scope%", getColoredStringScope(state))
+                            .replace("%reason%", state.reason)
+                    );
+                    ((Player) targetPlayer).sendMessage(coloredLine);
+                }
             }
 
-            //Attempts to send the target user a DM
-            jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
-                targetUser.openPrivateChannel().queue(privateChannel -> {
-                    String message = botConfig.getString("user-punishments-messages.temporary-ban-warn-message");
-                    privateChannel.sendMessage(message
-                            .replace("%scope%", state.scope.name())
-                            .replace("%reason%", state.reason)
-                            .replace("%user%", targetUser.getName())
-                            .replace("%server_name%", dcServer.getName())
-                    ).queue();
+            //Attempts to send the target user a DM (if the bot is configured)
+            if(isBotConfigured()){
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                    Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+                    targetUser.openPrivateChannel().queue(privateChannel -> {
+                        String message = botConfig.getString("user-punishments-messages.temporary-ban-warn-message");
+                        privateChannel.sendMessage(message
+                                .replace("%scope%", state.scope.name())
+                                .replace("%reason%", state.reason)
+                                .replace("%user%", targetUser.getName())
+                                .replace("%server_name%", dcServer.getName())
+                        ).queue();
+                    });
                 });
-            });
+            }
         }
     }
 
@@ -363,17 +377,22 @@ public class PunishmentContext {
     private void permMuteMC(){
         //If the target player is online, sends him a chat message
         if(targetPlayer.isOnline()){
-            String message = plugin.getConfig().getString("player-punishments-messages.perm-mute-message");
-            ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', message
-                    .replace("%scope%", getColoredStringScope(state))
-                    .replace("%reason%", state.reason)
-                    .replace("%id%", state.ID)
-            ));
+            List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
+            for(String line : message){
+                ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', line
+                        .replace("%scope%", getColoredStringScope(state))
+                        .replace("%reason%", state.reason)
+                        .replace("%id%", state.ID)
+                ));
+            }
         }
     }
     private void permTimeoutDC() throws SQLException {
+        Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+
         //Attempts to send the target user a DM
-        jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+            Member targetMember = dcServer.getMember(targetUser);
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.perm-timeout-message");
                 privateChannel.sendMessage(message
@@ -400,31 +419,37 @@ public class PunishmentContext {
             plugin.getDatabaseManager().expireAllWarns(targetPlayer,   PunishmentType.PERM_MUTE_WARN, state.scope);
 
             //Applies the perm mute/timeout
+            state.type = PunishmentType.PERM_MUTE;
             applyPermMuteTimeout();
         }
         //If not, sends messages
         else{
             //If the target player is online, in game, sends a chat message
             if(targetPlayer.isOnline()){
-                String message =  plugin.getConfig().getString("player-punishments-messages.perm-mute-warn-message");
-                ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', message
-                        .replace("%scope%", getColoredStringScope(state))
-                        .replace("%reason%", state.reason)
-                ));
+                List<String> message =  plugin.getConfig().getStringList("player-punishments-messages.perm-mute-warn-message");
+                for(String line : message){
+                    ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', line
+                            .replace("%scope%", getColoredStringScope(state))
+                            .replace("%reason%", state.reason)
+                    ));
+                }
             }
 
-            //Attempts to send the target user a DM
-            jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
-                targetUser.openPrivateChannel().queue(privateChannel -> {
-                    String message = botConfig.getString("user-punishments-messages.permanent-timeout-warn-message");
-                    privateChannel.sendMessage(message
-                            .replace("%scope%", state.scope.name())
-                            .replace("%reason%", state.reason)
-                            .replace("%user%",  targetUser.getName())
-                            .replace("%server_name%", dcServer.getName())
-                    ).queue();
+            //Attempts to send the target user a DM (if the bot is configured)
+            if(isBotConfigured()){
+                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                    targetUser.openPrivateChannel().queue(privateChannel -> {
+                        String message = botConfig.getString("user-punishments-messages.permanent-timeout-warn-message");
+                        privateChannel.sendMessage(message
+                                .replace("%scope%", state.scope.name())
+                                .replace("%reason%", state.reason)
+                                .replace("%user%",  targetUser.getName())
+                                .replace("%server_name%", dcServer.getName())
+                        ).queue();
+                    });
                 });
-            });
+            }
         }
     }
 
@@ -441,19 +466,24 @@ public class PunishmentContext {
     private void tempMuteMC(){
         //If the target player is online on the game, sends a chat message
         if(targetPlayer.isOnline()){
-            String message = plugin.getConfig().getString("player-punishments-messages.temp-mute-message");
-            ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', message
-                    .replace("%scope%", getColoredStringScope(state))
-                    .replace("%reason%", state.reason)
-                    .replace("%id%", state.ID)
-                    .replace("%time_left%", plugin.formatTime(state.duration))
-                    .replace("%expiration_time%", getFormattedTime(System.currentTimeMillis() + state.duration))
-            ));
+            List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-message");
+            for(String line : message){
+                ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', line
+                        .replace("%scope%", getColoredStringScope(state))
+                        .replace("%reason%", state.reason)
+                        .replace("%id%", state.ID)
+                        .replace("%time_left%", plugin.formatTime(state.duration))
+                        .replace("%expiration_time%", getFormattedTime(System.currentTimeMillis() + state.duration))
+                ));
+            }
         }
     }
     private void tempTimeoutDC() throws SQLException {
         //Attempts to send a DM to the target user
-        jda.retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+            Member targetMember = dcServer.getMember(targetUser);
+
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.temporary-timeout-message");
                 privateChannel.sendMessage(message
@@ -467,5 +497,52 @@ public class PunishmentContext {
                 ).queue(success -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue(), failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue());
             }, failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue());
         });
+    }
+
+    //Temporary Mutes/Timeouts Warnings
+    public void applyTempMuteTimeoutWarn() throws SQLException {
+        state.ID = createId();
+
+        //Inserts the warning
+        insertPunishment();
+
+        //Checks if the target player/user has reached the number of warns
+        if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.TEMP_BAN_WARN, state.scope)){
+            //Expire the warnings
+            plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.TEMP_BAN_WARN, state.scope);
+
+            //Applies the temporary mute/timeout
+            state.type = PunishmentType.TEMP_MUTE;
+            applyTempMuteTimeout();
+        }
+        //If not, sends messages to the user/player about the warning
+        else{
+            //Sends a chat message if the target player is online
+            if(targetPlayer.isOnline()){
+                List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-warn-message");
+                for(String line : message){
+                    ((Player) targetPlayer).sendMessage(line
+                            .replace("%scope%", getColoredStringScope(state))
+                            .replace("%reason%", state.reason)
+                    );
+                }
+            }
+
+            //Attempts to send the target user a DM (if the bot is configured)
+            if(isBotConfigured()){
+                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                    targetUser.openPrivateChannel().queue(privateChannel -> {
+                        String message = botConfig.getString("user-punishments-messages.temporary-timeout-warn-message");
+                        privateChannel.sendMessage(message
+                                .replace("%scope%", state.scope.name())
+                                .replace("%reason%", state.reason)
+                                .replace("%server_name%", dcServer.getName())
+                                .replace("%user%", targetUser.getName())
+                        ).queue();
+                    });
+                });
+            }
+        }
     }
 }

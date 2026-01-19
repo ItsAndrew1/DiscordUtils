@@ -47,21 +47,21 @@ public enum PunishmentType{
 
     TEMP_MUTE(false){
         @Override
-        public void apply(PunishmentContext ctx) {
-
+        public void apply(PunishmentContext ctx) throws SQLException {
+            ctx.applyTempMuteTimeout();
         }
     },
     PERM_MUTE_WARN(true){
         @Override
-        public void apply(PunishmentContext ctx){
-
+        public void apply(PunishmentContext ctx) throws SQLException {
+            ctx.applyPermMuteTimeoutWarn();
         }
     },
 
     TEMP_MUTE_WARN(true){
         @Override
-        public void apply(PunishmentContext ctx) {
-
+        public void apply(PunishmentContext ctx) throws SQLException {
+            ctx.applyTempMuteTimeoutWarn();
         }
     };
 
