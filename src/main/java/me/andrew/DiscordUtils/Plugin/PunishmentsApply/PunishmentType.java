@@ -27,8 +27,8 @@ public enum PunishmentType{
 
     TEMP_BAN_WARN(true){
         @Override
-        public void apply(PunishmentContext ctx){
-
+        public void apply(PunishmentContext ctx) throws SQLException {
+            ctx.applyTempBanWarn();
         }
     },
 
@@ -40,8 +40,8 @@ public enum PunishmentType{
 
     PERM_MUTE(true){
         @Override
-        public void apply(PunishmentContext ctx){
-
+        public void apply(PunishmentContext ctx) throws SQLException {
+            ctx.applyPermMuteTimeout();
         }
     },
 
