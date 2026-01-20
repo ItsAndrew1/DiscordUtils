@@ -144,13 +144,6 @@ public class FinalPunishmentGUI implements Listener {
             }
         }
     }
-    private String getPunishmentNormalScope(PunishmentScopes scope){
-        return switch(scope){
-            case MINECRAFT -> "MINECRAFT";
-            case GLOBAL -> "GLOBAL";
-            case DISCORD -> "DISCORD";
-        };
-    }
     private String getPunishmentColoredScope(PunishmentScopes scope){
         return switch(scope){
             case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
@@ -187,19 +180,17 @@ public class FinalPunishmentGUI implements Listener {
         //If the staff clicks on Approve Punishment button
         if(clickedMaterial.equals(Material.GREEN_CONCRETE)) {
             player.closeInventory();
-            FileConfiguration botConfig = plugin.botFile().getConfig();
 
             OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
             String clickedPlayerName = targetPlayer.getName();
             String chatPrefix = plugin.getConfig().getString("chat-prefix");
             PunishmentScopes scope = state.scope;
             PunishmentType punishmentType = state.type;
-            String reason = state.reason;
 
-            //Checking if the target player is verified (if the scope is DISCORD)
-            if (scope == PunishmentScopes.DISCORD && !plugin.getDatabaseManager().isVerified(targetPlayer.getUniqueId())) {
+            //Checking if the target player is verified (if the scope is DISCORD or GLOBAL)
+            if ((scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL) && !plugin.getDatabaseManager().isVerified(targetPlayer.getUniqueId())) {
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &cPlayer &e" + clickedPlayerName + " &cis not verified!"));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &cPlayer &e" + clickedPlayerName + " &cis not verified on the discord server!"));
                 return;
             }
 

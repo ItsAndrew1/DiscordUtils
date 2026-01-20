@@ -110,6 +110,7 @@ public class AddRemoveHistoryGUI implements Listener{
             AddingState newState = new AddingState(
                     null,
                     plugin.getPlayerHeadsGUIs().getClickedPlayer().getUniqueId(),
+                    player.getName(),
                     null,
                     null,
                     null,
