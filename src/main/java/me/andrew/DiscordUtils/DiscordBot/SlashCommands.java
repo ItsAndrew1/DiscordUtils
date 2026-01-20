@@ -2,8 +2,13 @@ package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
+import me.andrew.DiscordUtils.Plugin.Punishment;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -149,6 +154,75 @@ public class SlashCommands extends ListenerAdapter{
                     throw new RuntimeException(e);
                 }
             }
+
+            case "psremove" -> {
+                try{
+                    //Getting the ID from the command
+                    String ID = event.getOption("ID").getAsString();
+
+                    //Checking if there is a punishment with that ID
+                    if(!punishmentExists(ID)){
+                        event.reply("There is **no punishment** with that ID!").setEphemeral(true).queue();
+                        return;
+                    }
+
+                    //Expiring the punishment that has the typed ID
+                    Connection dbConnection = plugin.getDatabaseManager().getConnection();
+                    String SQL = "UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE id =?";
+
+                    PreparedStatement ps = dbConnection.prepareStatement(SQL);
+                    ps.setLong(1, System.currentTimeMillis());
+                    ps.setString(2, ID);
+                    ps.executeUpdate();
+
+                    //Getting the punishment scope and type
+                    String SQL2 = "SELECT type, scope, uuid FROM punishment WHERE id = ?";
+                    PreparedStatement ps2 = dbConnection.prepareStatement(SQL2);
+                    ps2.setString(1, ID);
+                    ResultSet rs = ps2.executeQuery();
+
+                    PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
+                    PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
+                    UUID targetUUID =  UUID.fromString(rs.getString("uuid"));
+
+                    //If the scope is Discord or Global, I have to unban/remove the timeout of the user
+                    if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
+                        if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                            String banType = type.isPermanent() ? "PERMANENT BAN" : "TEMPORARY BAN";
+
+                            //Sends the target user a DM informing that the ban got removed
+                            botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
+                                targetUser.openPrivateChannel().queue(channel -> {
+                                    String message = botConfig.getString("user-punishments-messages.ban-remove-user-message");
+                                    channel.sendMessage(message
+                                            .replace("%user%", targetUser.getName())
+                                            .replace("%server_name%", botMain.getDiscordServer().getName())
+                                            .replace("%ban_type%",  banType)
+                                    ).queue(success -> botMain.getDiscordServer().unban(targetUser).queue(), failure -> botMain.getDiscordServer().unban(targetUser).queue());
+                                }, failure -> botMain.getDiscordServer().unban(targetUser).queue());
+                            });
+                        }
+
+                        if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
+                            String timeoutType = type.isPermanent() ? "PERMANENT TIMEOUT" : "TEMPORARY TIMEOUT";
+
+                            //Sends the target user a DM informing him that the timeout got removed
+                            botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
+                                targetUser.openPrivateChannel().queue(channel -> {
+                                    String message = botConfig.getString("user-punishments-messages.timeout-remove-user-message");
+                                    channel.sendMessage(message
+                                            .replace("%user%", targetUser.getName())
+                                            .replace("%server_name%", botMain.getDiscordServer().getName())
+                                            .replace("%timeout_type%",  timeoutType)
+                                    ).queue(success -> botMain.getDiscordServer().removeTimeout(targetUser).queue(), failure -> botMain.getDiscordServer().removeTimeout(targetUser).queue());
+                                }, failure ->  botMain.getDiscordServer().removeTimeout(targetUser).queue());
+                            });
+                        }
+                    }
+                } catch (Exception e){
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 
@@ -163,5 +237,29 @@ public class SlashCommands extends ListenerAdapter{
             }
         }
         return userPlayer;
+    }
+
+    private String getTargetPlayerUserID(UUID targetUUID) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String SQL = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
+            ps.setString(1, targetUUID.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.getString("discordId");
+            }
+        }
+    }
+
+    private boolean punishmentExists(String ID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT 1 FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next();
+            }
+        }
     }
 }

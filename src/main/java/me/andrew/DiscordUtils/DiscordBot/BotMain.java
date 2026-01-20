@@ -40,7 +40,9 @@ public class BotMain{
                 Commands.slash("pshistory", "View the history of a player!")
                         .addOption(OptionType.STRING, "ign", "Enter the player's IGN!", false),
                 Commands.slash("punish", "Punish a player. You cannot enter your own name!")
-                        .addOption(OptionType.STRING, "ign", "Enter the player's IGN.", true)
+                        .addOption(OptionType.STRING, "ign", "Enter the player's IGN.", true),
+                Commands.slash("psremove", "Remove a punishment from a player!")
+                        .addOption(OptionType.STRING, "ID", "Enter the ID of the punishment.", true)
         ).queue();
     }
 

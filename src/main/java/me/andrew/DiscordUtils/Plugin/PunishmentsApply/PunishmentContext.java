@@ -309,10 +309,10 @@ public class PunishmentContext {
                         .replace("%expiration_time%", getFormattedTime(System.currentTimeMillis() + state.duration))
                         .replace("%server_name%", dcServer.getName())
                         .replace("%user%", targetUser.getName())
-                ).queue(success -> dcServer.ban(targetUser, Math.toIntExact(state.duration), TimeUnit.MILLISECONDS).reason(state.reason).queue(),
-                        failure -> dcServer.ban(targetUser, Math.toIntExact(state.duration), TimeUnit.MILLISECONDS).reason(state.reason).queue()
+                ).queue(success -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue(),
+                        failure -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue()
                         );
-            }, failure -> dcServer.ban(targetUser, Math.toIntExact(state.duration), TimeUnit.MILLISECONDS).reason(state.reason).queue());
+            }, failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue());
         });
     }
 
