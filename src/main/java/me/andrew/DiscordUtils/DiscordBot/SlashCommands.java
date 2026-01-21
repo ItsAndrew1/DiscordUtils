@@ -223,6 +223,14 @@ public class SlashCommands extends ListenerAdapter{
                     throw new RuntimeException(e);
                 }
             }
+
+            case "unverify" -> {
+                String userID = event.getUser().getId();
+
+                //Removing the user from the playersVerification table
+                Connection dbConnection = plugin.getDatabaseManager().getConnection();
+                String sql =
+            }
         }
     }
 

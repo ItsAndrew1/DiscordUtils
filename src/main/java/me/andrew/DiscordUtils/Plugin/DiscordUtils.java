@@ -8,6 +8,9 @@ import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.FacingChoiceGUI;
 import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.MainConfigGUI;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.*;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.dv8tion.jda.api.entities.Guild;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,11 +19,11 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -142,6 +145,71 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. The bot won't start. See message:");
             Bukkit.getLogger().warning(e.getMessage());
         }
+
+        //Runs a task to auto expire the punishments
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+            Connection dbConnection = databaseManager.getConnection();
+            try {
+                List<Punishment> allPunishments = getAllPunishments();
+                if(!allPunishments.isEmpty()){
+                    for(Punishment p : allPunishments){
+                        if(p.getExpiresAt() >= System.currentTimeMillis()){
+                            String sql = "UPDATE punishments SET active = false WHERE id = ?";
+
+                            PreparedStatement ps = dbConnection.prepareStatement(sql);
+                            ps.setString(1, p.getId());
+                            ps.executeUpdate();
+
+                            PunishmentType type = p.getPunishmentType();
+                            PunishmentScopes scope = p.getScope();
+
+                            String expireTimeoutDM = botConfig.getConfig().getString("timeout-expire-user-message");
+                            String expireBanDM = botConfig.getConfig().getString("ban-expire-user-message");
+
+                            //Getting the user ID from the target UUID assigned to the punishment
+                            UUID targetUUID = p.getUuid();
+                            String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+                            PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
+                            ps2.setString(1, targetUUID.toString());
+                            ResultSet rs = ps2.executeQuery();
+                            String userId = rs.getString("discordId");
+
+                            //Sends the target user a DM about this expiration if the user is verified
+                            if(databaseManager.isVerified(targetUUID)){
+                                discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
+                                    Guild dcServer = discordBot.getDiscordServer();
+                                    if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                                        targetUser.openPrivateChannel().queue(channel -> {
+                                            String banType = type.isPermanent() ? "PERMANENT BAN" : "TEMPORARY BAN";
+                                            channel.sendMessage(expireBanDM
+                                                    .replace("%scope%", scope.name())
+                                                    .replace("%ban_type%", banType)
+                                                    .replace("%user%", targetUser.getName())
+                                                    .replace("%server_name%", dcServer.getName())
+                                            ).queue(success -> dcServer.unban(targetUser).queue(), failure -> dcServer.unban(targetUser).queue());
+                                        }, failure -> dcServer.unban(targetUser).queue());
+                                    }
+
+                                    if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
+                                        targetUser.openPrivateChannel().queue(channel -> {
+                                            String muteType =  type.isPermanent() ? "PERMANENT MUTE" : "TEMPORARY MUTE";
+                                            channel.sendMessage(expireTimeoutDM
+                                                    .replace("%user%", targetUser.getName())
+                                                    .replace("%server_name%", dcServer.getName())
+                                                    .replace("%scope%", scope.name())
+                                                    .replace("%timeout_type%", muteType)
+                                            ).queue(success -> dcServer.removeTimeout(targetUser).queue(), failure -> dcServer.removeTimeout(targetUser).queue());
+                                        }, failure -> dcServer.removeTimeout(targetUser).queue());
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }, 0L, 20L*5); //Runs every 5 seconds
     }
 
     @Override
@@ -171,6 +239,23 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     public void waitForPlayerInput(Player player, Consumer<String> callback){
         chatInput.put(player.getUniqueId(), callback);
+    }
+
+    //Method for getting a list of all Punishments (List<Punishment>)
+    private List<Punishment> getAllPunishments() throws SQLException{
+        Connection dbConnection = getDatabaseManager().getConnection();
+        List<Punishment> allPunishments = new ArrayList<>();
+        String sql = "SELECT * FROM punishments";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            try(ResultSet rs = ps.executeQuery()){
+                while(rs.next()){
+                    Punishment p = getDatabaseManager().mapPunishment(rs);
+                    allPunishments.add(p);
+                }
+                return allPunishments;
+            }
+        }
     }
 
     //Handles the broadcasting task

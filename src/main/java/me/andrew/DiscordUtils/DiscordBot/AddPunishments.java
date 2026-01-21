@@ -248,7 +248,7 @@ public class AddPunishments extends ListenerAdapter{
 
         if(event.getCustomId().equals("psDuration")){
             //Check if the state has not expired
-            if(state == null){
+            if(!addingStateMap.containsKey(event.getUser().getIdLong())){
                 event.reply("This punishment session **has expired**! Run */punish <ign>* again!").setEphemeral(true).queue();
                 return;
             }

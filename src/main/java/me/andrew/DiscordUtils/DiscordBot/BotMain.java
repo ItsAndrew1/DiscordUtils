@@ -8,6 +8,13 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.bukkit.Bukkit;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class BotMain{
     private final JDA jda;
     private final Guild discordServer;
@@ -42,7 +49,8 @@ public class BotMain{
                 Commands.slash("punish", "Punish a player. You cannot enter your own name!")
                         .addOption(OptionType.STRING, "ign", "Enter the player's IGN.", true),
                 Commands.slash("psremove", "Remove a punishment from a player!")
-                        .addOption(OptionType.STRING, "ID", "Enter the ID of the punishment.", true)
+                        .addOption(OptionType.STRING, "ID", "Enter the ID of the punishment.", true),
+                Commands.slash("unverify", "Unverify the account you are linked with. You won't be able to chat on this server until you verify again!")
         ).queue();
     }
 

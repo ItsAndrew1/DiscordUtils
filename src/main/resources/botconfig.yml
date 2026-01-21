@@ -100,12 +100,14 @@ user-punishments-messages:
   #Placeholders: %user% -> Displays the target user's name
   #              %ban_type% -> Displays the ban type (permanent/temporary ban)
   #              %server_name% -> Displays the discord server's name
-  ban-expire-user-message: "Dear **%user%**, your *%ban_type%* has **expired**! You can now join **%server_name%**!"
+  #              %scope% -> Displays the scope of the ban
+  ban-expire-user-message: "Dear **%user%**, your *%ban_type%* with scope *%scope%* has **expired**! You can now join **%server_name%**!"
   ban-remove-user-message: "Dear **%user%**, your *%ban_type%* has been **removed**! You can now join **%server_name%**!"
 
   #The message when a user's timeout expires or gets removed. Use '\n' for line breaks.
   #Placeholders: %user% -> Displays the target user's name
   #              %timeout_type% -> Displays the timeout type (permanent/temporary timeout)
   #              %server_name% -> Displays the discord server's name
-  timeout-expire-user-message: "Dear **%user%**, your *%timeout_type%* on *%server_name%* has **expired**!"
+  #              %scope% -> Displays the scope of the timeout
+  timeout-expire-user-message: "Dear **%user%**, your *%timeout_type%* with scope *%scope%* on *%server_name%* has **expired**!"
   timeout-remove-user-message: "Dear **%user%**, your *%timeout_type%* on *%server_name%* has been **removed**!"
