@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.jetbrains.annotations.NotNull;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -194,6 +195,35 @@ public class Commands implements CommandExecutor{
                 throw new RuntimeException(e);
             }
             return true;
+        }
+
+        if(command.getName().equalsIgnoreCase("unverify")){
+            //Checking if the player has permission to run the command
+            if(!player.hasPermission("discordutils.use")){
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message")));
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
+                return true;
+            }
+
+            //Checking if the player is verified
+            String sql = "DELETE FROM playersVerification WHERE uuid = ?";
+            try(PreparedStatement preparedStatement = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+                if(!plugin.getDatabaseManager().isVerified(player.getUniqueId())){
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have a MC account linked to the DC server. Run &l/verify &cto link one!"));
+                    player.playSound(player.getLocation(), invalid, 1f, 1f);
+                    return true;
+                }
+
+                //Deleting the player from playersVerification table
+                preparedStatement.setString(1, player.getUniqueId().toString());
+                preparedStatement.execute();
+
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aUnverified successfully!"));
+                player.playSound(player.getLocation(), good, 1f, 1f);
+                return true;
+            } catch (SQLException e){
+                throw new RuntimeException(e);
+            }
         }
 
         return false;

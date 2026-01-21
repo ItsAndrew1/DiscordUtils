@@ -91,6 +91,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(commands);
         getCommand("verify").setExecutor(commands);
+        getCommand("unverify").setExecutor(commands);
         getCommand("dcutils").setExecutor(commands);
         getCommand("dcutils").setTabCompleter(new CommandTABS(this));
 
@@ -168,14 +169,14 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
                             //Getting the user ID from the target UUID assigned to the punishment
                             UUID targetUUID = p.getUuid();
-                            String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-                            PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
-                            ps2.setString(1, targetUUID.toString());
-                            ResultSet rs = ps2.executeQuery();
-                            String userId = rs.getString("discordId");
-
                             //Sends the target user a DM about this expiration if the user is verified
                             if(databaseManager.isVerified(targetUUID)){
+                                String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+                                PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
+                                ps2.setString(1, targetUUID.toString());
+                                ResultSet rs = ps2.executeQuery();
+                                String userId = rs.getString("discordId");
+
                                 discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
                                     Guild dcServer = discordBot.getDiscordServer();
                                     if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){

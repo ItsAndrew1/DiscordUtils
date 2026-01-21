@@ -226,11 +226,36 @@ public class SlashCommands extends ListenerAdapter{
 
             case "unverify" -> {
                 String userID = event.getUser().getId();
-
-                //Removing the user from the playersVerification table
                 Connection dbConnection = plugin.getDatabaseManager().getConnection();
-                String sql =
+                String sql = "DELETE FROM playersVerification WHERE discordId = ?";
+
+                //Checking if the user is verified
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                    if(!isUserVerified(userID)){
+                        event.reply("You *don't have* any MC account linked to your DC account! Use **/verify** to link one!").setEphemeral(true).queue();
+                        return;
+                    }
+
+                    //Removing the user from the playersVerification table
+                    ps.setString(1, userID);
+                    ps.executeUpdate();
+
+                    event.reply("Unverified successfully!").setEphemeral(true).queue();
+                } catch (Exception e){
+                    throw new RuntimeException(e);
+                }
             }
+        }
+    }
+
+    private boolean isUserVerified(String ID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String SQL = "SELECT 1 FROM playersVerification WHERE discordId = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
+            ps.setString(1, ID);
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
         }
     }
 
