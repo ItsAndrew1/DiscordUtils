@@ -23,6 +23,12 @@ maximum-length-reason: 2000
 minimum-length-duration: 2
 maximum-length-duration: 15
 
+#Configure the punishment appeal. For the placeholder use '\n' for line breaks
+minimum-length-appeal: 500 #In characters!
+maximum-length-appeal: 5000 #In characters!
+placeholder-appeal: "In detail, explain anything related to the punishment you've received. \nMINIMUM 100 WORDS! If we cannot understand the text, we will decline it immediately."
+appeal-channel-id:  #The channel where the appeals will show up
+
 #Punishments Messages in user's DM. These trigger when you apply a punishment.
 user-punishments-messages:
   #This is the message when a user gets kicked from your server. Use '\n' for line breaks. It supports MARKDOWN!!

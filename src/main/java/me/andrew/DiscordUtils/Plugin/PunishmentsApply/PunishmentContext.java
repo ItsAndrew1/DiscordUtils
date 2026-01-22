@@ -3,6 +3,8 @@ package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
@@ -216,7 +218,7 @@ public class PunishmentContext {
                                 .replace("%server_name%", dcServer.getName())
 
                         //If it fails to send the message, still bans the target user
-                ).queue(success -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue(), failure -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue());
+                ).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Apply Punishment"))).queue(success -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue(), failure -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue());
             }, failure ->  dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue()); //If it fails to open the DM, still bans the target user
         });
     }
@@ -309,7 +311,7 @@ public class PunishmentContext {
                         .replace("%expiration_time%", getFormattedTime(System.currentTimeMillis() + state.duration))
                         .replace("%server_name%", dcServer.getName())
                         .replace("%user%", targetUser.getName())
-                ).queue(success -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue(),
+                ).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Apply Punishment"))).queue(success -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue(),
                         failure -> dcServer.ban(targetUser, 0, TimeUnit.SECONDS).reason(state.reason).queue()
                         );
             }, failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue());
@@ -401,7 +403,7 @@ public class PunishmentContext {
                         .replace("%id%", state.ID)
                         .replace("%server_name%", dcServer.getName())
                         .replace("%user%", targetUser.getName())
-                ).queue(success -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue(), failure -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue());
+                ).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Apply Punishment"))).queue(success -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue(), failure -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue());
             }, failure -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue()); //If it fails to open the DM, still timeout the user
         });
     }
@@ -494,7 +496,7 @@ public class PunishmentContext {
                         .replace("%expiration_time%", getFormattedTime(System.currentTimeMillis() + state.duration))
                         .replace("%server_name%",  dcServer.getName())
                         .replace("%user%", targetUser.getName())
-                ).queue(success -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue(), failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue());
+                ).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Apply Punishment"))).queue(success -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue(), failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue());
             }, failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue());
         });
     }

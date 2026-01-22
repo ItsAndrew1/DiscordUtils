@@ -89,7 +89,8 @@ public class DatabaseManager {
                     expire_at BIGINT,
                     active TINYINT(1) DEFAULT 1,
                     removed TINYINT(1) DEFAULT 0,
-                    removed_at BIGINT
+                    removed_at BIGINT,
+                    appeal_state TEXT DEFAULT NULL
                 );
         """;
         try(Statement statement = connection.createStatement()){

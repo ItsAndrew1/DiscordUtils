@@ -6,6 +6,7 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentContext;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
@@ -202,7 +203,8 @@ public class AddPunishments extends ListenerAdapter{
                     );
 
                     state.scope.applyPunishment(ctx, state.type);
-                    event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
+                    event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!")
+                            .setEphemeral(true).queue();
                     addingStateMap.remove(event.getUser().getIdLong());
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
@@ -261,7 +263,8 @@ public class AddPunishments extends ListenerAdapter{
                         state
                 );
                 state.scope.applyPunishment(ctx, state.type);
-                event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
+                event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!")
+                        .setEphemeral(true).queue();
                 addingStateMap.remove(event.getUser().getIdLong());
             } catch (Exception e){
                 throw new RuntimeException(e);
