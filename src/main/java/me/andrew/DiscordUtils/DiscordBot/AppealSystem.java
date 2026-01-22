@@ -5,6 +5,7 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
@@ -24,6 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
 
 public class AppealSystem extends ListenerAdapter {
     private final DiscordUtils plugin;
@@ -35,6 +37,8 @@ public class AppealSystem extends ListenerAdapter {
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event){
         FileConfiguration botConfig = plugin.botFile().getConfig();
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+
         if(event.getComponentId().contains("appeal:")){
             try{
                 //Getting the punishmentId from the customId of the button
@@ -42,14 +46,21 @@ public class AppealSystem extends ListenerAdapter {
 
                 //Checking if the punishment still exists in the DB
                 if(!doesPunishmentExist(punishmentID)){
-                    event.reply("This punishment doesn't exit anymore!").queue();
+                    event.reply("This punishment doesn't exit anymore!").setEphemeral(true).queue();
                     return;
                 }
 
                 //Checking if the appeal is in a pending state
                 if(isPunishmentInAppealState(punishmentID)){
-                    event.reply("You **have already appealed** for this punishment! Please *wait* until a decision is made. Only then, you may appeal again.").queue();
+                    event.reply("You **have already appealed** for this punishment! Please *wait* until a decision is made. Only then, you may appeal again.").setEphemeral(true).queue();
                     return;
+                }
+
+                //Updating the punishment 'appeal_state' in the punishments table
+                String sql = "UPDATE punishments SET appeal_state = 'PENDING' WHERE id = ?";
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                    ps.setString(1, punishmentID);
+                    ps.executeUpdate();
                 }
 
                 //Opening a modal with the appealing form
@@ -143,11 +154,18 @@ public class AppealSystem extends ListenerAdapter {
 
         String field =
                 "Minecraft IGN: "+targetPlayerName+"\n\n"+
-                "**Issued At**: "+plugin.formatTime(createdAt)
+                "**Issued At**: "+formatTime(createdAt)
                 +"\n**Scope**: "+scope.name()
-                +"\n**Type**: "+type.name()
-                +"\n\nAppeal Mini Essay: \n"
-                + reasonForm;
+                +"\n**Type**: "+type.name();
+        if(!type.isPermanent()) field+="\n**Expires In**: "+plugin.formatTime(expiresAt - System.currentTimeMillis());
+        field += "\n\nAppeal Form: \n" + reasonForm;
+        embedFormBuilder.setDescription(field);
+
+        //Sends the embed to the channel designated for appeals
+        appealsChannel.sendMessageEmbeds(embedFormBuilder.build()).addComponents(ActionRow.of(
+                Button.success("appeal_accept:"+punishmentID, "Accept"),
+                Button.danger("appeal_decline:"+punishmentID, "Decline")
+        )).queue();
 
         event.reply("Punishment appeal sent successfully!").setEphemeral(true).queue();
     }
@@ -163,6 +181,29 @@ public class AppealSystem extends ListenerAdapter {
                 return type == PunishmentType.TEMP_BAN || type == PunishmentType.TEMP_MUTE;
             }
         }
+    }
+
+    public String formatTime(long millis){
+        long days =  TimeUnit.MILLISECONDS.toDays(millis);
+        millis -= TimeUnit.DAYS.toMillis(days);
+
+        long hours =  TimeUnit.MILLISECONDS.toHours(millis);
+        millis -=  TimeUnit.HOURS.toMillis(hours);
+
+        long minutes =  TimeUnit.MILLISECONDS.toMinutes(millis);
+        millis -= TimeUnit.MINUTES.toMillis(minutes);
+
+        long seconds =  TimeUnit.MILLISECONDS.toSeconds(millis);
+
+        StringBuilder sb = new StringBuilder();
+        if(minutes > 0) seconds = 0;
+
+        if(days > 0) sb.append(days).append("d ");
+        if(hours > 0) sb.append(hours).append("h ");
+        if(minutes > 0) sb.append(minutes).append("m ");
+        if(seconds > 0 || sb.isEmpty()) sb.append(seconds).append("s");
+
+        return sb.toString().trim();
     }
 }
 

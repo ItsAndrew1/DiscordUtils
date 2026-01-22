@@ -158,7 +158,7 @@ public class SlashCommands extends ListenerAdapter{
             case "psremove" -> {
                 try{
                     //Getting the ID from the command
-                    String ID = event.getOption("ID").getAsString();
+                    String ID = event.getOption("id").getAsString();
 
                     //Checking if there is a punishment with that ID
                     if(!punishmentExists(ID)){
@@ -176,7 +176,7 @@ public class SlashCommands extends ListenerAdapter{
                     ps.executeUpdate();
 
                     //Getting the punishment scope and type
-                    String SQL2 = "SELECT type, scope, uuid FROM punishment WHERE id = ?";
+                    String SQL2 = "SELECT type, scope, uuid FROM punishments WHERE id = ?";
                     PreparedStatement ps2 = dbConnection.prepareStatement(SQL2);
                     ps2.setString(1, ID);
                     ResultSet rs = ps2.executeQuery();

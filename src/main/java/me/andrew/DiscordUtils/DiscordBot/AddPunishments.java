@@ -90,7 +90,7 @@ public class AddPunishments extends ListenerAdapter{
         try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
             ps.setString(1, userId);
             try(ResultSet rs = ps.executeQuery()){
-                Player staff = Bukkit.getPlayer(UUID.fromString(rs.getString("uuid")));
+                OfflinePlayer staff = Bukkit.getOfflinePlayer(UUID.fromString(rs.getString("uuid")));
                 return staff.getName();
             }
         }
@@ -178,7 +178,7 @@ public class AddPunishments extends ListenerAdapter{
             state.lastInteraction = System.currentTimeMillis();
 
             //If the punishment is a temp mute or temp ban, opens the duration modal. Else, inserts the punishment.
-            if (!state.type.isPermanent()) {
+            if (!state.type.isPermanent() && state.type != PunishmentType.KICK){
                 int minimumLength = botConfig.getInt("minimum-length-duration");
                 int maximumLength = botConfig.getInt("maximum-length-duration");
                 TextInput body = TextInput.create("duration", TextInputStyle.PARAGRAPH)
@@ -203,8 +203,7 @@ public class AddPunishments extends ListenerAdapter{
                     );
 
                     state.scope.applyPunishment(ctx, state.type);
-                    event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!")
-                            .setEphemeral(true).queue();
+                    event.editMessage("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").queue();
                     addingStateMap.remove(event.getUser().getIdLong());
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
@@ -263,8 +262,8 @@ public class AddPunishments extends ListenerAdapter{
                         state
                 );
                 state.scope.applyPunishment(ctx, state.type);
-                event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!")
-                        .setEphemeral(true).queue();
+                event.editMessage("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!")
+                        .queue();
                 addingStateMap.remove(event.getUser().getIdLong());
             } catch (Exception e){
                 throw new RuntimeException(e);

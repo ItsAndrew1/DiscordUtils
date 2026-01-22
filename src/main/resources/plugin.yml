@@ -18,6 +18,10 @@ commands:
     description: Handles the verification for the players
     permission: discordutils.use
 
+  unverify:
+    description: Unverifies the minecraft account linked to the discord user
+    permission: discordutils.use
+
 permissions:
   discordutils.use:
     description: Allows the use of the command

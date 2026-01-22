@@ -21,6 +21,7 @@ public class BotMain{
     private final PunishmentHistory punishmentHistory;
     private final AddPunishments addPunishments;
 
+
     public BotMain(String token, String guildId, DiscordUtils plugin) throws Exception{
         SlashCommands slashCommands = new SlashCommands(plugin, this);
         punishmentHistory = new PunishmentHistory(plugin);
@@ -31,6 +32,7 @@ public class BotMain{
                 .addEventListeners(slashCommands)
                 .addEventListeners(punishmentHistory)
                 .addEventListeners(addPunishments)
+                .addEventListeners(new AppealSystem(plugin))
                 .build()
                 .awaitReady();
 
@@ -49,8 +51,8 @@ public class BotMain{
                 Commands.slash("punish", "Punish a player. You cannot enter your own name!")
                         .addOption(OptionType.STRING, "ign", "Enter the player's IGN.", true),
                 Commands.slash("psremove", "Remove a punishment from a player!")
-                        .addOption(OptionType.STRING, "ID", "Enter the ID of the punishment.", true),
-                Commands.slash("unverify", "Unverify the account you are linked with. You won't be able to chat on this server until you verify again!")
+                        .addOption(OptionType.STRING, "id", "Enter the ID of the punishment.", true),
+                Commands.slash("unverify", "Unverify the account you are linked with.")
         ).queue();
     }
 

@@ -154,7 +154,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 List<Punishment> allPunishments = getAllPunishments();
                 if(!allPunishments.isEmpty()){
                     for(Punishment p : allPunishments){
-                        if(p.getExpiresAt() >= System.currentTimeMillis()){
+                        if(p.getExpiresAt() <= System.currentTimeMillis() && p.isActive()){
                             String sql = "UPDATE punishments SET active = false WHERE id = ?";
 
                             PreparedStatement ps = dbConnection.prepareStatement(sql);
@@ -164,8 +164,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                             PunishmentType type = p.getPunishmentType();
                             PunishmentScopes scope = p.getScope();
 
-                            String expireTimeoutDM = botConfig.getConfig().getString("timeout-expire-user-message");
-                            String expireBanDM = botConfig.getConfig().getString("ban-expire-user-message");
+                            String expireTimeoutDM = botConfig.getConfig().getString("user-punishments-messages.timeout-expire-user-message");
+                            String expireBanDM = botConfig.getConfig().getString("user-punishments-messages.ban-expire-user-message");
 
                             //Getting the user ID from the target UUID assigned to the punishment
                             UUID targetUUID = p.getUuid();
