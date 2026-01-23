@@ -57,9 +57,10 @@ public class AppealSystem extends ListenerAdapter {
                 }
 
                 //Updating the punishment 'appeal_state' in the punishments table
-                String sql = "UPDATE punishments SET appeal_state = 'PENDING' WHERE id = ?";
+                String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
                 try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                    ps.setString(1, punishmentID);
+                    ps.setString(1, "PENDING");
+                    ps.setString(2, punishmentID);
                     ps.executeUpdate();
                 }
 

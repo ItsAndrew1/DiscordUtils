@@ -10,6 +10,7 @@ import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.*;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -164,9 +165,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                             PunishmentType type = p.getPunishmentType();
                             PunishmentScopes scope = p.getScope();
 
-                            String expireTimeoutDM = botConfig.getConfig().getString("user-punishments-messages.timeout-expire-user-message");
-                            String expireBanDM = botConfig.getConfig().getString("user-punishments-messages.ban-expire-user-message");
-
                             //Getting the user ID from the target UUID assigned to the punishment
                             UUID targetUUID = p.getUuid();
                             //Sends the target user a DM about this expiration if the user is verified
@@ -182,24 +180,44 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                                     if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
                                         targetUser.openPrivateChannel().queue(channel -> {
                                             String banType = type.isPermanent() ? "PERMANENT BAN" : "TEMPORARY BAN";
-                                            channel.sendMessage(expireBanDM
-                                                    .replace("%scope%", scope.name())
-                                                    .replace("%ban_type%", banType)
+                                            String expireBanDM = botConfig.getConfig().getString("user-punishments-messages.ban-expire-user-message")
                                                     .replace("%user%", targetUser.getName())
+                                                    .replace("%ban_type%", banType)
+                                                    .replace("%scope%", scope.name())
                                                     .replace("%server_name%", dcServer.getName())
-                                            ).queue(success -> dcServer.unban(targetUser).queue(), failure -> dcServer.unban(targetUser).queue());
+                                                    ;
+
+                                            EmbedBuilder embed = new EmbedBuilder();
+                                            embed.setTitle(banType+" EXPIRATION");
+                                            embed.setColor(Color.GREEN.asRGB());
+                                            embed.setDescription(expireBanDM);
+
+                                            channel.sendMessageEmbeds(embed.build()).queue(
+                                                    success -> dcServer.unban(targetUser).queue(),
+                                                    failure -> dcServer.unban(targetUser).queue()
+                                            );
                                         }, failure -> dcServer.unban(targetUser).queue());
                                     }
 
                                     if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
                                         targetUser.openPrivateChannel().queue(channel -> {
                                             String muteType =  type.isPermanent() ? "PERMANENT MUTE" : "TEMPORARY MUTE";
-                                            channel.sendMessage(expireTimeoutDM
-                                                    .replace("%user%", targetUser.getName())
-                                                    .replace("%server_name%", dcServer.getName())
+                                            String expireTimeoutDM = botConfig.getConfig().getString("user-punishments-messages.timeout-expire-user-message")
                                                     .replace("%scope%", scope.name())
                                                     .replace("%timeout_type%", muteType)
-                                            ).queue(success -> dcServer.removeTimeout(targetUser).queue(), failure -> dcServer.removeTimeout(targetUser).queue());
+                                                    .replace("%user%", targetUser.getName())
+                                                    .replace("%server_name%", dcServer.getName())
+                                                    ;
+
+                                            EmbedBuilder embed = new EmbedBuilder();
+                                            embed.setColor(Color.GREEN.asRGB());
+                                            embed.setTitle(muteType+" EXPIRATION");
+                                            embed.setDescription(expireTimeoutDM);
+
+                                            channel.sendMessageEmbeds(embed.build()).queue(
+                                                    success -> dcServer.removeTimeout(targetUser).queue(),
+                                                    failure -> dcServer.removeTimeout(targetUser).queue()
+                                            );
                                         }, failure -> dcServer.removeTimeout(targetUser).queue());
                                     }
                                 });

@@ -1,6 +1,9 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
@@ -8,7 +11,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.security.SecureRandom;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -37,6 +42,14 @@ public class VerificationManager{
             for(String line : hasVerifiedMessage){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
             }
+
+            //Assigns the Verified role to the user
+            Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+            String userID = getUserID(player.getUniqueId().toString());
+            Member targetMember = dcServer.getMemberById(userID);
+            String verifiedRoleID = plugin.botFile().getConfig().getString("verification.verified-role-id");
+            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
+            dcServer.addRoleToMember(targetMember, verifiedRole).queue();
 
             //Sound
             Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound").toLowerCase()));
@@ -170,5 +183,16 @@ public class VerificationManager{
         }
 
         return verificationCode.toString();
+    }
+
+    private String getUserID(String targetUUID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, targetUUID);
+            ResultSet rs = ps.executeQuery();
+            return rs.getString("discordId");
+        }
     }
 }

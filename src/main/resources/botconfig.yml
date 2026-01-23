@@ -26,8 +26,18 @@ maximum-length-duration: 15
 #Configure the punishment appeal. Use '\n' for line breaks
 minimum-length-appeal: 500 #In characters!
 maximum-length-appeal: 5000 #In characters!
-placeholder-appeal: "In detail, explain anything related to the punishment you've received. \nMINIMUM 100 WORDS! If we cannot understand the text, we will decline it immediately."
+placeholder-appeal: "In detail, explain anything related to the punishment you've received. \nMINIMUM 100 WORDS!"
 appeal-channel-id:  #The channel where the appeals will show up
+
+#Configure the member join event. You will need to create 2 roles and a verify channel!
+verification:
+  verified-role-id:  #This role will be a 'Member' type role. It will be used to let the user see the other channels
+  unverified-role-id:  #This one is used to only show the 'verify' channel
+  verify-channel-id:  #The ID of the verification channel
+
+#Configure the Role for timeout. You will also have to create one
+use-timeout-role: true #If you want to use this role or not
+timeout-role-id:  #The ID of the role you created
 
 #Punishments Messages in user's DM. These trigger when you apply a punishment.
 user-punishments-messages:

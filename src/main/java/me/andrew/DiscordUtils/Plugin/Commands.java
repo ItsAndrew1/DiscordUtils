@@ -3,16 +3,21 @@ package me.andrew.DiscordUtils.Plugin;
 
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -205,14 +210,34 @@ public class Commands implements CommandExecutor{
                 return true;
             }
 
-            //Checking if the player is verified
+            FileConfiguration botConfig = plugin.botFile().getConfig();
+
             String sql = "DELETE FROM playersVerification WHERE uuid = ?";
             try(PreparedStatement preparedStatement = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+                //Checking if the player is verified
                 if(!plugin.getDatabaseManager().isVerified(player.getUniqueId())){
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have a MC account linked to the DC server. Run &l/verify &cto link one!"));
                     player.playSound(player.getLocation(), invalid, 1f, 1f);
                     return true;
                 }
+                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+                String userDiscordID;
+
+                //Getting the user's discord id
+                String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+                try(PreparedStatement preparedStatement2 = plugin.getDatabaseManager().getConnection().prepareStatement(sql2)){
+                    preparedStatement2.setString(1, player.getUniqueId().toString());
+                    ResultSet rs = preparedStatement2.executeQuery();
+                    userDiscordID = rs.getString("discordId");
+                }
+
+                //Removing all roles from the target user and giving him Unverified role
+                String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
+                Role unverified = dcServer.getRoleById(unverifiedRoleID);
+
+                Member targetMember = dcServer.getMemberById(userDiscordID);
+                for(Role role : targetMember.getRoles()) dcServer.removeRoleFromMember(targetMember, role).queue();
+                dcServer.addRoleToMember(targetMember, unverified).queue();
 
                 //Deleting the player from playersVerification table
                 preparedStatement.setString(1, player.getUniqueId().toString());

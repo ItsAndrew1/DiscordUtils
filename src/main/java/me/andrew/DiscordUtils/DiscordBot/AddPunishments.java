@@ -11,6 +11,9 @@ import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -204,12 +207,40 @@ public class AddPunishments extends ListenerAdapter{
 
                     state.scope.applyPunishment(ctx, state.type);
                     event.editMessage("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").queue();
+
+                    //Applying the timeout role if the type is perm mute and scope is discord or global
+                    if(state.type == PunishmentType.PERM_BAN && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+
                     addingStateMap.remove(event.getUser().getIdLong());
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
             }
         }
+    }
+
+    private void addTimeoutRole(UUID targetUUID, Guild server) throws SQLException{
+        FileConfiguration botConfig = plugin.botFile().getConfig();
+
+        //Checking if the timeout role is toggled
+        boolean toggleTimeoutRole = botConfig.getBoolean("use-timeout-role");
+        if(!toggleTimeoutRole) return;
+
+        //Getting the target user ID
+        String userID;
+        String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, targetUUID.toString());
+            ResultSet rs =  ps.executeQuery();
+            userID = rs.getString("discordId");
+        }
+
+        Member targetMember = server.getMemberById(userID);
+        String timeoutRoleID = botConfig.getString("timeout-role-id");
+        Role timeoutRole = server.getRoleById(timeoutRoleID);
+
+        server.addRoleToMember(targetMember, timeoutRole).queue();
     }
 
     @Override
@@ -262,6 +293,10 @@ public class AddPunishments extends ListenerAdapter{
                         state
                 );
                 state.scope.applyPunishment(ctx, state.type);
+
+                //Giving the timeout role if the type is temp mute and scope is discord or global
+                if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+
                 event.editMessage("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!")
                         .queue();
                 addingStateMap.remove(event.getUser().getIdLong());

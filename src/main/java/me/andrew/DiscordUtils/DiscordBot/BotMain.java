@@ -21,7 +21,6 @@ public class BotMain{
     private final PunishmentHistory punishmentHistory;
     private final AddPunishments addPunishments;
 
-
     public BotMain(String token, String guildId, DiscordUtils plugin) throws Exception{
         SlashCommands slashCommands = new SlashCommands(plugin, this);
         punishmentHistory = new PunishmentHistory(plugin);
@@ -33,6 +32,7 @@ public class BotMain{
                 .addEventListeners(punishmentHistory)
                 .addEventListeners(addPunishments)
                 .addEventListeners(new AppealSystem(plugin))
+                .addEventListeners(new MemberJoinEvent(plugin, this))
                 .build()
                 .awaitReady();
 

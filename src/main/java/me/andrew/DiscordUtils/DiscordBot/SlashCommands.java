@@ -5,9 +5,13 @@ import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -17,6 +21,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.jspecify.annotations.NonNull;
 
+import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -156,6 +161,8 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "psremove" -> {
+                event.deferReply(true).queue();
+
                 try{
                     //Getting the ID from the command
                     String ID = event.getOption("id").getAsString();
@@ -168,7 +175,7 @@ public class SlashCommands extends ListenerAdapter{
 
                     //Expiring the punishment that has the typed ID
                     Connection dbConnection = plugin.getDatabaseManager().getConnection();
-                    String SQL = "UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE id =?";
+                    String SQL = "UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE id = ?";
 
                     PreparedStatement ps = dbConnection.prepareStatement(SQL);
                     ps.setLong(1, System.currentTimeMillis());
@@ -193,12 +200,19 @@ public class SlashCommands extends ListenerAdapter{
                             //Sends the target user a DM informing that the ban got removed
                             botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
                                 targetUser.openPrivateChannel().queue(channel -> {
-                                    String message = botConfig.getString("user-punishments-messages.ban-remove-user-message");
-                                    channel.sendMessage(message
+                                    String description = botConfig.getString("user-punishments-messages.ban-remove-user-message")
                                             .replace("%user%", targetUser.getName())
                                             .replace("%server_name%", botMain.getDiscordServer().getName())
-                                            .replace("%ban_type%",  banType)
-                                    ).queue(success -> botMain.getDiscordServer().unban(targetUser).queue(), failure -> botMain.getDiscordServer().unban(targetUser).queue());
+                                            .replace("%ban_type%", banType);
+
+                                    EmbedBuilder embed = new EmbedBuilder();
+                                    embed.setTitle(banType+" REMOVAL");
+                                    embed.setColor(Color.GREEN.getRGB());
+                                    embed.setDescription(description);
+
+                                    channel.sendMessageEmbeds(embed.build()).queue(success -> botMain.getDiscordServer().unban(targetUser).queue(),
+                                            failure -> botMain.getDiscordServer().unban(targetUser).queue()
+                                            );
                                 }, failure -> botMain.getDiscordServer().unban(targetUser).queue());
                             });
                         }
@@ -209,22 +223,32 @@ public class SlashCommands extends ListenerAdapter{
                             //Sends the target user a DM informing him that the timeout got removed
                             botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
                                 targetUser.openPrivateChannel().queue(channel -> {
-                                    String message = botConfig.getString("user-punishments-messages.timeout-remove-user-message");
-                                    channel.sendMessage(message
+                                    String description = botConfig.getString("user-punishments-messages.timeout-remove-user-message")
                                             .replace("%user%", targetUser.getName())
-                                            .replace("%server_name%", botMain.getDiscordServer().getName())
-                                            .replace("%timeout_type%",  timeoutType)
-                                    ).queue(success -> botMain.getDiscordServer().removeTimeout(targetUser).queue(), failure -> botMain.getDiscordServer().removeTimeout(targetUser).queue());
+                                            .replace("%server_name%",  botMain.getDiscordServer().getName())
+                                            .replace("%timeout_type%", timeoutType);
+
+                                    EmbedBuilder embed = new EmbedBuilder();
+                                    embed.setColor(Color.GREEN.getRGB());
+                                    embed.setTitle(timeoutType+" REMOVAL");
+                                    embed.setDescription(description);
+
+                                    channel.sendMessageEmbeds(embed.build()).queue(
+                                            success -> botMain.getDiscordServer().removeTimeout(targetUser).queue(),
+                                            failure -> botMain.getDiscordServer().removeTimeout(targetUser).queue()
+                                    );
                                 }, failure ->  botMain.getDiscordServer().removeTimeout(targetUser).queue());
                             });
                         }
                     }
                 } catch (Exception e){
-                    throw new RuntimeException(e);
+                    event.reply("Nu iti zic").setEphemeral(true).queue();
                 }
             }
 
             case "unverify" -> {
+                event.deferReply(true).queue();
+
                 String userID = event.getUser().getId();
                 Connection dbConnection = plugin.getDatabaseManager().getConnection();
                 String sql = "DELETE FROM playersVerification WHERE discordId = ?";
@@ -240,7 +264,13 @@ public class SlashCommands extends ListenerAdapter{
                     ps.setString(1, userID);
                     ps.executeUpdate();
 
-                    event.reply("Unverified successfully!").setEphemeral(true).queue();
+                    //Removing from the user all the Roles and giving him the Unverified role
+                    Member targetMember = event.getMember();
+                    for(Role role : targetMember.getRoles()) botMain.getDiscordServer().removeRoleFromMember(targetMember, role).queue();
+
+                    String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
+                    Role unverified = botMain.getDiscordServer().getRoleById(unverifiedRoleID);
+                    botMain.getDiscordServer().addRoleToMember(targetMember, unverified).queue();
                 } catch (Exception e){
                     throw new RuntimeException(e);
                 }

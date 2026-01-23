@@ -9,6 +9,7 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -120,30 +121,7 @@ public class FinalPunishmentGUI implements Listener {
             case PunishmentType.TEMP_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE WARN");
         };
     }
-    private String createId(){
-        int idLength = plugin.getConfig().getInt("punishment-id-length");
-        StringBuilder id = new StringBuilder(idLength);
-        SecureRandom random = new SecureRandom();
 
-        id.append("#");
-        for(int i = 0; i < idLength; i++){
-            id.append(random.nextInt(10)); //Generates everytime a number from 0-9
-        }
-
-        return id.toString();
-    }
-
-    private String getTargetUserID(String ign) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String SQL = "SELECT discordId FROM playersVerification WHERE ign = ?";
-
-        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
-            ps.setString(1, ign);
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.getString("discordId");
-            }
-        }
-    }
     private String getPunishmentColoredScope(PunishmentScopes scope){
         return switch(scope){
             case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
@@ -270,6 +248,29 @@ public class FinalPunishmentGUI implements Listener {
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_MUTE_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
             }
+        }
+
+        //Giving timeout role on discord if the type is perm/temp mute and scope is global/discord
+        FileConfiguration botConfig = plugin.botFile().getConfig();
+        boolean useTimeoutRole = botConfig.getBoolean("use-timeout-role");
+        if((state.type == PunishmentType.TEMP_MUTE || state.type == PunishmentType.PERM_MUTE) && (state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && useTimeoutRole){
+            String timeoutRoleID = botConfig.getString("timeout-role-id");
+
+            //Getting the discord ID of the user
+            String targetUserID;
+            Connection dbConnection = plugin.getDatabaseManager().getConnection();
+            String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+            try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                ps.setString(1, state.targetUUID.toString());
+                ResultSet rs = ps.executeQuery();
+                targetUserID = rs.getString("discordId");
+            }
+
+            //Giving the role
+            Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+            Member targetMember = dcServer.getMemberById(targetUserID);
+            Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
+            dcServer.addRoleToMember(targetMember, timeoutRole).queue();
         }
 
         //Removing the staff from the adding state map
