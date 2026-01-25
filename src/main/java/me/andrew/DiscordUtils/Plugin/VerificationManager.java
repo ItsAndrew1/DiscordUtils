@@ -27,7 +27,7 @@ public class VerificationManager{
     public void verificationProcess(Player player) throws SQLException {
         //Inserts the player into the playersVerification table if the doesn't exit already
         if(!plugin.getDatabaseManager().playerAlreadyExits(player.getUniqueId())){
-            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO playersVerification (uuid, ign, discordId, verified, hasVerified) values (?, ?, null, false, false)")){
+            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO playersVerification (uuid, ign, discordId, verified) values (?, ?, null, false)")){
                 ps.setString(1, player.getUniqueId().toString());
                 ps.setString(2, player.getName());
                 ps.executeUpdate();
@@ -35,93 +35,7 @@ public class VerificationManager{
         }
         Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.villager.no"));
 
-        //Check if the player has verified
-        if(plugin.getDatabaseManager().hasPlayerVerified(player.getUniqueId())){
-            //Sends a message
-            List<String> hasVerifiedMessage = plugin.getConfig().getStringList("player-verified-message");
-            for(String line : hasVerifiedMessage){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
-            }
-
-            //Assigns the Verified role to the user
-            Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-            String userID = getUserID(player.getUniqueId().toString());
-            Member targetMember = dcServer.getMemberById(userID);
-            String verifiedRoleID = plugin.botFile().getConfig().getString("verification.verified-role-id");
-            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
-            dcServer.addRoleToMember(targetMember, verifiedRole).queue();
-
-            //Sound
-            Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound").toLowerCase()));
-            float phvsVolume = plugin.getConfig().getInt("phvs-volume");
-            float phvsPitch = plugin.getConfig().getInt("phvs-pitch");
-            player.playSound(player.getLocation(), hasVerifiedSound, phvsVolume, phvsPitch);
-
-            //Giving the rewards if there are any (and if rewards are toggled)
-            boolean toggleRewards = plugin.getConfig().getBoolean("rewards.toggle-giving-rewards");
-            if(toggleRewards) {
-                //Giving exp if the value is over 0
-                int expLevels = plugin.getConfig().getInt("rewards.exp");
-                if (expLevels > 0) player.giveExp(expLevels);
-
-                //Giving the items
-                ConfigurationSection itemsToGive = plugin.getConfig().getConfigurationSection("rewards.items");
-                if (itemsToGive != null) {
-                    for (String stringItem : itemsToGive.getKeys(false)) {
-                        String stringMaterial = plugin.getConfig().getString("rewards.items." + stringItem + ".material");
-                        int itemQuantity = plugin.getConfig().getInt("rewards.items." + stringItem + ".quantity");
-                        ItemStack item;
-                        try {
-                            item = new ItemStack(Material.matchMaterial(stringMaterial.toUpperCase()), itemQuantity);
-                        } catch (Exception e) {
-                            String errorMessage = plugin.getConfig().getString("error-giving-rewards-message");
-                            player.sendMessage(ChatColor.translateAlternateColorCodes('&', errorMessage));
-                            Bukkit.getLogger().warning("[DISCORDUTILS] One/More reward item(s) are invalid! Giving rewards won't work!");
-                            Bukkit.getLogger().warning("[DISCORDUTILS] " + e.getMessage());
-                            return;
-                        }
-
-                        //Attaching the enchants to the item
-                        ConfigurationSection itemEnchants = plugin.getConfig().getConfigurationSection("rewards.items." + stringItem + ".enchantments");
-                        if (itemEnchants != null) {
-                            for (String enchantmentString : itemEnchants.getKeys(false)) {
-                                try {
-                                    Enchantment enchant = Enchantment.getByName(enchantmentString);
-                                    int enchantLevel = plugin.getConfig().getInt("rewards.items." + stringItem + ".enchantments." + enchantmentString);
-                                    item.addEnchantment(enchant, enchantLevel);
-                                } catch (Exception e) {
-                                    String errorMessage = plugin.getConfig().getString("error-giving-rewards-message");
-                                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', errorMessage));
-                                    Bukkit.getLogger().warning("[DISCORDUTILS] One/More enchantment(s) for item " + stringItem + " are invalid! Giving rewards won't work!");
-                                    Bukkit.getLogger().warning("[DISCORDUTILS] " + e.getMessage());
-                                    return;
-                                }
-                            }
-                        }
-
-                        //Drops the rewards if the player doesn't have enough inv space
-                        if (player.getInventory().firstEmpty() == -1) {
-                            World playerWorld = player.getWorld();
-                            double playerX = player.getLocation().getX();
-                            double playerY = player.getLocation().getY();
-                            double playerZ = player.getLocation().getZ();
-                            Location dropLocation = new Location(playerWorld, playerX + 1, playerY, playerZ); //Drop them in front of him
-
-                            playerWorld.dropItem(dropLocation, item);
-                        } else player.getInventory().addItem(item);
-                    }
-                }
-            }
-
-            //Deletes the hasVerified boolean from the table
-            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("UPDATE playersVerification SET hasVerified=null WHERE uuid = ?")){
-                ps.setString(1, player.getUniqueId().toString());
-                ps.executeUpdate();
-            }
-            return;
-        }
-
-        //Check if the player has been verified
+        //Check if the player is already verified
         if(plugin.getDatabaseManager().isVerified(player.getUniqueId())){
             String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-is-already-verified-message"));
             player.sendMessage(message);

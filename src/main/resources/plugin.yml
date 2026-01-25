@@ -3,6 +3,7 @@ version: '1.0.1'
 main: me.andrew.DiscordUtils.Plugin.DiscordUtils
 api-version: '1.21'
 author: _ItsAndrew_
+description: Connect your Minecraft server with your Discord server!
 
 commands:
   discord:
@@ -19,12 +20,16 @@ commands:
     permission: discordutils.use
 
   unverify:
-    description: Unverifies the minecraft account linked to the discord user
+    description: Unverifies the Minecraft account linked to the Discord user
+    permission: discordutils.use
+
+  history:
+    description: Shows the punishment history of the player that runs the command
     permission: discordutils.use
 
 permissions:
   discordutils.use:
-    description: Allows the use of the command
+    description: Allows the player to use the plugin's essentials
     default: true
 
   discordutils.staff:

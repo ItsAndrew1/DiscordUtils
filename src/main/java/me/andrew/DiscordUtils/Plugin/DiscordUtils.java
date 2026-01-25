@@ -12,6 +12,8 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -50,7 +52,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private ChoosePunishTypeGUI choosePunishTypeGUI;
     private ChoosePunishScopeGUI choosePunishScopeGUI;
     private FinalPunishmentGUI finalPunishmentGUI;
-    private RemovePunishmentsGUI removePunishmentsGUI;
 
     private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
 
@@ -80,7 +81,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         choosePunishTypeGUI = new ChoosePunishTypeGUI(this);
         choosePunishScopeGUI = new  ChoosePunishScopeGUI(this);
         finalPunishmentGUI = new FinalPunishmentGUI(this);
-        removePunishmentsGUI = new RemovePunishmentsGUI(this);
         CheckPlayerBanMute checkPlayerBanMute = new CheckPlayerBanMute(this);
         discordGUI = new DiscordGUI(this);
         discordBlockManager = new DiscordBlock(this);
@@ -89,10 +89,12 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         blockConfigurationGUI = new BlockConfigurationGUI(this);
         appearanceChoiceGUI = new AppearanceChoiceGUI(this);
         facingChoiceGUI = new FacingChoiceGUI(this);
+
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(commands);
         getCommand("verify").setExecutor(commands);
         getCommand("unverify").setExecutor(commands);
+        getCommand("history").setExecutor(commands);
         getCommand("dcutils").setExecutor(commands);
         getCommand("dcutils").setTabCompleter(new CommandTABS(this));
 
@@ -109,7 +111,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         getServer().getPluginManager().registerEvents(choosePunishScopeGUI, this);
         getServer().getPluginManager().registerEvents(finalPunishmentGUI, this);
         getServer().getPluginManager().registerEvents(checkPlayerBanMute, this);
-        getServer().getPluginManager().registerEvents(removePunishmentsGUI, this);
         getServer().getPluginManager().registerEvents(facingChoiceGUI, this);
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -148,6 +149,60 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             Bukkit.getLogger().warning(e.getMessage());
         }
 
+        //Sends an embed on the verification channel, but first I check if everything is alright with the channel and the roles
+        String verifiedRoleID = botFile().getConfig().getString("verification.verified-role-id");
+        String unverifiedRoleID = botFile().getConfig().getString("verification.unverified-role-id");
+        String verifyChannelID = botFile().getConfig().getString("verification.verify-channel-id");
+
+        //Checking if the IDs are empty
+        if(verifiedRoleID == null || unverifiedRoleID == null || verifyChannelID == null){
+            Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are null!");
+        }
+        else{
+            long verifyChannelIDlong = 0;
+
+            try{
+                long verifiedRoleIDlong =  Long.parseLong(verifiedRoleID);
+                long unverifiedRoleIDlong =  Long.parseLong(unverifiedRoleID);
+                verifyChannelIDlong = Long.parseLong(verifyChannelID);
+            } catch (Exception e){
+                Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are invalid!");
+                Bukkit.getLogger().warning(e.getMessage());
+            }
+
+            try{
+                TextChannel verifyChannel = discordBot.getJda().getTextChannelById(verifyChannelIDlong);
+                verifyChannel.getHistory().retrievePast(1).queue(messages -> {
+                    if(messages.isEmpty()){
+                        //Building the embed and sending it to the verify channel
+                        EmbedBuilder embedBuilder = new EmbedBuilder();
+
+                        //Getting the color
+                        int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED");
+                        int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE");
+                        int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN");
+                        embedBuilder.setColor(Color.fromRGB(redValue, blueValue, greenValue).asRGB());
+
+                        //Setting the title
+                        String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title");
+                        embedBuilder.setTitle(embedTitle);
+
+                        //Setting the description
+                        String description = botConfig.getConfig().getString("verification.verify-channel-embed-description");
+                        embedBuilder.setDescription(description
+                                .replace("%server_name%", discordBot.getDiscordServer().getName())
+                        );
+
+                        //Sending the embed to the verify channel
+                        verifyChannel.sendMessageEmbeds(embedBuilder.build()).queue();
+                    }
+                });
+            } catch (Exception e){
+                Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when a sending the embed to the 'verify' channel. See message:");
+                Bukkit.getLogger().warning(e.getMessage());
+            }
+        }
+
         //Runs a task to auto expire the punishments
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
             Connection dbConnection = databaseManager.getConnection();
@@ -155,7 +210,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 List<Punishment> allPunishments = getAllPunishments();
                 if(!allPunishments.isEmpty()){
                     for(Punishment p : allPunishments){
-                        if(p.getExpiresAt() <= System.currentTimeMillis() && p.isActive()){
+                        if(p.getExpiresAt() <= System.currentTimeMillis() && p.isActive() && p.getExpiresAt() != 0){
                             String sql = "UPDATE punishments SET active = false WHERE id = ?";
 
                             PreparedStatement ps = dbConnection.prepareStatement(sql);
@@ -165,60 +220,30 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                             PunishmentType type = p.getPunishmentType();
                             PunishmentScopes scope = p.getScope();
 
-                            //Getting the user ID from the target UUID assigned to the punishment
+                            //Unbans/removed the timeout of a user if the scope is discord/global
                             UUID targetUUID = p.getUuid();
-                            //Sends the target user a DM about this expiration if the user is verified
-                            if(databaseManager.isVerified(targetUUID)){
-                                String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-                                PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
-                                ps2.setString(1, targetUUID.toString());
-                                ResultSet rs = ps2.executeQuery();
-                                String userId = rs.getString("discordId");
+                            String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+                            PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
+                            ps2.setString(1, targetUUID.toString());
+                            ResultSet rs = ps2.executeQuery();
+                            if(!rs.next()) return;
 
+                            String userId = rs.getString("discordId");
+                            if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
                                 discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
                                     Guild dcServer = discordBot.getDiscordServer();
-                                    if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                                        targetUser.openPrivateChannel().queue(channel -> {
-                                            String banType = type.isPermanent() ? "PERMANENT BAN" : "TEMPORARY BAN";
-                                            String expireBanDM = botConfig.getConfig().getString("user-punishments-messages.ban-expire-user-message")
-                                                    .replace("%user%", targetUser.getName())
-                                                    .replace("%ban_type%", banType)
-                                                    .replace("%scope%", scope.name())
-                                                    .replace("%server_name%", dcServer.getName())
-                                                    ;
-
-                                            EmbedBuilder embed = new EmbedBuilder();
-                                            embed.setTitle(banType+" EXPIRATION");
-                                            embed.setColor(Color.GREEN.asRGB());
-                                            embed.setDescription(expireBanDM);
-
-                                            channel.sendMessageEmbeds(embed.build()).queue(
-                                                    success -> dcServer.unban(targetUser).queue(),
-                                                    failure -> dcServer.unban(targetUser).queue()
-                                            );
-                                        }, failure -> dcServer.unban(targetUser).queue());
-                                    }
-
+                                    if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN) dcServer.unban(targetUser).queue();
                                     if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-                                        targetUser.openPrivateChannel().queue(channel -> {
-                                            String muteType =  type.isPermanent() ? "PERMANENT MUTE" : "TEMPORARY MUTE";
-                                            String expireTimeoutDM = botConfig.getConfig().getString("user-punishments-messages.timeout-expire-user-message")
-                                                    .replace("%scope%", scope.name())
-                                                    .replace("%timeout_type%", muteType)
-                                                    .replace("%user%", targetUser.getName())
-                                                    .replace("%server_name%", dcServer.getName())
-                                                    ;
 
-                                            EmbedBuilder embed = new EmbedBuilder();
-                                            embed.setColor(Color.GREEN.asRGB());
-                                            embed.setTitle(muteType+" EXPIRATION");
-                                            embed.setDescription(expireTimeoutDM);
+                                        //Removes the timeout role of the member if he has the role
+                                        dcServer.retrieveMemberById(userId).queue(targetMember -> {
+                                            long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
+                                            Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
 
-                                            channel.sendMessageEmbeds(embed.build()).queue(
-                                                    success -> dcServer.removeTimeout(targetUser).queue(),
-                                                    failure -> dcServer.removeTimeout(targetUser).queue()
-                                            );
-                                        }, failure -> dcServer.removeTimeout(targetUser).queue());
+                                            if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                        });
+
+                                        if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
                                     }
                                 });
                             }
@@ -396,9 +421,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public ChoosePunishScopeGUI getChoosePunishScopeGUI() {
         return choosePunishScopeGUI;
-    }
-    public RemovePunishmentsGUI getRemovePunishmentsGUI() {
-        return removePunishmentsGUI;
     }
     public FacingChoiceGUI getFacingChoiceGUI() {
         return facingChoiceGUI;

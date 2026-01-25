@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -59,6 +60,8 @@ public class PunishmentContext {
         try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
             ps.setString(1, ign);
             try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return null;
+
                 return rs.getString("discordId");
             }
         }
@@ -75,7 +78,7 @@ public class PunishmentContext {
         EmbedBuilder embed = new EmbedBuilder();
         embed.setTitle(title);
         embed.setColor(Color.RED.getRGB());
-        if(state.type != PunishmentType.KICK) embed.setFooter("ID: " + state.ID);
+        if(state.type != PunishmentType.KICK && !state.type.name().contains("WARN")) embed.setFooter("ID: " + state.ID);
 
         String field = message
                 .replace("%scope%", state.scope.name())
@@ -282,7 +285,7 @@ public class PunishmentContext {
                         String message = botConfig.getString("user-punishments-messages.permanent-ban-warn-message");
                         EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT BAN WARNING");
 
-                        privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:" + state.ID, "Appeal Punishment"))).queue();
+                        privateChannel.sendMessageEmbeds(embed.build()).queue();
                     });
                 });
             }
@@ -375,7 +378,7 @@ public class PunishmentContext {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
                         String message = botConfig.getString("user-punishments-messages.temporary-ban-warn-message");
                         EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY BAN WARNING");
-                        privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue();
+                        privateChannel.sendMessageEmbeds(embed.build()).queue();
                     });
                 });
             }
@@ -412,15 +415,18 @@ public class PunishmentContext {
 
         //Attempts to send the target user a DM
         plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
-            Member targetMember = dcServer.getMember(targetUser);
-            targetUser.openPrivateChannel().queue(privateChannel -> {
-                String message = botConfig.getString("user-punishments-messages.perm-timeout-message");
-                EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT TIMEOUT");
-                privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue(
-                        success -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue(),
-                        failure -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue()
-                );
-            }, failure -> targetMember.timeoutFor(100000000, TimeUnit.DAYS).reason(state.reason).queue()); //If it fails to open the DM, still timeout the user
+            dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
+                //Gives the targetMember the timeout role
+                long timeoutRoleId = botConfig.getLong("timeout-role-id");
+                Role timeoutRole = dcServer.getRoleById(timeoutRoleId);
+                dcServer.addRoleToMember(targetMember, timeoutRole).queue();
+
+                targetUser.openPrivateChannel().queue(privateChannel -> {
+                    String message = botConfig.getString("user-punishments-messages.permanent-timeout-message");
+                    EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT TIMEOUT");
+                    privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue();
+                });
+            });
         });
     }
 
@@ -461,8 +467,8 @@ public class PunishmentContext {
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
                         String message = botConfig.getString("user-punishments-messages.permanent-timeout-warn-message");
-                        EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT TIMEOUT WARNING");
-                        privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue();
+                        EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT TIMEOUT/MUTE WARNING");
+                        privateChannel.sendMessageEmbeds(embed.build()).queue();
                     });
                 });
             }
@@ -500,16 +506,21 @@ public class PunishmentContext {
         //Attempts to send a DM to the target user
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
         plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
-            Member targetMember = dcServer.getMember(targetUser);
+            dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
+                //Gives the targetMember the timeout role
+                long timeoutRoleId = botConfig.getLong("timeout-role-id");
+                Role timeoutRole = dcServer.getRoleById(timeoutRoleId);
+                dcServer.addRoleToMember(targetMember, timeoutRole).queue();
 
-            targetUser.openPrivateChannel().queue(privateChannel -> {
-                String message = botConfig.getString("user-punishments-messages.temporary-timeout-message");
-                EmbedBuilder embed =  getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY TIMEOUT");
-                privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue(
-                        success -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue(),
-                        failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue()
-                );
-            }, failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue());
+                targetUser.openPrivateChannel().queue(privateChannel -> {
+                    String message = botConfig.getString("user-punishments-messages.temporary-timeout-message");
+                    EmbedBuilder embed =  getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY TIMEOUT");
+                    privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue(
+                            success -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue(),
+                            failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue()
+                    );
+                }, failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue());
+            });
         });
     }
 
@@ -521,9 +532,9 @@ public class PunishmentContext {
         insertPunishment();
 
         //Checks if the target player/user has reached the number of warns
-        if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.TEMP_BAN_WARN, state.scope)){
+        if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.TEMP_MUTE_WARN, state.scope)){
             //Expire the warnings
-            plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.TEMP_BAN_WARN, state.scope);
+            plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.TEMP_MUTE_WARN, state.scope);
 
             //Applies the temporary mute/timeout
             state.type = PunishmentType.TEMP_MUTE;
@@ -536,10 +547,10 @@ public class PunishmentContext {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-warn-message");
                     for(String line : message){
-                        ((Player) targetPlayer).sendMessage(line
+                        ((Player) targetPlayer).sendMessage(ChatColor.translateAlternateColorCodes('&', line
                                 .replace("%scope%", getColoredStringScope(state))
                                 .replace("%reason%", state.reason)
-                        );
+                        ));
                     }
                 });
             }
@@ -551,7 +562,7 @@ public class PunishmentContext {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
                         String message = botConfig.getString("user-punishments-messages.temporary-timeout-warn-message");
                         EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY TIMEOUT WARNING");
-                        privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue();
+                        privateChannel.sendMessageEmbeds(embed.build()).queue();
                     });
                 });
             }

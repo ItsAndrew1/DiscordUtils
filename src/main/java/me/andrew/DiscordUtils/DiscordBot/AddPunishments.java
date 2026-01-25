@@ -29,6 +29,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -48,7 +49,8 @@ public class AddPunishments extends ListenerAdapter{
         //Task for auto deleting users from the map
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
             long now = System.currentTimeMillis();
-            addingStateMap.entrySet().removeIf(entry -> now - entry.getValue().lastInteraction > TimeUnit.MINUTES.toMillis(2));
+            int inactivityMinutes = plugin.botFile().getConfig().getInt("interaction-minutes");
+            addingStateMap.entrySet().removeIf(entry -> now - entry.getValue().lastInteraction > TimeUnit.MINUTES.toMillis(inactivityMinutes));
         }, 0L, 20L*60); //Task runs every minute
     }
 
@@ -103,17 +105,17 @@ public class AddPunishments extends ListenerAdapter{
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
         long userId = event.getUser().getIdLong();
         AddingState state = addingStateMap.get(userId);
+
+        if(state == null){
+            event.reply("This punishment session **has expired**. Please run */punish <ign>* again!").setEphemeral(true).queue();
+            return;
+        }
+
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
         if (event.getComponentId().equals("punishment:type")) {
-            //Checking if the state has not expired
-            if (!addingStateMap.containsKey(event.getUser().getIdLong())){
-                event.reply("This punishment session **has expired**. Please run */punish <ign>* again!").setEphemeral(true).queue();
-                return;
-            }
-
             //Setting the type
             state.type = PunishmentType.valueOf(event.getValues().getFirst());
 
@@ -136,12 +138,6 @@ public class AddPunishments extends ListenerAdapter{
         }
 
         if (event.getComponentId().equals("punishment:scope")) {
-            //Check if the state has not expired
-            if (!addingStateMap.containsKey(event.getUser().getIdLong())) {
-                event.reply("This punishment session **has expired**. Plesae run */punish <ign>* again!").setEphemeral(true).queue();
-                return;
-            }
-
             //Setting the punishment scope
             state.scope = PunishmentScopes.valueOf(event.getValues().getFirst());
 
@@ -181,40 +177,47 @@ public class AddPunishments extends ListenerAdapter{
             state.lastInteraction = System.currentTimeMillis();
 
             //If the punishment is a temp mute or temp ban, opens the duration modal. Else, inserts the punishment.
-            if (!state.type.isPermanent() && state.type != PunishmentType.KICK){
-                int minimumLength = botConfig.getInt("minimum-length-duration");
-                int maximumLength = botConfig.getInt("maximum-length-duration");
-                TextInput body = TextInput.create("duration", TextInputStyle.PARAGRAPH)
-                        .setPlaceholder("Enter the duration of the punishment (eg. 2d5h10m15s)")
-                        .setMinLength(minimumLength)
-                        .setMaxLength(maximumLength)
-                        .build();
+            try {
+                if ((!state.type.isPermanent() && state.type != PunishmentType.KICK) || (playerHasNrOfWarnsMinus1(Bukkit.getOfflinePlayer(state.targetUUID), state.type, state.scope) && state.type != PunishmentType.PERM_MUTE_WARN && state.type != PunishmentType.PERM_BAN_WARN)){
+                    int minimumLength = botConfig.getInt("minimum-length-duration");
+                    int maximumLength = botConfig.getInt("maximum-length-duration");
+                    TextInput body = TextInput.create("duration", TextInputStyle.PARAGRAPH)
+                            .setPlaceholder("Enter the duration of the punishment (eg. 2d5h10m15s)")
+                            .setMinLength(minimumLength)
+                            .setMaxLength(maximumLength)
+                            .build();
 
-                Modal durationModal = Modal.create("psDuration", "Duration of Punishment")
-                        .addComponents(Label.of("Duration", body))
-                        .build();
-                event.replyModal(durationModal).queue();
-            }
-            else{
-                //Applies the punishment.
-                try {
-                    //Creating the new context and applying the punishment
-                    PunishmentContext ctx = new PunishmentContext(
-                            plugin,
-                            getPlayerStaff(event.getUser().getId()),
-                            state
-                    );
-
-                    state.scope.applyPunishment(ctx, state.type);
-                    event.editMessage("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").queue();
-
-                    //Applying the timeout role if the type is perm mute and scope is discord or global
-                    if(state.type == PunishmentType.PERM_BAN && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
-
-                    addingStateMap.remove(event.getUser().getIdLong());
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                    Modal durationModal = Modal.create("psDuration", "Duration of Punishment")
+                            .addComponents(Label.of("Duration", body))
+                            .build();
+                    event.replyModal(durationModal).queue();
                 }
+                else{
+                    //Applies the punishment.
+                    try {
+                        //Creating the new context and applying the punishment
+                        PunishmentContext ctx = new PunishmentContext(
+                                plugin,
+                                getPlayerStaff(event.getUser().getId()),
+                                state
+                        );
+
+                        //Applying the timeout role if the type is perm mute and scope is discord or global
+                        if(state.type == PunishmentType.PERM_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+
+                        //Inserting the logs (if they are toggled)
+                        if(botConfig.getBoolean("use-logs")) new InsertLog(plugin, bot, state);
+
+                        state.scope.applyPunishment(ctx, state.type);
+                        event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
+
+                        addingStateMap.remove(event.getUser().getIdLong());
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
             }
         }
     }
@@ -222,25 +225,25 @@ public class AddPunishments extends ListenerAdapter{
     private void addTimeoutRole(UUID targetUUID, Guild server) throws SQLException{
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
-        //Checking if the timeout role is toggled
-        boolean toggleTimeoutRole = botConfig.getBoolean("use-timeout-role");
-        if(!toggleTimeoutRole) return;
-
         //Getting the target user ID
         String userID;
         String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
         try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+
             ps.setString(1, targetUUID.toString());
             ResultSet rs =  ps.executeQuery();
+            if(!rs.next()) return;
+
             userID = rs.getString("discordId");
         }
 
-        Member targetMember = server.getMemberById(userID);
-        String timeoutRoleID = botConfig.getString("timeout-role-id");
-        Role timeoutRole = server.getRoleById(timeoutRoleID);
+        server.retrieveMemberById(userID).queue(targetMember -> {
+            long timeoutRoleID = botConfig.getLong("timeout-role-id");
+            Role timeoutRole = server.getRoleById(timeoutRoleID);
 
-        server.addRoleToMember(targetMember, timeoutRole).queue();
+            server.addRoleToMember(targetMember, timeoutRole).queue();
+        });
     }
 
     @Override
@@ -248,13 +251,13 @@ public class AddPunishments extends ListenerAdapter{
         long userId =  event.getUser().getIdLong();
         AddingState state = addingStateMap.get(userId);
 
-        if(event.getCustomId().equals("psReason")){
-            //Check if the state has not expired
-            if(!addingStateMap.containsKey(event.getUser().getIdLong())){
-                event.reply("This punishment session **has expired**! Run */punish <ign>* again!").setEphemeral(true).queue();
-                return;
-            }
+        //Check if the state has not expired
+        if(state == null){
+            event.reply("This punishment session **has expired**! Run */punish <ign>* again!").setEphemeral(true).queue();
+            return;
+        }
 
+        if(event.getCustomId().equals("psReason")){
             //Setting the reason
             ModalMapping bodyInput = event.getValue("reason");
             state.reason = bodyInput.getAsString();
@@ -273,12 +276,6 @@ public class AddPunishments extends ListenerAdapter{
         }
 
         if(event.getCustomId().equals("psDuration")){
-            //Check if the state has not expired
-            if(!addingStateMap.containsKey(event.getUser().getIdLong())){
-                event.reply("This punishment session **has expired**! Run */punish <ign>* again!").setEphemeral(true).queue();
-                return;
-            }
-
             //Getting the duration
             ModalMapping bodyInput = event.getValue("duration");
             String durationString =  bodyInput.getAsString();
@@ -297,13 +294,30 @@ public class AddPunishments extends ListenerAdapter{
                 //Giving the timeout role if the type is temp mute and scope is discord or global
                 if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
 
-                event.editMessage("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!")
-                        .queue();
+                event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
                 addingStateMap.remove(event.getUser().getIdLong());
             } catch (Exception e){
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private boolean playerHasNrOfWarnsMinus1(OfflinePlayer targetPlayer, PunishmentType type, PunishmentScopes scope) throws SQLException{
+        Connection connection = plugin.getDatabaseManager().getConnection();
+        int warnNr = 0;
+        int maxWarns = plugin.getConfig().getInt("warns-amount");
+
+        try(PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
+            ps.setString(1, targetPlayer.getUniqueId().toString());
+            ps.setString(2, type.toString());
+            ps.setString(3, scope.toString());
+
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) warnNr = rs.getInt("warn_count");
+            }
+        }
+
+        return warnNr == maxWarns - 1;
     }
 
     private String getPunishmentTypeString(PunishmentType type){

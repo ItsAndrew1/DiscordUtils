@@ -55,8 +55,7 @@ public class DatabaseManager {
                 uuid TEXT UNIQUE PRIMARY KEY,
                 ign TEXT UNIQUE,
                 discordId TEXT UNIQUE,
-                verified TINYINT(1) DEFAULT 0,
-                hasVerified TINYINT(1) DEFAULT 0
+                verified TINYINT(1) DEFAULT 0
              );
              """;
         try(Statement statement = connection.createStatement()){
@@ -113,22 +112,6 @@ public class DatabaseManager {
             ps.setString(1, discordId);
             ps.setString(2, uuid.toString());
             ps.executeUpdate();
-        }
-    }
-
-    public void setPlayerHasVerified(UUID uuid) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET hasVerified=true WHERE uuid = ?")){
-            ps.setString(1, uuid.toString());
-            ps.executeUpdate();
-        }
-    }
-
-    public boolean hasPlayerVerified(UUID uuid) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT hasVerified FROM playersVerification WHERE uuid = ?")){
-            ps.setString(1, uuid.toString());
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next() && rs.getBoolean("hasVerified");
-            }
         }
     }
 

@@ -14,39 +14,43 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
 
 public class MemberJoinEvent extends ListenerAdapter {
     private final DiscordUtils plugin;
-    private final BotMain bot;
 
-    public MemberJoinEvent(DiscordUtils plugin, BotMain bot) {
+    public MemberJoinEvent(DiscordUtils plugin) {
         this.plugin = plugin;
-        this.bot = bot;
     }
 
     @Override
     public void onGuildMemberJoin(GuildMemberJoinEvent event) {
-        Guild dcServer = bot.getDiscordServer();
-        if(event.getGuild() != dcServer) return;
-
         FileConfiguration botConfig = plugin.botFile().getConfig();
+        String userId = event.getUser().getId();
 
-        try {
-            //Checking if the user is verified => gives Verified role
-            String verifiedRoleID = botConfig.getString("verification.verified-role-id");
-            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
-            if(isUserVerified(event.getUser().getId())){
-                dcServer.addRoleToMember(event.getMember(), verifiedRole).queue();
-                return;
+        event.getGuild().retrieveMemberById(userId).queue(member -> {
+            long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+            Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
+
+            long unverifiedRoleID = botConfig.getLong("verification.unverified-role-id");
+            Role unverifiedRole = event.getGuild().getRoleById(unverifiedRoleID);
+
+            if(verifiedRole == null || unverifiedRole == null) return;
+
+            try {
+                if(isUserVerified(event.getUser().getId())){
+                    event.getGuild().addRoleToMember(member, verifiedRole).queue();
+
+                    //Modifying their nickname after their MC ign
+                    member.modifyNickname(getUserIGN(member.getId())).queue();
+                    return;
+                }
+
+                event.getGuild().addRoleToMember(member, unverifiedRole).queue();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
             }
-
-            //Giving the unverified role
-            String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
-            Role unverifiedRole = dcServer.getRoleById(unverifiedRoleID);
-            dcServer.addRoleToMember(event.getMember(), unverifiedRole).queue();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        });
     }
 
     private boolean isUserVerified(String discordId) throws SQLException {
@@ -57,6 +61,19 @@ public class MemberJoinEvent extends ListenerAdapter {
             ps.setString(1, discordId);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
+            }
+        }
+    }
+
+    private String getUserIGN(String discordId) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String SQL = "SELECT ign FROM playersVerification WHERE discordId = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
+            ps.setString(1, discordId);
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) return rs.getString("ign");
+                return null;
             }
         }
     }

@@ -4,7 +4,11 @@ package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import me.andrew.DiscordUtils.Plugin.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.dv8tion.jda.api.entities.Guild;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -15,6 +19,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -99,7 +106,7 @@ public class AddRemoveHistoryGUI implements Listener{
         //If the player clicks on history button
         if(clickedMat.equals(Material.PAPER)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-            plugin.getPunishmentsGUI().showGui(player, 1);
+            plugin.getPunishmentsGUI().showGui(player, 1, false);
         }
 
         //If the player clicks on add punishment button
@@ -125,7 +132,97 @@ public class AddRemoveHistoryGUI implements Listener{
         //If the player clicks on remove punishment button
         if(clickedItemMeta.getDisplayName().contains("Remove")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-            plugin.getRemovePunishmentsGUI().showGui(player, 1);
+            player.closeInventory();
+
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the ID of the punishment you want to remove (&7E.G: &l#123456&a). Type &c&lcancel &ato return."));
+            plugin.waitForPlayerInput(player, input -> removePunishment(input, player));
+        }
+    }
+
+    private void removePunishment(String ID, Player staff){
+        if(ID.equalsIgnoreCase("cancel")){
+            showGui(staff);
+            return;
+        }
+
+        String chatPrefix = plugin.getConfig().getString("chat-prefix");
+        try{
+            //Checking if there is a punishment with that ID
+            if(!punishmentExists(ID)){
+                staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThere is no punishment with ID &l"+ID+"&c!"));
+                staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+
+                //Re-opens the GUI after 1/2 seconds
+                Bukkit.getScheduler().runTaskLater(plugin, () -> showGui(staff), 10L);
+                return;
+            }
+
+            //Getting the punishment with that ID
+            Punishment targetP = getPunishment(ID);
+            plugin.getDatabaseManager().removePunishment(targetP.getPunishmentType(), targetP.getUuid());
+
+            //If the scope is discord/global, I have to unban/remove the target user's timeout
+            if(targetP.getScope() == PunishmentScopes.DISCORD || targetP.getScope() == PunishmentScopes.GLOBAL){
+                String targetUserID = getTargetUserID(targetP.getUuid());
+                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+
+                if(targetP.getPunishmentType() == PunishmentType.PERM_BAN || targetP.getPunishmentType() == PunishmentType.TEMP_BAN) plugin.getDiscordBot().getJda().retrieveUserById(targetUserID).queue(user -> dcServer.unban(user).queue());
+
+                if(targetP.getPunishmentType() == PunishmentType.TEMP_MUTE || targetP.getPunishmentType() == PunishmentType.PERM_MUTE){
+                    //Removing the timeout role
+                    long timeoutRoleID = plugin.botFile().getConfig().getLong("timeout-role-id");
+                    dcServer.retrieveMemberById(targetUserID).queue(member ->{
+                        dcServer.removeRoleFromMember(member, dcServer.getRoleById(timeoutRoleID)).queue();
+
+                        //Removing the timeout if it is a temporary one
+                        if(targetP.getPunishmentType() == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(member).queue();
+                    });
+                }
+            }
+
+            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment with ID &7&l"+ID+" &ahas been removed from player &e"+Bukkit.getOfflinePlayer(targetP.getUuid()).getName()+"&a!"));
+            staff.playSound(staff.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.4f);
+        } catch (Exception e){
+            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThere was a problem when attempted to remove the punishment. See the server's CMD for more info"));
+            Bukkit.getLogger().warning("[DISCORDUTILS] "+e.getMessage());
+        }
+    }
+
+    private boolean punishmentExists(String ID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT 1 FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next();
+            }
+        }
+    }
+
+    private Punishment getPunishment(String ID) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT * FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) return plugin.getDatabaseManager().mapPunishment(rs);
+                return null;
+            }
+        }
+    }
+
+    private String getTargetUserID(UUID targetUUID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, targetUUID.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) return rs.getString("discordId");
+                return null;
+            }
         }
     }
 }

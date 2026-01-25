@@ -15,8 +15,8 @@ pvm-set-ephemeral: true
 #Set the minutes for the interactions
 interaction-minutes: 2 #If a user is having an interaction and he doesn't do anything for some minutes, it removes the user from it.
 
-#Set the Minimum and Maximum length for the reason modal (In characters!)
-minimum-length-reason: 10
+#Set the Minimum and Maximum length for the punishment reason modal (In characters!)
+minimum-length-reason: 5
 maximum-length-reason: 2000
 
 #Set the Minimum and Maximum length for the duration modal (In Characters!)
@@ -24,8 +24,8 @@ minimum-length-duration: 2
 maximum-length-duration: 15
 
 #Configure the punishment appeal. Use '\n' for line breaks
-minimum-length-appeal: 500 #In characters!
-maximum-length-appeal: 5000 #In characters!
+minimum-length-appeal: 75 #In characters!
+maximum-length-appeal: 4000 #In characters! MAX IS 4000!!!
 placeholder-appeal: "In detail, explain anything related to the punishment you've received. \nMINIMUM 100 WORDS!"
 appeal-channel-id:  #The channel where the appeals will show up
 
@@ -33,13 +33,43 @@ appeal-channel-id:  #The channel where the appeals will show up
 verification:
   verified-role-id:  #This role will be a 'Member' type role. It will be used to let the user see the other channels
   unverified-role-id:  #This one is used to only show the 'verify' channel
-  verify-channel-id:  #The ID of the verification channel
+  verify-channel-id:  #The ID of the verification channel. IT MUST BE EMPTY, WITH NO TEXT HISTORY!!!
 
-#Configure the Role for timeout. You will also have to create one
-use-timeout-role: true #If you want to use this role or not
+  #Configure the verify channel embed. It is helpful for players to know what to do when they join the server.
+  #For description, you can use '\n' for line breaks.
+  #Placeholders: %server_name% -> Displays the discord server's name
+  verify-channel-embed-description: "**Welcome to %server_name%!**\n\nTo start your adventure: \n1.) Head over to our **Minecraft Server**\n2.) Run */verify* to get a **code**\n3.) Come back here and run */verify <code>*\n4.) Have fun on our server!"
+  verify-channel-embed-title: "VERIFY YOUR ACCOUNT!"
+  verify-channel-embed-color: #This will work in R-red G-green B-blue format!
+    RED: 138
+    GREEN: 43
+    BLUE: 226
+
+#Configure the Role for timeout. You will also have to create one for this.
 timeout-role-id:  #The ID of the role you created
 
-#Punishments Messages in user's DM. These trigger when you apply a punishment.
+#Configure what role the user must have to use the specific command. You will enter the ID of the roles!!
+pshistory-cmd-roles: #This only works for '/pshistory <ign>'!! Everyone will be able to run only '/pshistory'
+  -
+
+punish-cmd-roles:
+  -
+
+psremove-cmd-roles:
+  -
+
+#Configure the logs system. This is for staff to see each punishment that has been applied.
+use-logs: true #If you want to use logs or not.
+logs:
+  use-only-one-channel: false #This is if you want to use only one channel for ALL logs. (false -> no / true -> yes)
+  channel-id:  #The ID of the channel. Ignore this if you typed 'false' in 'use-only-one-channel'!!
+  multiple-channel-id:
+    warnings-channel-id:  #The ID for the warnings channel. This channel will only show warnings!
+    kicks-channel-id:  #The ID for the kicks channel. This channel will only show kicks!
+    mutes-channel-id:  #The ID for the mute channel. This channel will only show mutes!
+    bans-channel-id:  #The ID for the ban channel. This channel will only show mutes!
+
+#Punishments Messages in user's DM. These trigger when you apply a punishment. They are also vital for appealing!
 user-punishments-messages:
   #This is the message when a user gets kicked from your server. Use '\n' for line breaks. It supports MARKDOWN!!
   #Placeholders: %user% -> Displays the user's name.
@@ -107,19 +137,3 @@ user-punishments-messages:
   #              %reason% -> Displays the reason of the punishment
   #              %scope% -> Displays the scope of the punishment
   temporary-timeout-warn-message: "Dear **%user%**, \n\nYou *got* a **temporary timeout warning** on *%server_name%*. \n**Scope**: %scope%\n**Reason**: %reason%"
-
-  #The message when a user's ban expires or gets removed. Use '\n' for line breaks.
-  #Placeholders: %user% -> Displays the target user's name
-  #              %ban_type% -> Displays the ban type (permanent/temporary ban)
-  #              %server_name% -> Displays the discord server's name
-  #              %scope% -> Displays the scope of the ban
-  ban-expire-user-message: "Dear **%user%**, your *%ban_type%* with scope *%scope%* has **expired**! You can now join **%server_name%**!"
-  ban-remove-user-message: "Dear **%user%**, your *%ban_type%* has been **removed**! You can now join **%server_name%**!"
-
-  #The message when a user's timeout expires or gets removed. Use '\n' for line breaks.
-  #Placeholders: %user% -> Displays the target user's name
-  #              %timeout_type% -> Displays the timeout type (permanent/temporary timeout)
-  #              %server_name% -> Displays the discord server's name
-  #              %scope% -> Displays the scope of the timeout
-  timeout-expire-user-message: "Dear **%user%**, your *%timeout_type%* with scope *%scope%* on *%server_name%* has **expired**!"
-  timeout-remove-user-message: "Dear **%user%**, your *%timeout_type%* on *%server_name%* has been **removed**!"

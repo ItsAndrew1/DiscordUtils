@@ -2,34 +2,30 @@ package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
-import me.andrew.DiscordUtils.Plugin.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 import java.awt.*;
+import java.awt.Color;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.List;
 
 public class SlashCommands extends ListenerAdapter{
     private final DiscordUtils plugin;
@@ -56,6 +52,22 @@ public class SlashCommands extends ListenerAdapter{
                     throw new RuntimeException(e);
                 }
 
+                //Checking if the user is already verified
+                Connection dbConnection = plugin.getDatabaseManager().getConnection();
+                String sql = "SELECT 1 FROM playersVerification WHERE discordId = ?";
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                    ps.setString(1, userId);
+                    ResultSet rs = ps.executeQuery();
+
+                    if(rs.next()){
+                        event.reply("You are already verified!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                //Checking if the code expired or is invalid
                 if (uuid == null) {
                     boolean ephemeral = botConfig.getBoolean("iecm-set-ephemeral");
                     String message = botConfig.getString("invalid-expired-code-message");
@@ -63,10 +75,96 @@ public class SlashCommands extends ListenerAdapter{
                     return;
                 }
 
+                Player player = Bukkit.getPlayer(uuid);
                 try {
                     plugin.getDatabaseManager().setPlayerVerified(uuid, userId);
-                    plugin.getDatabaseManager().setPlayerHasVerified(uuid);
                     plugin.getDatabaseManager().deleteExpiredCode(uuid);
+
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        //Sends a message
+                        List<String> hasVerifiedMessage = plugin.getConfig().getStringList("player-verified-message");
+                        for(String line : hasVerifiedMessage){
+                            player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
+                        }
+
+                        //Assigns the Verified role to the user and removed the Unverified one
+                        Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+                        dcServer.retrieveMemberById(userId).queue(member -> {
+                            long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                            long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
+                            Role unverifiedRole = dcServer.getRoleById(unverifiedRoleID);
+                            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
+                            dcServer.addRoleToMember(member, verifiedRole).queue();
+                            dcServer.removeRoleFromMember(member, unverifiedRole).queue();
+                        });
+
+                        //Sound
+                        Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound").toLowerCase()));
+                        float phvsVolume = plugin.getConfig().getInt("phvs-volume");
+                        float phvsPitch = plugin.getConfig().getInt("phvs-pitch");
+                        player.playSound(player.getLocation(), hasVerifiedSound, phvsVolume, phvsPitch);
+
+                        //Giving the rewards if there are any (and if rewards are toggled)
+                        boolean toggleRewards = plugin.getConfig().getBoolean("rewards.toggle-giving-rewards");
+                        if(toggleRewards) {
+                            //Giving exp if the value is over 0
+                            int expLevels = plugin.getConfig().getInt("rewards.exp");
+                            if (expLevels > 0) player.giveExp(expLevels);
+
+                            //Giving the items
+                            ConfigurationSection itemsToGive = plugin.getConfig().getConfigurationSection("rewards.items");
+                            if (itemsToGive != null) {
+                                for (String stringItem : itemsToGive.getKeys(false)) {
+                                    String stringMaterial = plugin.getConfig().getString("rewards.items." + stringItem + ".material");
+                                    int itemQuantity = plugin.getConfig().getInt("rewards.items." + stringItem + ".quantity");
+                                    ItemStack item;
+                                    try {
+                                        item = new ItemStack(Material.matchMaterial(stringMaterial.toUpperCase()), itemQuantity);
+                                    } catch (Exception e) {
+                                        String errorMessage = plugin.getConfig().getString("error-giving-rewards-message");
+                                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', errorMessage));
+                                        Bukkit.getLogger().warning("[DISCORDUTILS] One/More reward item(s) are invalid! Giving rewards won't work!");
+                                        Bukkit.getLogger().warning("[DISCORDUTILS] " + e.getMessage());
+                                        return;
+                                    }
+
+                                    //Attaching the enchants to the item
+                                    ConfigurationSection itemEnchants = plugin.getConfig().getConfigurationSection("rewards.items." + stringItem + ".enchantments");
+                                    if (itemEnchants != null) {
+                                        for (String enchantmentString : itemEnchants.getKeys(false)) {
+                                            try {
+                                                Enchantment enchant = Enchantment.getByName(enchantmentString);
+                                                int enchantLevel = plugin.getConfig().getInt("rewards.items." + stringItem + ".enchantments." + enchantmentString);
+                                                item.addEnchantment(enchant, enchantLevel);
+                                            } catch (Exception e) {
+                                                String errorMessage = plugin.getConfig().getString("error-giving-rewards-message");
+                                                player.sendMessage(ChatColor.translateAlternateColorCodes('&', errorMessage));
+                                                Bukkit.getLogger().warning("[DISCORDUTILS] One/More enchantment(s) for item " + stringItem + " are invalid! Giving rewards won't work!");
+                                                Bukkit.getLogger().warning("[DISCORDUTILS] " + e.getMessage());
+                                                return;
+                                            }
+                                        }
+                                    }
+
+                                    //Drops the rewards if the player doesn't have enough inv space
+                                    if (player.getInventory().firstEmpty() == -1) {
+                                        World playerWorld = player.getWorld();
+                                        double playerX = player.getLocation().getX();
+                                        double playerY = player.getLocation().getY();
+                                        double playerZ = player.getLocation().getZ();
+                                        Location dropLocation = new Location(playerWorld, playerX + 1, playerY, playerZ); //Drop them in front of him
+
+                                        playerWorld.dropItem(dropLocation, item);
+                                    } else player.getInventory().addItem(item);
+                                }
+                            }
+                        }
+                    });
+
+                    //Setting the user's nickname after their MC ign
+                    botMain.getDiscordServer().retrieveMemberById(userId).queue(member -> {
+                        if(!member.isOwner()) member.modifyNickname(player.getName()).queue();
+                    });
 
                     String message = botConfig.getString("player-verified-message");
                     boolean ephemeral = botConfig.getBoolean("pvm-set-ephemeral");
@@ -107,6 +205,18 @@ public class SlashCommands extends ListenerAdapter{
                     return;
                 }
 
+                //Checking if the user has permission to check the history of others
+                boolean hasPermission = false;
+                List<Long> psRemoveRoles = botConfig.getLongList("pshistory-cmd-roles");
+                for(Long roleID : psRemoveRoles){
+                    Role role = botMain.getDiscordServer().getRoleById(roleID);
+                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                }
+                if(!hasPermission){
+                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                    return;
+                }
+
                 //Getting the target player
                 String ign = event.getOption("ign").getAsString();
                 OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
@@ -138,6 +248,18 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "punish" -> {
+                //Checking if the user has the necessary roles
+                boolean hasPermission = false;
+                List<Long> psRemoveRoles = botConfig.getLongList("punish-cmd-roles");
+                for(Long roleID : psRemoveRoles){
+                    Role role = botMain.getDiscordServer().getRoleById(roleID);
+                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                }
+                if(!hasPermission){
+                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                    return;
+                }
+
                 try {
                     //Getting the player from the ign
                     String ign = event.getOption("ign").getAsString();
@@ -161,7 +283,17 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "psremove" -> {
-                event.deferReply(true).queue();
+                //Checking if the user has the necessary roles
+                boolean hasPermission = false;
+                List<Long> psRemoveRoles = botConfig.getLongList("psremove-cmd-roles");
+                for(Long roleID : psRemoveRoles){
+                    Role role = botMain.getDiscordServer().getRoleById(roleID);
+                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                }
+                if(!hasPermission){
+                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                    return;
+                }
 
                 try{
                     //Getting the ID from the command
@@ -188,67 +320,39 @@ public class SlashCommands extends ListenerAdapter{
                     ps2.setString(1, ID);
                     ResultSet rs = ps2.executeQuery();
 
-                    PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
-                    PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
-                    UUID targetUUID =  UUID.fromString(rs.getString("uuid"));
+                    if(rs.next()){
+                        PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
+                        final PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
+                        UUID targetUUID = UUID.fromString(rs.getString("uuid"));
 
-                    //If the scope is Discord or Global, I have to unban/remove the timeout of the user
-                    if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
-                        if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                            String banType = type.isPermanent() ? "PERMANENT BAN" : "TEMPORARY BAN";
+                        //If the scope is Discord or Global, I have to unban/remove the timeout of the user
+                        if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
+                            Guild dcServer = botMain.getDiscordServer();
 
-                            //Sends the target user a DM informing that the ban got removed
                             botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
-                                targetUser.openPrivateChannel().queue(channel -> {
-                                    String description = botConfig.getString("user-punishments-messages.ban-remove-user-message")
-                                            .replace("%user%", targetUser.getName())
-                                            .replace("%server_name%", botMain.getDiscordServer().getName())
-                                            .replace("%ban_type%", banType);
+                                if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN) dcServer.unban(targetUser).queue();
 
-                                    EmbedBuilder embed = new EmbedBuilder();
-                                    embed.setTitle(banType+" REMOVAL");
-                                    embed.setColor(Color.GREEN.getRGB());
-                                    embed.setDescription(description);
+                                if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
+                                    //Removes the timeout role from the member if he has it
+                                    dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
+                                        long timeoutRoleID = botConfig.getLong("timeout-role-id");
+                                        Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
+                                        if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                    });
 
-                                    channel.sendMessageEmbeds(embed.build()).queue(success -> botMain.getDiscordServer().unban(targetUser).queue(),
-                                            failure -> botMain.getDiscordServer().unban(targetUser).queue()
-                                            );
-                                }, failure -> botMain.getDiscordServer().unban(targetUser).queue());
-                            });
-                        }
-
-                        if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-                            String timeoutType = type.isPermanent() ? "PERMANENT TIMEOUT" : "TEMPORARY TIMEOUT";
-
-                            //Sends the target user a DM informing him that the timeout got removed
-                            botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
-                                targetUser.openPrivateChannel().queue(channel -> {
-                                    String description = botConfig.getString("user-punishments-messages.timeout-remove-user-message")
-                                            .replace("%user%", targetUser.getName())
-                                            .replace("%server_name%",  botMain.getDiscordServer().getName())
-                                            .replace("%timeout_type%", timeoutType);
-
-                                    EmbedBuilder embed = new EmbedBuilder();
-                                    embed.setColor(Color.GREEN.getRGB());
-                                    embed.setTitle(timeoutType+" REMOVAL");
-                                    embed.setDescription(description);
-
-                                    channel.sendMessageEmbeds(embed.build()).queue(
-                                            success -> botMain.getDiscordServer().removeTimeout(targetUser).queue(),
-                                            failure -> botMain.getDiscordServer().removeTimeout(targetUser).queue()
-                                    );
-                                }, failure ->  botMain.getDiscordServer().removeTimeout(targetUser).queue());
+                                    if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
+                                }
                             });
                         }
                     }
+
+                    event.reply("Punishment with ID **"+ID+"** has been removed!").setEphemeral(true).queue();
                 } catch (Exception e){
-                    event.reply("Nu iti zic").setEphemeral(true).queue();
+                    throw new RuntimeException(e);
                 }
             }
 
             case "unverify" -> {
-                event.deferReply(true).queue();
-
                 String userID = event.getUser().getId();
                 Connection dbConnection = plugin.getDatabaseManager().getConnection();
                 String sql = "DELETE FROM playersVerification WHERE discordId = ?";
@@ -264,16 +368,31 @@ public class SlashCommands extends ListenerAdapter{
                     ps.setString(1, userID);
                     ps.executeUpdate();
 
-                    //Removing from the user all the Roles and giving him the Unverified role
+                    //Removing from the user the 'Verified' role and giving him the Unverified role
+                    long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+                    Role verifiedRole =  botMain.getDiscordServer().getRoleById(verifiedRoleID);
+
                     Member targetMember = event.getMember();
-                    for(Role role : targetMember.getRoles()) botMain.getDiscordServer().removeRoleFromMember(targetMember, role).queue();
+                    if(targetMember.getRoles().contains(verifiedRole)) botMain.getDiscordServer().removeRoleFromMember(targetMember, verifiedRole).queue();
 
                     String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
                     Role unverified = botMain.getDiscordServer().getRoleById(unverifiedRoleID);
                     botMain.getDiscordServer().addRoleToMember(targetMember, unverified).queue();
+
+                    //Resetting the nickname
+                    if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
+
+                    event.reply("Unverified successfully!").setEphemeral(true).queue();
                 } catch (Exception e){
                     throw new RuntimeException(e);
                 }
+            }
+
+            case "appeal" -> {
+                String userID = event.getUser().getId();
+                String punishmentID = event.getOption("id").getAsString();
+
+
             }
         }
     }
@@ -309,6 +428,8 @@ public class SlashCommands extends ListenerAdapter{
         try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
             ps.setString(1, targetUUID.toString());
             try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return null;
+
                 return rs.getString("discordId");
             }
         }
@@ -322,6 +443,32 @@ public class SlashCommands extends ListenerAdapter{
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
+            }
+        }
+    }
+
+    private boolean doesPunishmentExist(String punishmentID) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT 1 FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, punishmentID);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next();
+            }
+        }
+    }
+
+    private boolean isPunishmentInAppealState(String punishmentID) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, punishmentID);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+
+                return rs.getString("appeal_state") != null;
             }
         }
     }

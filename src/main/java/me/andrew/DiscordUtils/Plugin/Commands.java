@@ -40,7 +40,7 @@ public class Commands implements CommandExecutor{
         try {
             //Check if the player is muted temporarily
             Punishment tempMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
-            if(tempMute != null){
+            if(tempMute != null && (tempMute.getScope() == PunishmentScopes.MINECRAFT || tempMute.getScope() == PunishmentScopes.GLOBAL)){
                 if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getCrt());
                 else{
                     //Sends the player a message (if the messages are toggled)
@@ -69,6 +69,7 @@ public class Commands implements CommandExecutor{
                                 .replace("%reason%", reason)
                                 .replace("%time_left%", timeLeftString)
                                 .replace("%expiration_time%", expiresAtString)
+                                .replace("%id%", tempMute.getId())
                         ));
                     }
                     return true;
@@ -77,7 +78,7 @@ public class Commands implements CommandExecutor{
 
             //Check if the player is muted permanently
             Punishment permMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.PERM_MUTE);
-            if(permMute != null){
+            if(permMute != null && (permMute.getScope() == PunishmentScopes.MINECRAFT || permMute.getScope() == PunishmentScopes.GLOBAL)){
                 if(permMute.isActive()){
                     //Sends the target player a message (if the messages are toggled)
                     //Getting the reason and scope
@@ -89,6 +90,7 @@ public class Commands implements CommandExecutor{
                     for(String messageLine: message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
                             .replace("%scope%", scope)
                             .replace("%reason%", reason)
+                            .replace("%id%", permMute.getId())
                     ));
                     return true;
                 }
@@ -231,13 +233,19 @@ public class Commands implements CommandExecutor{
                     userDiscordID = rs.getString("discordId");
                 }
 
-                //Removing all roles from the target user and giving him Unverified role
-                String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
+                //Removing the 'Verified' role from the target user and giving him Unverified role
+                long unverifiedRoleID = botConfig.getLong("verification.unverified-role-id");
                 Role unverified = dcServer.getRoleById(unverifiedRoleID);
+                long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+                Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
 
-                Member targetMember = dcServer.getMemberById(userDiscordID);
-                for(Role role : targetMember.getRoles()) dcServer.removeRoleFromMember(targetMember, role).queue();
-                dcServer.addRoleToMember(targetMember, unverified).queue();
+                dcServer.retrieveMemberById(userDiscordID).queue(targetMember -> {
+                    if(targetMember.getRoles().contains(verifiedRole)) dcServer.removeRoleFromMember(targetMember, verifiedRole).queue();
+                    dcServer.addRoleToMember(targetMember, unverified).queue();
+
+                    //Resetting the user's nickname
+                    if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
+                });
 
                 //Deleting the player from playersVerification table
                 preparedStatement.setString(1, player.getUniqueId().toString());
@@ -247,6 +255,21 @@ public class Commands implements CommandExecutor{
                 player.playSound(player.getLocation(), good, 1f, 1f);
                 return true;
             } catch (SQLException e){
+                throw new RuntimeException(e);
+            }
+        }
+
+        if(command.getName().equalsIgnoreCase("history")){
+            //Checking if the player has the permission
+            if(!player.hasPermission("discordutils.use")){
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message")));
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
+                return true;
+            }
+
+            try {
+                plugin.getPunishmentsGUI().showGui(player, 1, true);
+            } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
         }

@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -32,28 +33,45 @@ public class PunishmentsGUI implements Listener{
     private final DiscordUtils plugin;
     private Connection databaseConnection;
     private final Map<UUID, PunishmentsFilter> filters = new HashMap<>();
+    private final Map<UUID, Boolean> selfMap = new HashMap<>();
 
     public PunishmentsGUI(DiscordUtils plugin){
         this.plugin = plugin;
     }
 
-    public void showGui(Player player, int page) throws SQLException {
+    public void showGui(Player player, int page, boolean self) throws SQLException {
+        selfMap.put(player.getUniqueId(), self);
+
         databaseConnection = plugin.getDatabaseManager().getConnection();
         int invSize = 54;
 
         //Getting the filtering that the player has
         PunishmentsFilter filter = filters.getOrDefault(player.getUniqueId(), PunishmentsFilter.ALL); //Shows all by default
 
-        String clickPlayerName = plugin.getPlayerHeadsGUIs().getClickedPlayer().getName();
-        UUID clickedPlayerUUID = plugin.getPlayerHeadsGUIs().getClickedPlayer().getUniqueId();
-        String guiTitle = clickPlayerName+"'s History (Page "+page+")";
+        //Getting the main data
+        String clickPlayerName;
+        UUID playerUUID;
+        String guiTitle;
+        if(selfMap.get(player.getUniqueId())){
+            clickPlayerName = player.getName();
+            playerUUID = player.getUniqueId();
+            guiTitle = "Your History (Page "+page+")";
+        }
+        else{
+            clickPlayerName = plugin.getPlayerHeadsGUIs().getClickedPlayer().getName();
+            playerUUID = plugin.getPlayerHeadsGUIs().getClickedPlayer().getUniqueId();
+            guiTitle = clickPlayerName+"'s History (Page "+page+")";
+        }
 
         Inventory gui = Bukkit.createInventory(null, invSize, guiTitle);
 
         //Setting the selected player's head on the top of the GUI
         ItemStack selectedPlayersHead = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta sphMeta =  (SkullMeta) selectedPlayersHead.getItemMeta();
-        sphMeta.setOwningPlayer(plugin.getPlayerHeadsGUIs().getClickedPlayer());
+
+        if(selfMap.get(player.getUniqueId())) sphMeta.setOwningPlayer(player);
+        else sphMeta.setOwningPlayer(plugin.getPlayerHeadsGUIs().getClickedPlayer());
+
         sphMeta.setDisplayName(ChatColor.YELLOW + clickPlayerName);
         selectedPlayersHead.setItemMeta(sphMeta);
         gui.setItem(4, selectedPlayersHead);
@@ -65,15 +83,15 @@ public class PunishmentsGUI implements Listener{
         decoGlass.setItemMeta(decoGlassMeta);
         for(int i = 9; i<=17; i++) gui.setItem(i, decoGlass);
 
-        //Return button
-        ItemStack returnButton = new ItemStack(Material.SPECTRAL_ARROW);
+        //Return/Exit button
+        ItemStack returnButton = new ItemStack(selfMap.get(player.getUniqueId()) ? Material.RED_CONCRETE : Material.SPECTRAL_ARROW);
         ItemMeta returnButtonMeta = returnButton.getItemMeta();
-        returnButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lRETURN"));
+        returnButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', selfMap.get(player.getUniqueId()) ? "&c&lEXIT" : "&c&lRETURN"));
         returnButton.setItemMeta(returnButtonMeta);
         gui.setItem(49, returnButton);
 
         //Setting the punishments
-        if(!plugin.getDatabaseManager().playerHasPunishments(clickedPlayerUUID)){
+        if(!plugin.getDatabaseManager().playerHasPunishments(playerUUID)){
             //No punishments item
             ItemStack noPunish = new ItemStack(Material.BARRIER);
             ItemMeta noPunishMeta = noPunish.getItemMeta();
@@ -83,8 +101,8 @@ public class PunishmentsGUI implements Listener{
         }
         else{
             //Filtering buttons
-            int nrPlayerActivePunishments = plugin.getDatabaseManager().getPlayerActivePunishmentsNr(clickedPlayerUUID);
-            int nrPlayerExpiredPunishments = plugin.getDatabaseManager().getPlayerExpiredPunishmentsNr(clickedPlayerUUID);
+            int nrPlayerActivePunishments = plugin.getDatabaseManager().getPlayerActivePunishmentsNr(playerUUID);
+            int nrPlayerExpiredPunishments = plugin.getDatabaseManager().getPlayerExpiredPunishmentsNr(playerUUID);
             if(nrPlayerActivePunishments >= 1 && nrPlayerExpiredPunishments >= 1){
                 if(filter.equals(PunishmentsFilter.ALL)){
                     ItemStack filterAllButton =  new ItemStack(Material.YELLOW_DYE);
@@ -141,7 +159,7 @@ public class PunishmentsGUI implements Listener{
 
             int punishmentsPerPage = 27;
             int offset = (page - 1) *  punishmentsPerPage;
-            List<Punishment> playerPunishments = plugin.getDatabaseManager().getPlayerPunishments(clickedPlayerUUID, filter, punishmentsPerPage, offset);
+            List<Punishment> playerPunishments = plugin.getDatabaseManager().getPlayerPunishments(playerUUID, filter, punishmentsPerPage, offset);
             int endIndex = Math.min(offset + punishmentsPerPage, playerPunishments.size());
 
             //Displaying the punishments
@@ -265,6 +283,15 @@ public class PunishmentsGUI implements Listener{
     }
 
     @EventHandler
+    public void onGuiExit(InventoryCloseEvent e){
+        if(!(e.getPlayer() instanceof Player player)) return;
+        if(!e.getView().getTitle().contains("History")) return;
+
+        //Removing the player from the selfMap
+        selfMap.remove(player.getUniqueId());
+    }
+
+    @EventHandler
     public void onClick(InventoryClickEvent event) throws SQLException {
         if(!(event.getWhoClicked() instanceof Player player)) return;
         if(!event.getView().getTitle().contains("History")) return;
@@ -281,21 +308,37 @@ public class PunishmentsGUI implements Listener{
         Material returnButton = Material.SPECTRAL_ARROW;
         if(clickedMaterial.equals(returnButton)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+
+            //Removing the player from the selfMap
+            selfMap.remove(player.getUniqueId());
+
             plugin.getAddRemovePunishGUI().showGui(player);
+            return;
+        }
+
+        //If the player clicks on exit button
+        Material exitButton = Material.RED_CONCRETE;
+        if(clickedMaterial.equals(exitButton)){
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+
+            //Removing the player from the selfMap
+            selfMap.remove(player.getUniqueId());
+
+            player.closeInventory();
             return;
         }
 
         //If the player clicks on next page
         if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&caNext Page"))){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            showGui(player, getPageNrFromTitle(event.getView().getTitle()) + 1);
+            showGui(player, getPageNrFromTitle(event.getView().getTitle()) + 1, selfMap.get(player.getUniqueId()));
             return;
         }
 
         //If the player clicks on previous page
         if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&cPrevious Page"))){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            showGui(player, getPageNrFromTitle(event.getView().getTitle()) - 1);
+            showGui(player, getPageNrFromTitle(event.getView().getTitle()) - 1, selfMap.get(player.getUniqueId()));
             return;
         }
 
@@ -303,17 +346,17 @@ public class PunishmentsGUI implements Listener{
         if(clickedMaterial.equals(Material.YELLOW_DYE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             filters.put(player.getUniqueId(), PunishmentsFilter.ACTIVE);
-            showGui(player, 1);
+            showGui(player, 1, selfMap.get(player.getUniqueId()));
         }
         if(clickedMaterial.equals(Material.GREEN_DYE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             filters.put(player.getUniqueId(), PunishmentsFilter.EXPIRED);
-            showGui(player, 1);
+            showGui(player, 1, selfMap.get(player.getUniqueId()));
         }
         if(clickedMaterial.equals(Material.RED_DYE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             filters.put(player.getUniqueId(), PunishmentsFilter.ALL);
-            showGui(player, 1);
+            showGui(player, 1, selfMap.get(player.getUniqueId()));
         }
     }
 }

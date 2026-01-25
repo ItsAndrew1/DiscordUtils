@@ -1,6 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
+import me.andrew.DiscordUtils.DiscordBot.InsertLog;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentContext;
@@ -243,35 +244,15 @@ public class FinalPunishmentGUI implements Listener {
             }
 
             //If punishment is a temp mute warning
-            if (punishmentType == PunishmentType.TEMP_MUTE_WARN && (scope == PunishmentScopes.MINECRAFT || scope == PunishmentScopes.GLOBAL)) {
+            if (punishmentType == PunishmentType.TEMP_MUTE_WARN) {
                 scope.applyPunishment(ctx, PunishmentType.TEMP_MUTE_WARN);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_MUTE_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
             }
         }
 
-        //Giving timeout role on discord if the type is perm/temp mute and scope is global/discord
-        FileConfiguration botConfig = plugin.botFile().getConfig();
-        boolean useTimeoutRole = botConfig.getBoolean("use-timeout-role");
-        if((state.type == PunishmentType.TEMP_MUTE || state.type == PunishmentType.PERM_MUTE) && (state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && useTimeoutRole){
-            String timeoutRoleID = botConfig.getString("timeout-role-id");
-
-            //Getting the discord ID of the user
-            String targetUserID;
-            Connection dbConnection = plugin.getDatabaseManager().getConnection();
-            String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-            try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                ps.setString(1, state.targetUUID.toString());
-                ResultSet rs = ps.executeQuery();
-                targetUserID = rs.getString("discordId");
-            }
-
-            //Giving the role
-            Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-            Member targetMember = dcServer.getMemberById(targetUserID);
-            Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
-            dcServer.addRoleToMember(targetMember, timeoutRole).queue();
-        }
+        //Inserting the log (if they are toggled)
+        if(plugin.botFile().getConfig().getBoolean("use-logs")) new InsertLog(plugin, plugin.getDiscordBot(), state);
 
         //Removing the staff from the adding state map
         plugin.getPunishmentsAddingStates().remove(player.getUniqueId());

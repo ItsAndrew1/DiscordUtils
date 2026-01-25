@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.bukkit.Bukkit;
 
 import java.sql.Connection;
@@ -32,7 +33,9 @@ public class BotMain{
                 .addEventListeners(punishmentHistory)
                 .addEventListeners(addPunishments)
                 .addEventListeners(new AppealSystem(plugin))
-                .addEventListeners(new MemberJoinEvent(plugin, this))
+                .addEventListeners(new MemberJoinEvent(plugin))
+                .enableIntents(GatewayIntent.GUILD_MEMBERS)
+                .enableIntents(GatewayIntent.DIRECT_MESSAGES)
                 .build()
                 .awaitReady();
 
@@ -43,6 +46,13 @@ public class BotMain{
             jda.shutdownNow();
         }
 
+        //Global commands
+        jda.updateCommands().addCommands(
+                Commands.slash("appeal", "Appeal Your Punishment")
+                        .addOption(OptionType.STRING, "id", "Enter the ID of the punishment!", true)
+        ).queue();
+
+        //The server commands
         discordServer.updateCommands().addCommands(
                 Commands.slash("verify", "Verify your minecraft account!")
                         .addOption(OptionType.INTEGER, "code", "Enter the code you were given.", true),

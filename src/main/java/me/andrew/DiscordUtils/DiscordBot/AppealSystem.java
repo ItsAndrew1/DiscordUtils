@@ -35,81 +35,6 @@ public class AppealSystem extends ListenerAdapter {
     }
 
     @Override
-    public void onButtonInteraction(ButtonInteractionEvent event){
-        FileConfiguration botConfig = plugin.botFile().getConfig();
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-
-        if(event.getComponentId().contains("appeal:")){
-            try{
-                //Getting the punishmentId from the customId of the button
-                String punishmentID = event.getComponentId().split(":", 2)[1];
-
-                //Checking if the punishment still exists in the DB
-                if(!doesPunishmentExist(punishmentID)){
-                    event.reply("This punishment doesn't exit anymore!").setEphemeral(true).queue();
-                    return;
-                }
-
-                //Checking if the appeal is in a pending state
-                if(isPunishmentInAppealState(punishmentID)){
-                    event.reply("You **have already appealed** for this punishment! Please *wait* until a decision is made. Only then, you may appeal again.").setEphemeral(true).queue();
-                    return;
-                }
-
-                //Updating the punishment 'appeal_state' in the punishments table
-                String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                    ps.setString(1, "PENDING");
-                    ps.setString(2, punishmentID);
-                    ps.executeUpdate();
-                }
-
-                //Opening a modal with the appealing form
-                int maximumLength = botConfig.getInt("maximum-length-appeal");
-                int minimumLength = botConfig.getInt("minimum-length-appeal");
-                String placeholder = botConfig.getString("placeholder-appeal");
-
-                TextInput reasonForm = TextInput.create("reasonForm", TextInputStyle.PARAGRAPH)
-                        .setPlaceholder(placeholder)
-                        .setRequired(true)
-                        .setMinLength(minimumLength)
-                        .setMaxLength(maximumLength).build();
-
-                Modal formModal = Modal.create("appeal_form:"+punishmentID, "Appeal Your Punishment")
-                        .addComponents(Label.of("Form", reasonForm))
-                        .build();
-                event.replyModal(formModal).queue();
-            } catch(Exception e){
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private boolean doesPunishmentExist(String punishmentID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT 1 FROM punishments WHERE id = ?";
-
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-            ps.setString(1, punishmentID);
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next();
-            }
-        }
-    }
-
-    private boolean isPunishmentInAppealState(String punishmentID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
-
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-            ps.setString(1, punishmentID);
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.getString("appeal_state") != null;
-            }
-        }
-    }
-
-    @Override
     public void onModalInteraction(ModalInteractionEvent event){
         if(!event.getModalId().contains("appeal_form")) return;
 
@@ -137,17 +62,19 @@ public class AppealSystem extends ListenerAdapter {
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT uuid, type, scope";
         try {
-            if(isTemporary(punishmentID)) sql+=", expiresAt";
+            if(isTemporary(punishmentID)) sql+=", expire_at";
             sql+=" FROM punishments WHERE id = ?";
 
             try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
                 ps.setString(1, punishmentID);
-                ResultSet rs = ps.executeQuery();
-                targetPlayerName = Bukkit.getOfflinePlayer(rs.getString("uuid")).getName();
-                type = PunishmentType.valueOf(rs.getString("type"));
-                scope = PunishmentScopes.valueOf(rs.getString("scope"));
-                expiresAt = rs.getLong("expire_at");
-                createdAt = rs.getLong("created_at");
+                try(ResultSet rs = ps.executeQuery()){
+                    if(!rs.next()) return;
+                    targetPlayerName = Bukkit.getOfflinePlayer(rs.getString("uuid")).getName();
+                    type = PunishmentType.valueOf(rs.getString("type"));
+                    scope = PunishmentScopes.valueOf(rs.getString("scope"));
+                    expiresAt = rs.getLong("expire_at");
+                    createdAt = rs.getLong("created_at");
+                }
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -178,6 +105,8 @@ public class AppealSystem extends ListenerAdapter {
         try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+
                 PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
                 return type == PunishmentType.TEMP_BAN || type == PunishmentType.TEMP_MUTE;
             }
