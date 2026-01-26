@@ -45,8 +45,9 @@ verification:
     GREEN: 43
     BLUE: 226
 
-#Configure the Role for timeout. You will also have to create one for this.
-timeout-role-id:  #The ID of the role you created
+#Configure the Roles for the punishments. You will also have to create one for this.
+timeout-role-id:
+ban-role-id:
 
 #Configure what role the user must have to use the specific command. You will enter the ID of the roles!!
 pshistory-cmd-roles: #This only works for '/pshistory <ign>'!! Everyone will be able to run only '/pshistory'
