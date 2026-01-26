@@ -291,6 +291,9 @@ public class AddPunishments extends ListenerAdapter{
                 );
                 state.scope.applyPunishment(ctx, state.type);
 
+                //Inserting the logs (if they are toggled)
+                if(plugin.botFile().getConfig().getBoolean("use-logs")) new InsertLog(plugin, bot, state);
+
                 //Giving the timeout role if the type is temp mute and scope is discord or global
                 if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
 

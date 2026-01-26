@@ -5,6 +5,7 @@ import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
@@ -393,19 +394,24 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "appeal" -> {
-                String userID = event.getUser().getId();
                 String punishmentID = event.getOption("id").getAsString();
 
                 try {
                     //Checking if the punishment still exists and hasn't expired
                     if(!punishmentExists(punishmentID)){
-                        event.reply("This punishment has been **removed** or has **expired**!").setEphemeral(true).queue();
+                        event.reply("This punishment has already been **removed** or has **expired**!").setEphemeral(true).queue();
+                        return;
+                    }
+
+                    //Checking if the appeal was declined
+                    if(wasAppealDeclined(punishmentID)){
+                        event.reply("This appeal has been declined. You cannot appeal again.").setEphemeral(true).queue();
                         return;
                     }
 
                     //Checking if the punishment is already in appeal state
-                    if(isPunishmentInAppealState(punishmentID)){
-                        event.reply("You have already sent an appeal for this punishment! Wait for a *response* and **try again**.").setEphemeral(true).queue();
+                    if(isPunishmentInPendingState(punishmentID)){
+                        event.reply("You have already sent an appeal for this punishment! Please be patient while our staff reviews your appeal.").setEphemeral(true).queue();
                         return;
                     }
 
@@ -418,13 +424,33 @@ public class SlashCommands extends ListenerAdapter{
                             .setPlaceholder(placeholder)
                             .setRequired(true)
                             .setMinLength(minimumLength)
-                            .setMaxLength(maximumLength).build();
+                            .setMaxLength(maximumLength).build();;;;;;;;;;;;;;;;;;
+                            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  //Genta was here ☺
+                            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
                     Modal formModal = Modal.create("appeal_form:"+punishmentID, "Appeal Your Punishment")
                             .addComponents(Label.of("Form", reasonForm))
                             .build();
 
                     event.replyModal(formModal).queue();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            case "appealstatus" -> {
+                //Getting the punishment ID
+                String pID = event.getOption("id").getAsString();
+
+                try {
+                    //If the status is 'PENDING'
+                    if(isPunishmentInPendingState(pID)) event.reply("Punishment ID: "+pID+"\n**Status**: PENDING").setEphemeral(true).queue();
+
+                    //If the status is 'DECLINED'
+                    if(wasAppealDeclined(pID)) event.reply("Punishment ID: "+pID+"\n**Status**: DECLINED").setEphemeral(true).queue();
+
+                    //If the status is 'ACCEPTED'
+                    if(wasAppealAccepted(pID)) event.reply("Punishment ID: "+pID+"\n**Status**: ACCEPTED").setEphemeral(true).queue();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
@@ -482,7 +508,7 @@ public class SlashCommands extends ListenerAdapter{
         }
     }
 
-    private boolean isPunishmentInAppealState(String punishmentID) throws SQLException {
+    private boolean isPunishmentInPendingState(String punishmentID) throws SQLException {
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
@@ -491,7 +517,33 @@ public class SlashCommands extends ListenerAdapter{
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
 
-                return rs.getString("appeal_state") != null;
+                return rs.getString("appeal_state").equals("pending");
+            }
+        }
+    }
+
+    private boolean wasAppealAccepted(String ID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+                return rs.getString("appeal_state").equals("accepted");
+            }
+        }
+    }
+
+    private boolean wasAppealDeclined(String ID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+                return rs.getString("appeal_state").equals("declined");
             }
         }
     }

@@ -44,12 +44,15 @@ public class BotMain{
         if(discordServer == null){
             Bukkit.getLogger().info("[DISCORDUTILS] Discord server not found! Bot won't start.");
             jda.shutdownNow();
+            return;
         }
 
         //Global commands
         jda.updateCommands().addCommands(
                 Commands.slash("appeal", "Appeal Your Punishment")
-                        .addOption(OptionType.STRING, "id", "Enter the ID of the punishment!", true)
+                        .addOption(OptionType.STRING, "id", "Enter the ID of the punishment!", true),
+                Commands.slash("appealstatus", "View the status of the appeal")
+                        .addOption(OptionType.STRING, "id", "Enter the ID of the punishment you have appealed", true)
         ).queue();
 
         //The server commands

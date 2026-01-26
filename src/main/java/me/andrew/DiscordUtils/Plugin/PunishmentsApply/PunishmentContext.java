@@ -241,7 +241,7 @@ public class PunishmentContext {
 
                 EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT BAN");
 
-                privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:" + state.ID, "Appeal Punishment"))).queue(
+                privateChannel.sendMessageEmbeds(embed.build()).queue(
                         success -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue(),
                         failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue()
                 );
@@ -331,7 +331,7 @@ public class PunishmentContext {
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.temporary-ban-message");
                 EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY BAN");
-                privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue(
+                privateChannel.sendMessageEmbeds(embed.build()).queue(
                         success -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue(),
                         failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue()
                 );
@@ -424,7 +424,7 @@ public class PunishmentContext {
                 targetUser.openPrivateChannel().queue(privateChannel -> {
                     String message = botConfig.getString("user-punishments-messages.permanent-timeout-message");
                     EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT TIMEOUT");
-                    privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue();
+                    privateChannel.sendMessageEmbeds(embed.build()).queue();
                 });
             });
         });
@@ -515,7 +515,7 @@ public class PunishmentContext {
                 targetUser.openPrivateChannel().queue(privateChannel -> {
                     String message = botConfig.getString("user-punishments-messages.temporary-timeout-message");
                     EmbedBuilder embed =  getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY TIMEOUT");
-                    privateChannel.sendMessageEmbeds(embed.build()).addComponents(ActionRow.of(Button.primary("appeal:"+state.ID, "Appeal Punishment"))).queue(
+                    privateChannel.sendMessageEmbeds(embed.build()).queue(
                             success -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue(),
                             failure -> targetMember.timeoutFor(state.duration, TimeUnit.MILLISECONDS).reason(state.reason).queue()
                     );

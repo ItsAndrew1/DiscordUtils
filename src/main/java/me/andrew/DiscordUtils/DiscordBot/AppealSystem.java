@@ -25,6 +25,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 public class AppealSystem extends ListenerAdapter {
@@ -60,7 +64,7 @@ public class AppealSystem extends ListenerAdapter {
         long createdAt;
 
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT uuid, type, scope";
+        String sql = "SELECT uuid, type, scope, created_at";
         try {
             if(isTemporary(punishmentID)) sql+=", expire_at";
             sql+=" FROM punishments WHERE id = ?";
@@ -91,9 +95,19 @@ public class AppealSystem extends ListenerAdapter {
 
         //Sends the embed to the channel designated for appeals
         appealsChannel.sendMessageEmbeds(embedFormBuilder.build()).addComponents(ActionRow.of(
-                Button.success("appeal_accept:"+punishmentID, "Accept"),
-                Button.danger("appeal_decline:"+punishmentID, "Decline")
+                Button.success("appeal_accept:"+punishmentID, "Accept").withDisabled(appealWasAcceptedDecline(punishmentID)),
+                Button.danger("appeal_decline:"+punishmentID, "Decline").withDisabled(appealWasAcceptedDecline(punishmentID))
         )).queue();
+
+        //Updating the status of the appeal_state of the punishment
+        String sql2 = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
+            ps.setString(1, "pending");
+            ps.setString(2, punishmentID);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
         event.reply("Punishment appeal sent successfully!").setEphemeral(true).queue();
     }
@@ -114,26 +128,66 @@ public class AppealSystem extends ListenerAdapter {
     }
 
     public String formatTime(long millis){
-        long days =  TimeUnit.MILLISECONDS.toDays(millis);
-        millis -= TimeUnit.DAYS.toMillis(days);
+        Instant instant = Instant.ofEpochMilli(millis);
+        LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss");
+        return time.format(formatter);
+    }
 
-        long hours =  TimeUnit.MILLISECONDS.toHours(millis);
-        millis -=  TimeUnit.HOURS.toMillis(hours);
+    @Override
+    public void onButtonInteraction(ButtonInteractionEvent event){
+        if(!event.getComponentId().contains("appeal_")) return;
 
-        long minutes =  TimeUnit.MILLISECONDS.toMinutes(millis);
-        millis -= TimeUnit.MINUTES.toMillis(minutes);
+        //Getting the punishment ID
+        String punishmentID =  event.getComponentId().split(":", 2)[1];
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
 
-        long seconds =  TimeUnit.MILLISECONDS.toSeconds(millis);
+        //If the staff clicks on the Accept Button
+        if(event.getComponentId().contains("appeal_accept")){
+            String sql = "UPDATE punishments SET active = 0, removed = 1, removed_at = ?, appeal_state = ? WHERE id = ?";
 
-        StringBuilder sb = new StringBuilder();
-        if(minutes > 0) seconds = 0;
+            try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                ps.setLong(1, System.currentTimeMillis());
+                ps.setString(2, "accepted");
+                ps.setString(3, punishmentID);
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
 
-        if(days > 0) sb.append(days).append("d ");
-        if(hours > 0) sb.append(hours).append("h ");
-        if(minutes > 0) sb.append(minutes).append("m ");
-        if(seconds > 0 || sb.isEmpty()) sb.append(seconds).append("s");
+            event.reply("Appeal for **Punishment "+punishmentID+"** has been **ACCEPTED**\n**Staff**: "+event.getUser().getName()).queue();
+        }
 
-        return sb.toString().trim();
+        //If the staff clicks on the Decline Button
+        if(event.getComponentId().contains("appeal_decline")){
+            String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
+
+            //Setting the appeal state as 'Declined'
+            try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                ps.setString(1, "declined");
+                ps.setString(2, punishmentID);
+                ps.executeUpdate();
+            } catch (SQLException e){
+                throw new RuntimeException(e);
+            }
+
+            event.reply("Appeal for **Punishment "+punishmentID+"** has been **DECLINED**\n**Staff**: "+event.getUser().getName()).queue();
+        }
+    }
+
+    private boolean appealWasAcceptedDecline(String ID){
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+                String state = rs.getString("appeal_state");
+                return !state.equals("pending");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
-
