@@ -5,11 +5,15 @@ import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.label.Label;
+import net.dv8tion.jda.api.components.textinput.TextInput;
+import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.modals.Modal;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -392,7 +396,38 @@ public class SlashCommands extends ListenerAdapter{
                 String userID = event.getUser().getId();
                 String punishmentID = event.getOption("id").getAsString();
 
+                try {
+                    //Checking if the punishment still exists and hasn't expired
+                    if(!punishmentExists(punishmentID)){
+                        event.reply("This punishment has been **removed** or has **expired**!").setEphemeral(true).queue();
+                        return;
+                    }
 
+                    //Checking if the punishment is already in appeal state
+                    if(isPunishmentInAppealState(punishmentID)){
+                        event.reply("You have already sent an appeal for this punishment! Wait for a *response* and **try again**.").setEphemeral(true).queue();
+                        return;
+                    }
+
+                    //Opening a modal with the appealing form
+                    int maximumLength = botConfig.getInt("maximum-length-appeal");
+                    int minimumLength = botConfig.getInt("minimum-length-appeal");
+                    String placeholder = botConfig.getString("placeholder-appeal");
+
+                    TextInput reasonForm = TextInput.create("reasonForm", TextInputStyle.PARAGRAPH)
+                            .setPlaceholder(placeholder)
+                            .setRequired(true)
+                            .setMinLength(minimumLength)
+                            .setMaxLength(maximumLength).build();
+
+                    Modal formModal = Modal.create("appeal_form:"+punishmentID, "Appeal Your Punishment")
+                            .addComponents(Label.of("Form", reasonForm))
+                            .build();
+
+                    event.replyModal(formModal).queue();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -437,22 +472,10 @@ public class SlashCommands extends ListenerAdapter{
 
     private boolean punishmentExists(String ID) throws SQLException{
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT 1 FROM punishments WHERE id = ?";
+        String sql = "SELECT 1 FROM punishments WHERE id = ? AND active = 1";
 
         try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
             ps.setString(1, ID);
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next();
-            }
-        }
-    }
-
-    private boolean doesPunishmentExist(String punishmentID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT 1 FROM punishments WHERE id = ?";
-
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-            ps.setString(1, punishmentID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
             }
