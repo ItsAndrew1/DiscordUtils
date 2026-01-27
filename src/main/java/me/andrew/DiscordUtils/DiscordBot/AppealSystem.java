@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class AppealSystem extends ListenerAdapter {
@@ -136,7 +137,7 @@ public class AppealSystem extends ListenerAdapter {
 
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event){
-        if(!event.getComponentId().contains("appeal_")) return;
+        if(!event.getComponentId().contains("appeal_") && !event.getComponentId().contains("getbantype")) return;
 
         //Getting the punishment ID
         String punishmentID =  event.getComponentId().split(":", 2)[1];
@@ -173,6 +174,18 @@ public class AppealSystem extends ListenerAdapter {
 
             event.reply("Appeal for **Punishment "+punishmentID+"** has been **DECLINED**\n**Staff**: "+event.getUser().getName()).queue();
         }
+
+        if(event.getComponentId().equalsIgnoreCase("getbantype")){
+            try {
+                String userID = event.getUser().getId();
+                String id = getUserBanID(UUID.fromString(getUserMcUUID(userID, dbConnection)), dbConnection);
+
+                //Sending the ID
+                event.reply("Your ban ID is: **"+id+"**. Run /appeal <id> to appeal your ban!").queue();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private boolean appealWasAcceptedDecline(String ID){
@@ -189,5 +202,47 @@ public class AppealSystem extends ListenerAdapter {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private String getUserMcUUID(String discordId, Connection dbConnection) throws SQLException {
+        String sql = "SELECT uuid FROM playersVerification WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, discordId);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return null;
+                return rs.getString("uuid");
+            }
+        }
+    }
+
+    private String getUserBanID(UUID targetUUID, Connection dbConnection) throws SQLException {
+        String sql = "SELECT type FROM punishments WHERE uuid = ? AND active = 1";
+        PunishmentType type = null;
+
+        //Getting the type
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, targetUUID.toString());
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return null;
+                String typeString = rs.getString("type");
+                if(typeString.contains("BAN") && !typeString.contains("WARN")) type = PunishmentType.valueOf(typeString);
+            }
+        }
+
+        //Getting the ban ID
+        try{
+            String sql2 = "SELECT id FROM punishments WHERE type = ? AND active = 1";
+            try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
+                ps.setString(1, type.name());
+                try(ResultSet rs = ps.executeQuery()){
+                    if(rs.next()) return rs.getString("id");
+                }
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        return null;
     }
 }

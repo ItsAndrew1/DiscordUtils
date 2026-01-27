@@ -53,23 +53,20 @@ ban-role-id:
 banned-users-channel:
   id: 1465599359629656196
 
-  #Configure the first embed. This one may be used to help them acknowledge that they are banned.
-  embed1:
-    embed-title: "YOU HAVE BEEN BANNED"
-    embed-color:
-      RED: 255
-      GREEN: 0
-      BLUE: 0
-    embed-description:
-
-  #Configure the second embed. This one may be used as a guide to appeal their ban.
-  embed2:
-    embed-title: ""
-    embed-color:
-      RED: 0
-      GREEN: 255
-      BLUE: 0
-    embed-description:
+  #Configure the embed that will be sent to the channel. For description, use '\n' for line breaks.
+  embed-title: "HOW TO APPEAL"
+  embed-color:
+    RED: 255
+    GREEN: 0
+    BLUE: 0
+  embed-description: "If you see this. You might have been banned on **discord** or **globally**.
+  \nIf you think you didn't deserve the ban, here is how you can appeal your punishment.
+  \n\n1️⃣You should have received a message in the DM with information of the ban. Go in the bot DM.
+  \n\n2️⃣Run **/appeal** with the ID of your ban.
+  \n\n3️⃣Complete the form that you were prompted. *Be careful! You only have **1** appeal.*
+  \n\n4️⃣Wait for a response. We wish you luck 🙏!
+  \n\n**P.S.**: If you didn't get a DM, click the button below to get your ban ID. Then, run **/appeal <id>** here!
+  "
 
 #Configure what role the user must have to use the specific command. You will enter the ID of the roles!!
 pshistory-cmd-roles: #This only works for '/pshistory <ign>'!! Everyone will be able to run only '/pshistory'

@@ -1,6 +1,7 @@
 package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
@@ -44,8 +45,11 @@ public class MemberJoinEvent extends ListenerAdapter {
             if(verifiedRole == null || unverifiedRole == null || timeoutRole == null) return;
 
             try {
-                //Giving the user the 'Timeout' Role if he was previously on a timeout
-                if(isUserOnTimeout(member.getId())) event.getGuild().addRoleToMember(member, timeoutRole).queue();
+                //Giving the user the 'Timeout' Role if he is still on timeout (on discord/globally)
+                if(isUserOnTimeout(member.getId(), PunishmentScopes.GLOBAL) || isUserOnTimeout(member.getId(), PunishmentScopes.DISCORD)) event.getGuild().addRoleToMember(member, timeoutRole).queue();
+
+                //Giving the user the 'Banned' Role if he is still banned (on discord / globally).
+
 
                 if(isUserVerified(event.getUser().getId())){
                     event.getGuild().addRoleToMember(member, verifiedRole).queue();
@@ -85,17 +89,18 @@ public class MemberJoinEvent extends ListenerAdapter {
         }
     }
 
-    private boolean isUserOnTimeout(String userID) throws SQLException {
+    private boolean isUserOnTimeout(String userID, PunishmentScopes scope) throws SQLException {
         boolean permTimeout = false, tempTimeout = false;
 
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT 1 FROM punishments WHERE uuid = ? AND type = ? AND active = 1";
+        String sql = "SELECT 1 FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1";
         UUID targetUUID = Bukkit.getOfflinePlayer(getUserIGN(userID)).getUniqueId();
 
         //Checking if he is on permanent timeout
         try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
             ps.setString(1, targetUUID.toString());
             ps.setString(2, PunishmentType.PERM_MUTE.name());
+            ps.setString(3, scope.name());
             try(ResultSet rs = ps.executeQuery()){
                 if(rs.next()) permTimeout = true;
             }
@@ -105,11 +110,40 @@ public class MemberJoinEvent extends ListenerAdapter {
         try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
             ps.setString(1, targetUUID.toString());
             ps.setString(2, PunishmentType.TEMP_MUTE.name());
+            ps.setString(3, scope.name());
             try(ResultSet rs = ps.executeQuery()){
                 if(rs.next()) tempTimeout = true;
             }
         }
 
         return permTimeout || tempTimeout;
+    }
+
+    private boolean isUserBanned(String userID, PunishmentScopes scope) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        boolean permBanned = false, tempBanned = false;
+        String sql = "SELECT 1 FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1";
+
+        //Checking if the user is permanently banned
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, userID);
+            ps.setString(2, PunishmentType.PERM_BAN.name());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) permBanned = true;
+            }
+        }
+
+        //Checking if the user is temporarily banned
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, userID);
+            ps.setString(2, PunishmentType.TEMP_BAN.name());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) tempBanned = true;
+            }
+        }
+
+        return permBanned || tempBanned;
     }
 }

@@ -11,6 +11,8 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -192,36 +194,24 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             }
         }
 
-        //Sending the helping embeds in the banUsersChannel.
+        //Sending the embed in the banUsersChannel.
         String banUsersChannelIDs = botConfig.getConfig().getString("banned-users-channel.id");
         try{
             long banUsersChannelID = Long.parseLong(banUsersChannelIDs);
             TextChannel bannedUsersChannel = discordBot.getJda().getTextChannelById(banUsersChannelID);
 
-            bannedUsersChannel.getHistory().retrievePast(2).queue(messages -> {
+            bannedUsersChannel.getHistory().retrievePast(1).queue(messages -> {
                 if(messages.isEmpty()){
-                    //Getting the color of the first embed
-                    int redValue = botConfig.getConfig().getInt("banned-users-channel.embed1.embed-color.RED");
-                    int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed1.embed-color.GREEN");
-                    int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed1.embed-color.BLUE");
+                    //Getting the color
+                    int redValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.RED");
+                    int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.GREEN");
+                    int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.BLUE");
                     Color embedColor = Color.fromRGB(redValue, greenValue, blueValue);
 
-                    //Getting the title of the first embed
-                    String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed1.embed-title");
-                    String description = botConfig.getConfig().getString("banned-users-channel.embed1.embed-description");
-                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
-
-
-                    //Getting the color
-                    int redValue2 = botConfig.getConfig().getInt("banned-users-channel.embed2.embed-color.RED");
-                    int greenValue2 = botConfig.getConfig().getInt("banned-users-channel.embed2.embed-color.GREEN");
-                    int blueValue2 = botConfig.getConfig().getInt("banned-users-channel.embed2.embed-color.BLUE");
-                    Color embed2Color =  Color.fromRGB(redValue2, greenValue2, blueValue2);
-
                     //Getting the title and description
-                    String embed2Title = botConfig.getConfig().getString("banned-users-channel.embed2.embed-title");
-                    String embed2Desc = botConfig.getConfig().getString("banned-users-channel.embed2.embed-description");
-                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embed2Color, embed2Title, embed2Desc).build()).queue();
+                    String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed-title");
+                    String description = botConfig.getConfig().getString("banned-users-channel.embed-description");
+                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).addComponents(ActionRow.of(Button.primary("getbantype", "Get Your Ban ID"))).queue();
                 }
             });
         } catch(Exception e){
