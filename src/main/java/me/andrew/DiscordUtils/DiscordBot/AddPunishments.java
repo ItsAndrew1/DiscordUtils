@@ -103,6 +103,8 @@ public class AddPunishments extends ListenerAdapter{
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
+        if(!event.getComponentId().equals("punishment:type") && !event.getComponentId().equals("punishment:scope")) return;
+
         long userId = event.getUser().getIdLong();
         AddingState state = addingStateMap.get(userId);
 
@@ -248,6 +250,8 @@ public class AddPunishments extends ListenerAdapter{
 
     @Override
     public void onModalInteraction(ModalInteractionEvent event){
+        if(!event.getCustomId().equals("psReason") && !event.getCustomId().equals("psDuration")) return;
+
         long userId =  event.getUser().getIdLong();
         AddingState state = addingStateMap.get(userId);
 

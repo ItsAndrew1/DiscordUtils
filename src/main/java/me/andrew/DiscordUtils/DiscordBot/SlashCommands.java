@@ -537,7 +537,8 @@ public class SlashCommands extends ListenerAdapter{
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
-                return rs.getString("appeal_state").equals("accepted");
+                String result = rs.getString("appeal_state");
+                return result.equals("accepted");
             }
         }
     }

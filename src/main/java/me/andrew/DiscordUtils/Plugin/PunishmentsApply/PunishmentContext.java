@@ -108,7 +108,7 @@ public class PunishmentContext {
             ps.setString(5, state.reason);
             ps.setString(6, playerName);
             ps.setLong(7, System.currentTimeMillis());
-            ps.setString(12, null);
+            ps.setString(12, "x");
 
             //Handling various cases
             if(state.type == PunishmentType.KICK){

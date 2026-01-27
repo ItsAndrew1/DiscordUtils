@@ -4,6 +4,10 @@ import me.andrew.DiscordUtils.Plugin.*;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.GatewayIntent;
@@ -16,7 +20,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BotMain{
+public class BotMain extends ListenerAdapter {
     private final JDA jda;
     private final Guild discordServer;
     private final PunishmentHistory punishmentHistory;
@@ -34,6 +38,7 @@ public class BotMain{
                 .addEventListeners(addPunishments)
                 .addEventListeners(new AppealSystem(plugin))
                 .addEventListeners(new MemberJoinEvent(plugin))
+                .addEventListeners(new MessageDeleteSystem(plugin))
                 .enableIntents(GatewayIntent.GUILD_MEMBERS)
                 .enableIntents(GatewayIntent.DIRECT_MESSAGES)
                 .build()
