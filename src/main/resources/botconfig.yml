@@ -45,9 +45,31 @@ verification:
     GREEN: 43
     BLUE: 226
 
-#Configure the Roles for the punishments. You will also have to create one for this.
+#Configure the Timeout Role for the punishments. You will also have to create one for this.
 timeout-role-id:
+
+#Configure the Ban Channel and Banned Role ID. This is needed for users that are banned.
 ban-role-id:
+banned-users-channel:
+  id: 1465599359629656196
+
+  #Configure the first embed. This one may be used to help them acknowledge that they are banned.
+  embed1:
+    embed-title: "YOU HAVE BEEN BANNED"
+    embed-color:
+      RED: 255
+      GREEN: 0
+      BLUE: 0
+    embed-description:
+
+  #Configure the second embed. This one may be used as a guide to appeal their ban.
+  embed2:
+    embed-title: ""
+    embed-color:
+      RED: 0
+      GREEN: 255
+      BLUE: 0
+    embed-description:
 
 #Configure what role the user must have to use the specific command. You will enter the ID of the roles!!
 pshistory-cmd-roles: #This only works for '/pshistory <ign>'!! Everyone will be able to run only '/pshistory'

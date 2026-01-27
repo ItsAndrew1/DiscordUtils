@@ -174,33 +174,59 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 TextChannel verifyChannel = discordBot.getJda().getTextChannelById(verifyChannelIDlong);
                 verifyChannel.getHistory().retrievePast(1).queue(messages -> {
                     if(messages.isEmpty()){
-                        //Building the embed and sending it to the verify channel
-                        EmbedBuilder embedBuilder = new EmbedBuilder();
-
                         //Getting the color
                         int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED");
                         int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE");
                         int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN");
-                        embedBuilder.setColor(Color.fromRGB(redValue, blueValue, greenValue).asRGB());
+                        Color embedColor = Color.fromRGB(redValue, blueValue, greenValue);
 
-                        //Setting the title
+                        //Getting the title and the description
                         String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title");
-                        embedBuilder.setTitle(embedTitle);
-
-                        //Setting the description
                         String description = botConfig.getConfig().getString("verification.verify-channel-embed-description");
-                        embedBuilder.setDescription(description
-                                .replace("%server_name%", discordBot.getDiscordServer().getName())
-                        );
-
-                        //Sending the embed to the verify channel
-                        verifyChannel.sendMessageEmbeds(embedBuilder.build()).queue();
+                        verifyChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
                     }
                 });
             } catch (Exception e){
                 Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when a sending the embed to the 'verify' channel. See message:");
                 Bukkit.getLogger().warning(e.getMessage());
             }
+        }
+
+        //Sending the helping embeds in the banUsersChannel.
+        String banUsersChannelIDs = botConfig.getConfig().getString("banned-users-channel.id");
+        try{
+            long banUsersChannelID = Long.parseLong(banUsersChannelIDs);
+            TextChannel bannedUsersChannel = discordBot.getJda().getTextChannelById(banUsersChannelID);
+
+            bannedUsersChannel.getHistory().retrievePast(2).queue(messages -> {
+                if(messages.isEmpty()){
+                    //Getting the color of the first embed
+                    int redValue = botConfig.getConfig().getInt("banned-users-channel.embed1.embed-color.RED");
+                    int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed1.embed-color.GREEN");
+                    int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed1.embed-color.BLUE");
+                    Color embedColor = Color.fromRGB(redValue, greenValue, blueValue);
+
+                    //Getting the title of the first embed
+                    String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed1.embed-title");
+                    String description = botConfig.getConfig().getString("banned-users-channel.embed1.embed-description");
+                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
+
+
+                    //Getting the color
+                    int redValue2 = botConfig.getConfig().getInt("banned-users-channel.embed2.embed-color.RED");
+                    int greenValue2 = botConfig.getConfig().getInt("banned-users-channel.embed2.embed-color.GREEN");
+                    int blueValue2 = botConfig.getConfig().getInt("banned-users-channel.embed2.embed-color.BLUE");
+                    Color embed2Color =  Color.fromRGB(redValue2, greenValue2, blueValue2);
+
+                    //Getting the title and description
+                    String embed2Title = botConfig.getConfig().getString("banned-users-channel.embed2.embed-title");
+                    String embed2Desc = botConfig.getConfig().getString("banned-users-channel.embed2.embed-description");
+                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embed2Color, embed2Title, embed2Desc).build()).queue();
+                }
+            });
+        } catch(Exception e){
+            Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'banned-users-channel (botconfig.yml)'. See message:");
+            Bukkit.getLogger().warning(e.getMessage());
         }
 
         //Runs a task to auto expire the punishments
@@ -232,7 +258,14 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                             if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
                                 discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
                                     Guild dcServer = discordBot.getDiscordServer();
-                                    if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN) dcServer.unban(targetUser).queue();
+                                    if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                                        //Removing the banned role of the member if he has the role
+                                        long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
+                                        Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                                        dcServer.retrieveMemberById(userId).queue(member -> {
+                                            if(member.getRoles().contains(bannedRole)) dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                        });
+                                    }
                                     if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
 
                                         //Removes the timeout role of the member if he has the role
@@ -283,6 +316,15 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     public void waitForPlayerInput(Player player, Consumer<String> callback){
         chatInput.put(player.getUniqueId(), callback);
+    }
+
+    //Helper method for building embeds
+    private EmbedBuilder getEmbedBuilder(Color embedColor, String embedTitle, String description){
+        EmbedBuilder embed = new  EmbedBuilder();
+        embed.setTitle(embedTitle);
+        embed.setColor(embedColor.asRGB());
+        embed.setDescription(description);
+        return embed;
     }
 
     //Method for getting a list of all Punishments (List<Punishment>)

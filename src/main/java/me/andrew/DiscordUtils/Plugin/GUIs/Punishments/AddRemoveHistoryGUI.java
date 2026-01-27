@@ -9,6 +9,7 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Role;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -166,7 +167,14 @@ public class AddRemoveHistoryGUI implements Listener{
                 String targetUserID = getTargetUserID(targetP.getUuid());
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
-                if(targetP.getPunishmentType() == PunishmentType.PERM_BAN || targetP.getPunishmentType() == PunishmentType.TEMP_BAN) plugin.getDiscordBot().getJda().retrieveUserById(targetUserID).queue(user -> dcServer.unban(user).queue());
+                if(targetP.getPunishmentType() == PunishmentType.PERM_BAN || targetP.getPunishmentType() == PunishmentType.TEMP_BAN){
+                    //Removes the 'banned' role from the member if he has it
+                    dcServer.retrieveMemberById(targetUserID).queue(member -> {
+                        long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
+                        Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                        if(member.getRoles().contains(bannedRole)) dcServer.removeRoleFromMember(member, bannedRole).queue();
+                    });
+                }
 
                 if(targetP.getPunishmentType() == PunishmentType.TEMP_MUTE || targetP.getPunishmentType() == PunishmentType.PERM_MUTE){
                     //Removing the timeout role

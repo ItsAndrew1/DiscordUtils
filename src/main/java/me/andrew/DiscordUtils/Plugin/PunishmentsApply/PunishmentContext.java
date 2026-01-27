@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 /*
 This class helps with applying the punishment in game/in discord server
-and inserting them inside the database.
+and inserting them into the database.
  */
 public class PunishmentContext {
     private final DiscordUtils plugin;
@@ -214,8 +214,26 @@ public class PunishmentContext {
             case DISCORD -> {
                 permBanDC();
                 insertPunishment();
+
+                //Giving the Banned Role to the user
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                    long bannedRoleID = botConfig.getLong("ban-role-id");
+                    Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
+                    plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
+                });
             }
-            case GLOBAL -> {permBanDC(); permBanMC(); insertPunishment();}
+            case GLOBAL -> {
+                permBanDC();
+                permBanMC();
+                insertPunishment();
+
+                //Giving the Banned Role to the user
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                    long bannedRoleID = botConfig.getLong("ban-role-id");
+                    Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
+                    plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
+                });
+            }
         }
     }
     private void permBanMC(){
@@ -241,11 +259,8 @@ public class PunishmentContext {
 
                 EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT BAN");
 
-                privateChannel.sendMessageEmbeds(embed.build()).queue(
-                        success -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue(),
-                        failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue()
-                );
-            }, failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue());    
+                privateChannel.sendMessageEmbeds(embed.build()).queue();
+            });
         });
     }
 
@@ -304,8 +319,26 @@ public class PunishmentContext {
             case DISCORD -> {
                 tempBanDC();
                 insertPunishment();
+
+                //Giving the Banned Role to the user
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                    long bannedRoleID = botConfig.getLong("ban-role-id");
+                    Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
+                    plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
+                });
             }
-            case GLOBAL -> {tempBanDC(); tempBanMC(); insertPunishment();}
+            case GLOBAL -> {
+                tempBanDC();
+                tempBanMC();
+                insertPunishment();
+
+                //Giving the Banned Role to the user
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                    long bannedRoleID = botConfig.getLong("ban-role-id");
+                    Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
+                    plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
+                });
+            }
         }
     }
     private void tempBanMC(){
@@ -331,11 +364,8 @@ public class PunishmentContext {
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.temporary-ban-message");
                 EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY BAN");
-                privateChannel.sendMessageEmbeds(embed.build()).queue(
-                        success -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue(),
-                        failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue()
-                );
-            }, failure -> dcServer.ban(targetUser, 0, TimeUnit.MILLISECONDS).reason(state.reason).queue());
+                privateChannel.sendMessageEmbeds(embed.build()).queue();
+            });
         });
     }
 

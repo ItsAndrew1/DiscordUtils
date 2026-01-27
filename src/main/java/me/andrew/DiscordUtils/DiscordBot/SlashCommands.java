@@ -335,7 +335,14 @@ public class SlashCommands extends ListenerAdapter{
                             Guild dcServer = botMain.getDiscordServer();
 
                             botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
-                                if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN) dcServer.unban(targetUser).queue();
+                                if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                                    //Removes the 'banned' role from the member if he has it
+                                    dcServer.retrieveMemberById(targetUser.getId()).queue(member -> {
+                                        long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
+                                        Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                                        if(member.getRoles().contains(bannedRole)) dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                    });
+                                }
 
                                 if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
                                     //Removes the timeout role from the member if he has it
