@@ -181,6 +181,16 @@ public class SlashCommands extends ListenerAdapter{
 
             //pshistory command
             case "pshistory" -> {
+                //Checking if the user is banned
+                try {
+                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
                 OfflinePlayer userPlayer;
                 try {
                     userPlayer = getUserPlayer(event.getUser().getId());
@@ -253,6 +263,16 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "punish" -> {
+                //Checking if the user is banned
+                try {
+                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
                 //Checking if the user has the necessary roles
                 boolean hasPermission = false;
                 List<Long> psRemoveRoles = botConfig.getLongList("punish-cmd-roles");
@@ -288,6 +308,16 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "psremove" -> {
+                //Checking if the user is banned
+                try {
+                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
                 //Checking if the user has the necessary roles
                 boolean hasPermission = false;
                 List<Long> psRemoveRoles = botConfig.getLongList("psremove-cmd-roles");
@@ -372,6 +402,17 @@ public class SlashCommands extends ListenerAdapter{
 
             case "unverify" -> {
                 String userID = event.getUser().getId();
+
+                //Checking if the user is banned
+                try {
+                    if(isUserBanned(userID, PunishmentScopes.DISCORD) || isUserBanned(userID, PunishmentScopes.GLOBAL)){
+                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
                 Connection dbConnection = plugin.getDatabaseManager().getConnection();
                 String sql = "DELETE FROM playersVerification WHERE discordId = ?";
 
@@ -560,5 +601,33 @@ public class SlashCommands extends ListenerAdapter{
                 return rs.getString("appeal_state").equals("declined");
             }
         }
+    }
+
+    private boolean isUserBanned(String userID, PunishmentScopes scope) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        boolean permBanned = false, tempBanned = false;
+        String sql = "SELECT 1 FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1";
+
+        //Checking if the user is permanently banned
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, userID);
+            ps.setString(2, PunishmentType.PERM_BAN.name());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) permBanned = true;
+            }
+        }
+
+        //Checking if the user is temporarily banned
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, userID);
+            ps.setString(2, PunishmentType.TEMP_BAN.name());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) tempBanned = true;
+            }
+        }
+
+        return permBanned || tempBanned;
     }
 }

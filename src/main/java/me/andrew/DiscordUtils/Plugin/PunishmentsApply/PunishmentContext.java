@@ -218,7 +218,7 @@ public class PunishmentContext {
                 //Removing all the other roles from the user
                 plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
                     if(!member.isOwner()){
-                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
@@ -237,7 +237,7 @@ public class PunishmentContext {
                 //Removing all the other roles from the user
                 plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
                     if(!member.isOwner()){
-                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
@@ -337,7 +337,7 @@ public class PunishmentContext {
                 //Removing all the other roles from the user
                 plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
                     if(!member.isOwner()){
-                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
@@ -356,7 +356,7 @@ public class PunishmentContext {
                 //Removing all the other roles from the user
                 plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
                     if(!member.isOwner()){
-                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
