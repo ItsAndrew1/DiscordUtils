@@ -336,11 +336,17 @@ public class SlashCommands extends ListenerAdapter{
 
                             botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
                                 if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                                    //Removes the 'banned' role from the member if he has it
+                                    //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
                                     dcServer.retrieveMemberById(targetUser.getId()).queue(member -> {
                                         long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
                                         Role bannedRole = dcServer.getRoleById(bannedRoleID);
-                                        if(member.getRoles().contains(bannedRole)) dcServer.removeRoleFromMember(member, bannedRole).queue();
+
+                                        long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                                        Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
+                                        if(member.getRoles().contains(bannedRole)){
+                                            dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                            dcServer.addRoleToMember(member, verifiedRole).queue();
+                                        }
                                     });
                                 }
 

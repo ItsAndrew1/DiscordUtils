@@ -215,6 +215,13 @@ public class PunishmentContext {
                 permBanDC();
                 insertPunishment();
 
+                //Removing all the other roles from the user
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                    if(!member.isOwner()){
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                    }
+                });
+
                 //Giving the Banned Role to the user
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
                     long bannedRoleID = botConfig.getLong("ban-role-id");
@@ -226,6 +233,13 @@ public class PunishmentContext {
                 permBanDC();
                 permBanMC();
                 insertPunishment();
+
+                //Removing all the other roles from the user
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                    if(!member.isOwner()){
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                    }
+                });
 
                 //Giving the Banned Role to the user
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
@@ -320,6 +334,13 @@ public class PunishmentContext {
                 tempBanDC();
                 insertPunishment();
 
+                //Removing all the other roles from the user
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                    if(!member.isOwner()){
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                    }
+                });
+
                 //Giving the Banned Role to the user
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
                     long bannedRoleID = botConfig.getLong("ban-role-id");
@@ -331,6 +352,13 @@ public class PunishmentContext {
                 tempBanDC();
                 tempBanMC();
                 insertPunishment();
+
+                //Removing all the other roles from the user
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                    if(!member.isOwner()){
+                        for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role);
+                    }
+                });
 
                 //Giving the Banned Role to the user
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {

@@ -106,12 +106,28 @@ public class AddRemoveHistoryGUI implements Listener{
 
         //If the player clicks on history button
         if(clickedMat.equals(Material.PAPER)){
+            //Checking if the player has permission to view the history of a player
+            if(!player.hasPermission("discordutils.punishments.playerhistory")){
+                player.closeInventory();
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have permission to view the punishment history of other players!"));
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                return;
+            }
+
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             plugin.getPunishmentsGUI().showGui(player, 1, false);
         }
 
         //If the player clicks on add punishment button
         if(clickedItemMeta.getDisplayName().contains("Add")){
+            //Checking if the player has permission to add
+            if(!player.hasPermission("discordutils.punishments.add")){
+                player.closeInventory();
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have permission to add punishments!"));
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                return;
+            }
+
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
 
             //Inserts the staff into the addingStates map
@@ -132,6 +148,14 @@ public class AddRemoveHistoryGUI implements Listener{
 
         //If the player clicks on remove punishment button
         if(clickedItemMeta.getDisplayName().contains("Remove")){
+            //Checking if the player has permission
+            if(!player.hasPermission("discordutils.punishments.remove")){
+                player.closeInventory();
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have permission to remove punishments!"));
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                return;
+            }
+
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             player.closeInventory();
 
@@ -168,11 +192,17 @@ public class AddRemoveHistoryGUI implements Listener{
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
                 if(targetP.getPunishmentType() == PunishmentType.PERM_BAN || targetP.getPunishmentType() == PunishmentType.TEMP_BAN){
-                    //Removes the 'banned' role from the member if he has it
+                    //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
                     dcServer.retrieveMemberById(targetUserID).queue(member -> {
                         long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
                         Role bannedRole = dcServer.getRoleById(bannedRoleID);
-                        if(member.getRoles().contains(bannedRole)) dcServer.removeRoleFromMember(member, bannedRole).queue();
+
+                        long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                        Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
+                        if(member.getRoles().contains(bannedRole)){
+                            dcServer.removeRoleFromMember(member, bannedRole).queue();
+                            dcServer.addRoleToMember(member, verifiedRole).queue();
+                        }
                     });
                 }
 

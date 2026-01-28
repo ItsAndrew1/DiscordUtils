@@ -1,11 +1,17 @@
 #Developed by _ItsAndrew_
 #This file is for configuring the main settings of DiscordUtils.
 
+#IMPORTANT! If you have a network of servers, and you have this plugin on those servers,
+#set this value to true on ONE server and leave false on the REST OF THEM. If you don't,
+#it will override the bot each time you open a server.
+open-discord-bot: false
+
 chat-prefix: "&9&lDU &8>>" #The chat prefix displayed in chat.
 
 #Configure the database system. As you can see, by default the plugin is configured for SQLite.
 database-system:
-  #This is the type of the database. If you run a network with multiple servers, use 'mysql'! If you run only 1 server, use 'sqlite'!
+  #This is the type of the database. If you run a network with multiple servers,
+  #use 'mysql'! If you run only 1 server, use 'sqlite'!
   type: sqlite
   file-name: "database.db" #This is ONLY for SQLite, and it is ONLY a name for the file
 

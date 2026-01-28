@@ -6,6 +6,11 @@ guild-id:  #This is the ID your discord server has. To get it, turn on 'Develope
 bot-token:  #This is the token of a bot. To run the bot, you will need to create an app yourself in the Discord Developer Portal.
 #After you create an app, go to 'bot' section, copy the token and paste it here. To invite the bot to your server, go to 'OAuth2' section and generate a URL.
 
+#Enter the ID of which roles need to be deleted from the users when running the bot for the first time.
+#This is to help a task which automatically gives users from your server the 'Unverified' role and removing the other roles.
+roles-to-be-deleted:
+  -
+
 #Messages. They support MARKDOWN! 'Set ephemeral' makes the message appear only to that user
 invalid-expired-code-message: "**Invalid** or **expired** verification code!"
 iecm-set-ephemeral: true

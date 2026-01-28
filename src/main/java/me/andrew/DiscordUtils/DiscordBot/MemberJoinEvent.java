@@ -42,14 +42,20 @@ public class MemberJoinEvent extends ListenerAdapter {
             long timeoutRoleID = botConfig.getLong("timeout-role-id");
             Role timeoutRole = event.getGuild().getRoleById(timeoutRoleID);
 
-            if(verifiedRole == null || unverifiedRole == null || timeoutRole == null) return;
+            long bannedRoleID = botConfig.getLong("ban-role-id");
+            Role bannedRole = event.getGuild().getRoleById(bannedRoleID);
+
+            if(verifiedRole == null || unverifiedRole == null || timeoutRole == null || bannedRole == null) return;
 
             try {
                 //Giving the user the 'Timeout' Role if he is still on timeout (on discord/globally)
                 if(isUserOnTimeout(member.getId(), PunishmentScopes.GLOBAL) || isUserOnTimeout(member.getId(), PunishmentScopes.DISCORD)) event.getGuild().addRoleToMember(member, timeoutRole).queue();
 
                 //Giving the user the 'Banned' Role if he is still banned (on discord / globally).
-
+                if(isUserBanned(member.getId(), PunishmentScopes.GLOBAL) || isUserBanned(member.getId(), PunishmentScopes.DISCORD)){
+                    event.getGuild().removeRoleFromMember(member, verifiedRole).queue();
+                    event.getGuild().addRoleToMember(member, bannedRole).queue();
+                }
 
                 if(isUserVerified(event.getUser().getId())){
                     event.getGuild().addRoleToMember(member, verifiedRole).queue();

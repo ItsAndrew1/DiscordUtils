@@ -4,6 +4,8 @@ import me.andrew.DiscordUtils.Plugin.*;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -72,6 +74,28 @@ public class BotMain extends ListenerAdapter {
                         .addOption(OptionType.STRING, "id", "Enter the ID of the punishment.", true),
                 Commands.slash("unverify", "Unverify the account you are linked with.")
         ).queue();
+
+        //Running the task to mark users as unverified if the bot is initialized for the first time.
+        if(!plugin.botFile().getConfig().getBoolean("initialized", false)){
+            //First, getting the list of the roles that have to be deleted
+            List<Role> rolesToBeDeleted = new ArrayList<>();
+            for(long id : plugin.botFile().getConfig().getLongList("roles-to-be-deleted")){
+                rolesToBeDeleted.add(discordServer.getRoleById(id));
+            }
+
+            //Now removing each role and giving the unverified role
+            for(Member member : discordServer.getMembers()){
+                for(Role role : rolesToBeDeleted){
+                    if(member.getRoles().contains(role)) discordServer.removeRoleFromMember(member, role).queue();
+                }
+
+                long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
+                Role unverifiedRole =  discordServer.getRoleById(unverifiedRoleID);
+                discordServer.addRoleToMember(member, unverifiedRole).queue();
+            }
+
+            plugin.botFile().getConfig().set("initialized", true);
+        }
     }
 
     public JDA getJda() {

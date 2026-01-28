@@ -44,6 +44,8 @@ public class PlayerHeadsGUIs implements Listener{
         for(int i = startIndex; i < endIndex; i++){
             OfflinePlayer targetPlayer = players[i];
 
+            if(targetPlayer == player) continue; //Skips the staff player
+
             ItemStack skull =  new ItemStack(Material.PLAYER_HEAD);
             SkullMeta skullMeta = (SkullMeta) skull.getItemMeta();
 

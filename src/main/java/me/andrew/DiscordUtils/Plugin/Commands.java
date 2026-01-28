@@ -99,17 +99,19 @@ public class Commands implements CommandExecutor{
             throw new RuntimeException(e);
         }
 
+        //Checking if the player has permission for commands
+        if(!player.hasPermission("discordutils.commands")){
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou are not allowed to use commands!"));
+            return true;
+        }
+
+        String commandNoPermissionMessage = plugin.getConfig().getString("command-no-permission-message");
+
         //Get the sounds
         Sound good = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
         Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
 
         if(command.getName().equalsIgnoreCase("dcutils")){
-            if(!sender.hasPermission("discordutils.staff")){
-                player.playSound(player.getLocation(), invalid, 1f, 1f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message")));
-                return true;
-            }
-
             if(strings.length == 0){
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils <blockConfig | punishments | reload | help>"));
@@ -118,11 +120,21 @@ public class Commands implements CommandExecutor{
 
             switch(strings[0]){
                 case "blockConfig":
+                    if(!player.hasPermission("discordutils.commands.blockconfig")){
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', commandNoPermissionMessage));
+                        return true;
+                    }
+
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
                     plugin.getMainConfigGUI().showGUI(player);
                     break;
 
                 case "punishments":
+                    if(!player.hasPermission("discordutils.commands.punishments")){
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', commandNoPermissionMessage));
+                        return true;
+                    }
+
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
                     try {
                         plugin.getPlayerHeadsGUIs().showGui(player, 1);
@@ -148,6 +160,11 @@ public class Commands implements CommandExecutor{
                     break;
 
                 case "reload":
+                    if(!player.hasPermission("discordutils.commands.reload")){
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', commandNoPermissionMessage));
+                        return true;
+                    }
+
                     plugin.reloadConfig();
                     plugin.getDiscordBlockManager().spawnDiscordBlock(); //Spawns the discord block
 

@@ -13,7 +13,7 @@ commands:
 
   dcutils:
     description: Handles different configuration/punishments of the plugin
-    permission: discordutils.staff
+    permission: discordutils.commands
 
   verify:
     description: Handles the verification for the players
@@ -29,9 +29,33 @@ commands:
 
 permissions:
   discordutils.use:
-    description: Allows the player to use the plugin's essentials
+    description: Allows the players to use the plugin's essentials
     default: true
 
-  discordutils.staff:
-    description: Gives access to the commands
+  discordutils.commands:
+    description: Allows the player to use the plugin's commands
+    default: op
+
+  discordutils.commands.reload:
+    description: Allows the player to run '/dcutils reload'
+    default: op
+
+  discordutils.commands.blockconfig:
+    description: Allows the player to run '/dcutils blockconfig'
+    default: op
+
+  discordutils.commands.punishments:
+    description: Gives access to the punishments command
+    default: op
+
+  discordutils.punishments.add:
+    description: Gives access to add punishments
+    default: op
+
+  discordutils.punishments.remove:
+    description: Gives access to remove punishments
+    default: op
+
+  discordutils.punishments.playerhistory:
+    description: Gives access to see someone's history of punishments
     default: op

@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.bukkit.*;
@@ -127,156 +128,162 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             getDiscordBlockManager().startParticleTask();
         }
 
-        //Creates the database
-        try {
-            databaseManager.connectDb();
-            Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
-        } catch (SQLException e) {
-            Bukkit.getLogger().warning("[DISCORDUTILS] Failed to create database connection. See message: ");
-            Bukkit.getLogger().warning("[DISCORDUTILS]: "+e.getMessage());
-            getServer().getPluginManager().disablePlugin(this);
-        }
-
-        //Starts the discord bot if everything is ok
-        try{
-            String botToken = botFile().getConfig().getString("bot-token");
-            String guildId = botFile().getConfig().getString("guild-id");
-
-            if(botToken == null || guildId == null){
-                Bukkit.getLogger().warning("[DISCORDUTILS] Bot Token and/or Guild ID is null. The bot won't start!");
+        //Starts the discord bot and other stuff
+        if(getConfig().getBoolean("open-discord-bot")){
+            //Creates the database
+            try {
+                databaseManager.connectDb();
+                Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
+            } catch (SQLException e) {
+                Bukkit.getLogger().warning("[DISCORDUTILS] Failed to create database connection. See message: ");
+                Bukkit.getLogger().warning("[DISCORDUTILS]: "+e.getMessage());
+                getServer().getPluginManager().disablePlugin(this);
             }
-            else discordBot = new BotMain(botToken, guildId, this);
-        } catch (Exception e){
-            Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. The bot won't start. See message:");
-            Bukkit.getLogger().warning(e.getMessage());
-        }
-
-        //Sends an embed on the verification channel, but first I check if everything is alright with the channel and the roles
-        String verifiedRoleID = botFile().getConfig().getString("verification.verified-role-id");
-        String unverifiedRoleID = botFile().getConfig().getString("verification.unverified-role-id");
-        String verifyChannelID = botFile().getConfig().getString("verification.verify-channel-id");
-
-        //Checking if the IDs are empty
-        if(verifiedRoleID == null || unverifiedRoleID == null || verifyChannelID == null){
-            Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are null!");
-        }
-        else{
-            long verifyChannelIDlong = 0;
 
             try{
-                long verifiedRoleIDlong =  Long.parseLong(verifiedRoleID);
-                long unverifiedRoleIDlong =  Long.parseLong(unverifiedRoleID);
-                verifyChannelIDlong = Long.parseLong(verifyChannelID);
+                String botToken = botFile().getConfig().getString("bot-token");
+                String guildId = botFile().getConfig().getString("guild-id");
+
+                if(botToken == null || guildId == null){
+                    Bukkit.getLogger().warning("[DISCORDUTILS] Bot Token and/or Guild ID is null. The bot won't start!");
+                }
+                else discordBot = new BotMain(botToken, guildId, this);
             } catch (Exception e){
-                Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are invalid!");
+                Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. The bot won't start. See message:");
                 Bukkit.getLogger().warning(e.getMessage());
             }
 
+            //Sends an embed on the verification channel, but first I check if everything is alright with the channel and the roles
+            String verifiedRoleID = botFile().getConfig().getString("verification.verified-role-id");
+            String unverifiedRoleID = botFile().getConfig().getString("verification.unverified-role-id");
+            String verifyChannelID = botFile().getConfig().getString("verification.verify-channel-id");
+
+            //Checking if the IDs are empty
+            if(verifiedRoleID == null || unverifiedRoleID == null || verifyChannelID == null){
+                Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are null!");
+            }
+            else{
+                long verifyChannelIDlong = 0;
+
+                try{
+                    long verifiedRoleIDlong =  Long.parseLong(verifiedRoleID);
+                    long unverifiedRoleIDlong =  Long.parseLong(unverifiedRoleID);
+                    verifyChannelIDlong = Long.parseLong(verifyChannelID);
+                } catch (Exception e){
+                    Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are invalid!");
+                    Bukkit.getLogger().warning(e.getMessage());
+                }
+
+                try{
+                    TextChannel verifyChannel = discordBot.getJda().getTextChannelById(verifyChannelIDlong);
+                    verifyChannel.getHistory().retrievePast(1).queue(messages -> {
+                        if(messages.isEmpty()){
+                            //Getting the color
+                            int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED");
+                            int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE");
+                            int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN");
+                            Color embedColor = Color.fromRGB(redValue, blueValue, greenValue);
+
+                            //Getting the title and the description
+                            String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title");
+                            String description = botConfig.getConfig().getString("verification.verify-channel-embed-description");
+                            verifyChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
+                        }
+                    });
+                } catch (Exception e){
+                    Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when a sending the embed to the 'verify' channel. See message:");
+                    Bukkit.getLogger().warning(e.getMessage());
+                }
+            }
+
+            //Sending the embed in the banUsersChannel.
+            String banUsersChannelIDs = botConfig.getConfig().getString("banned-users-channel.id");
             try{
-                TextChannel verifyChannel = discordBot.getJda().getTextChannelById(verifyChannelIDlong);
-                verifyChannel.getHistory().retrievePast(1).queue(messages -> {
+                long banUsersChannelID = Long.parseLong(banUsersChannelIDs);
+                TextChannel bannedUsersChannel = discordBot.getJda().getTextChannelById(banUsersChannelID);
+
+                bannedUsersChannel.getHistory().retrievePast(1).queue(messages -> {
                     if(messages.isEmpty()){
                         //Getting the color
-                        int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED");
-                        int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE");
-                        int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN");
-                        Color embedColor = Color.fromRGB(redValue, blueValue, greenValue);
+                        int redValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.RED");
+                        int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.GREEN");
+                        int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.BLUE");
+                        Color embedColor = Color.fromRGB(redValue, greenValue, blueValue);
 
-                        //Getting the title and the description
-                        String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title");
-                        String description = botConfig.getConfig().getString("verification.verify-channel-embed-description");
-                        verifyChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
+                        //Getting the title and description
+                        String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed-title");
+                        String description = botConfig.getConfig().getString("banned-users-channel.embed-description");
+                        bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).addComponents(ActionRow.of(Button.primary("getbantype", "Get Your Ban ID"))).queue();
                     }
                 });
-            } catch (Exception e){
-                Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when a sending the embed to the 'verify' channel. See message:");
+            } catch(Exception e){
+                Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'banned-users-channel (botconfig.yml)'. See message:");
                 Bukkit.getLogger().warning(e.getMessage());
             }
-        }
 
-        //Sending the embed in the banUsersChannel.
-        String banUsersChannelIDs = botConfig.getConfig().getString("banned-users-channel.id");
-        try{
-            long banUsersChannelID = Long.parseLong(banUsersChannelIDs);
-            TextChannel bannedUsersChannel = discordBot.getJda().getTextChannelById(banUsersChannelID);
+            //Runs a task to auto expire the punishments
+            Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+                Connection dbConnection = databaseManager.getConnection();
+                try {
+                    List<Punishment> allPunishments = getAllPunishments();
+                    if(!allPunishments.isEmpty()){
+                        for(Punishment p : allPunishments){
+                            if(p.getExpiresAt() <= System.currentTimeMillis() && p.isActive() && p.getExpiresAt() != 0){
+                                String sql = "UPDATE punishments SET active = false WHERE id = ?";
 
-            bannedUsersChannel.getHistory().retrievePast(1).queue(messages -> {
-                if(messages.isEmpty()){
-                    //Getting the color
-                    int redValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.RED");
-                    int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.GREEN");
-                    int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.BLUE");
-                    Color embedColor = Color.fromRGB(redValue, greenValue, blueValue);
+                                PreparedStatement ps = dbConnection.prepareStatement(sql);
+                                ps.setString(1, p.getId());
+                                ps.executeUpdate();
 
-                    //Getting the title and description
-                    String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed-title");
-                    String description = botConfig.getConfig().getString("banned-users-channel.embed-description");
-                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).addComponents(ActionRow.of(Button.primary("getbantype", "Get Your Ban ID"))).queue();
-                }
-            });
-        } catch(Exception e){
-            Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'banned-users-channel (botconfig.yml)'. See message:");
-            Bukkit.getLogger().warning(e.getMessage());
-        }
+                                PunishmentType type = p.getPunishmentType();
+                                PunishmentScopes scope = p.getScope();
 
-        //Runs a task to auto expire the punishments
-        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
-            Connection dbConnection = databaseManager.getConnection();
-            try {
-                List<Punishment> allPunishments = getAllPunishments();
-                if(!allPunishments.isEmpty()){
-                    for(Punishment p : allPunishments){
-                        if(p.getExpiresAt() <= System.currentTimeMillis() && p.isActive() && p.getExpiresAt() != 0){
-                            String sql = "UPDATE punishments SET active = false WHERE id = ?";
+                                //Unbans/removed the timeout of a user if the scope is discord/global
+                                UUID targetUUID = p.getUuid();
+                                String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+                                PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
+                                ps2.setString(1, targetUUID.toString());
+                                ResultSet rs = ps2.executeQuery();
+                                if(!rs.next()) return;
 
-                            PreparedStatement ps = dbConnection.prepareStatement(sql);
-                            ps.setString(1, p.getId());
-                            ps.executeUpdate();
+                                String userId = rs.getString("discordId");
+                                if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
+                                    discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
+                                        Guild dcServer = discordBot.getDiscordServer();
+                                        if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                                            //Removing the banned role (and giving the 'Verified' role) from the member if he has the role
+                                            long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
+                                            Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                                            dcServer.retrieveMemberById(userId).queue(member -> {
+                                                if(member.getRoles().contains(bannedRole)){
+                                                    dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                                    dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
+                                                }
+                                            });
 
-                            PunishmentType type = p.getPunishmentType();
-                            PunishmentScopes scope = p.getScope();
+                                        }
+                                        if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
+                                            //Removes the timeout role of the member if he has the role
+                                            dcServer.retrieveMemberById(userId).queue(targetMember -> {
+                                                long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
+                                                Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
 
-                            //Unbans/removed the timeout of a user if the scope is discord/global
-                            UUID targetUUID = p.getUuid();
-                            String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-                            PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
-                            ps2.setString(1, targetUUID.toString());
-                            ResultSet rs = ps2.executeQuery();
-                            if(!rs.next()) return;
+                                                if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                            });
 
-                            String userId = rs.getString("discordId");
-                            if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
-                                discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
-                                    Guild dcServer = discordBot.getDiscordServer();
-                                    if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                                        //Removing the banned role of the member if he has the role
-                                        long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
-                                        Role bannedRole = dcServer.getRoleById(bannedRoleID);
-                                        dcServer.retrieveMemberById(userId).queue(member -> {
-                                            if(member.getRoles().contains(bannedRole)) dcServer.removeRoleFromMember(member, bannedRole).queue();
-                                        });
-                                    }
-                                    if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-
-                                        //Removes the timeout role of the member if he has the role
-                                        dcServer.retrieveMemberById(userId).queue(targetMember -> {
-                                            long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
-                                            Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
-
-                                            if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
-                                        });
-
-                                        if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
-                                    }
-                                });
+                                            if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
+                                        }
+                                    });
+                                }
                             }
                         }
                     }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        }, 0L, 20L*5); //Runs every 5 seconds
+            }, 0L, 20L*5); //Runs every 5 seconds
+        }
+
     }
 
     @Override
