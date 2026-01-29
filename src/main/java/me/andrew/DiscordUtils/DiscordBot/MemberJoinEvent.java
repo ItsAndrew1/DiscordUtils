@@ -48,6 +48,13 @@ public class MemberJoinEvent extends ListenerAdapter {
             if(verifiedRole == null || unverifiedRole == null || timeoutRole == null || bannedRole == null) return;
 
             try {
+                if(isUserVerified(event.getUser().getId())){
+                    event.getGuild().addRoleToMember(member, verifiedRole).queue();
+
+                    //Modifying their nickname after their MC ign
+                    member.modifyNickname(getUserIGN(member.getId())).queue();
+                }
+
                 //Giving the user the 'Timeout' Role if he is still on timeout (on discord/globally)
                 if(isUserOnTimeout(member.getId(), PunishmentScopes.GLOBAL) || isUserOnTimeout(member.getId(), PunishmentScopes.DISCORD)) event.getGuild().addRoleToMember(member, timeoutRole).queue();
 
@@ -56,16 +63,9 @@ public class MemberJoinEvent extends ListenerAdapter {
                     event.getGuild().removeRoleFromMember(member, verifiedRole).queue();
                     event.getGuild().addRoleToMember(member, bannedRole).queue();
                 }
-
-                if(isUserVerified(event.getUser().getId())){
-                    event.getGuild().addRoleToMember(member, verifiedRole).queue();
-
-                    //Modifying their nickname after their MC ign
-                    member.modifyNickname(getUserIGN(member.getId())).queue();
-                }
                 else event.getGuild().addRoleToMember(member, unverifiedRole).queue();
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
         });
     }

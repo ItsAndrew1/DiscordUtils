@@ -31,7 +31,6 @@ import java.util.*;
 
 public class PunishmentsGUI implements Listener{
     private final DiscordUtils plugin;
-    private Connection databaseConnection;
     private final Map<UUID, PunishmentsFilter> filters = new HashMap<>();
     private final Map<UUID, Boolean> selfMap = new HashMap<>();
 
@@ -40,11 +39,9 @@ public class PunishmentsGUI implements Listener{
     }
 
     public void showGui(Player player, int page, boolean self) throws SQLException {
-        selfMap.put(player.getUniqueId(), self);
+        if(!selfMap.containsKey(player.getUniqueId())) selfMap.put(player.getUniqueId(), self);
 
-        databaseConnection = plugin.getDatabaseManager().getConnection();
         int invSize = 54;
-
         //Getting the filtering that the player has
         PunishmentsFilter filter = filters.getOrDefault(player.getUniqueId(), PunishmentsFilter.ALL); //Shows all by default
 
@@ -67,7 +64,7 @@ public class PunishmentsGUI implements Listener{
 
         //Setting the selected player's head on the top of the GUI
         ItemStack selectedPlayersHead = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta sphMeta =  (SkullMeta) selectedPlayersHead.getItemMeta();
+        SkullMeta sphMeta = (SkullMeta) selectedPlayersHead.getItemMeta();
 
         if(selfMap.get(player.getUniqueId())) sphMeta.setOwningPlayer(player);
         else sphMeta.setOwningPlayer(plugin.getPlayerHeadsGUIs().getClickedPlayer());
@@ -280,15 +277,6 @@ public class PunishmentsGUI implements Listener{
 
     private boolean isPermanent(Punishment p){
         return p.getExpiresAt() == 0;
-    }
-
-    @EventHandler
-    public void onGuiExit(InventoryCloseEvent e){
-        if(!(e.getPlayer() instanceof Player player)) return;
-        if(!e.getView().getTitle().contains("History")) return;
-
-        //Removing the player from the selfMap
-        selfMap.remove(player.getUniqueId());
     }
 
     @EventHandler

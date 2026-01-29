@@ -43,6 +43,7 @@ public class BotMain extends ListenerAdapter {
                 .addEventListeners(new MessageDeleteSystem(plugin))
                 .enableIntents(GatewayIntent.GUILD_MEMBERS)
                 .enableIntents(GatewayIntent.DIRECT_MESSAGES)
+                .enableIntents(GatewayIntent.GUILD_MODERATION)
                 .build()
                 .awaitReady();
 
@@ -84,17 +85,18 @@ public class BotMain extends ListenerAdapter {
             }
 
             //Now removing each role and giving the unverified role
+            Bukkit.getLogger().warning("Member number: "+discordServer.getMembers().size());
             for(Member member : discordServer.getMembers()){
-                for(Role role : rolesToBeDeleted){
-                    if(member.getRoles().contains(role)) discordServer.removeRoleFromMember(member, role).queue();
-                }
+                long discordBotRoleID = plugin.botFile().getConfig().getLong("discord-bot-role");
+                if(member.isOwner() || member.getRoles().contains(discordServer.getRoleById(discordBotRoleID))) continue;
 
                 long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
                 Role unverifiedRole =  discordServer.getRoleById(unverifiedRoleID);
-                discordServer.addRoleToMember(member, unverifiedRole).queue();
+                discordServer.modifyMemberRoles(member, unverifiedRole).queue(success -> {},  failure -> Bukkit.getLogger().warning("Failed to modify role for "+member.getNickname()+": "+failure.getMessage()));
             }
 
             plugin.botFile().getConfig().set("initialized", true);
+            plugin.botFile().saveConfig();
         }
     }
 

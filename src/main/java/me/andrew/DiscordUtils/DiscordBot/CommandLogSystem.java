@@ -1,5 +1,6 @@
-package me.andrew.DiscordUtils.Plugin;
+package me.andrew.DiscordUtils.DiscordBot;
 
+import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;

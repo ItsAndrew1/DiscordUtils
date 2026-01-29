@@ -8,6 +8,7 @@ bot-token:  #This is the token of a bot. To run the bot, you will need to create
 
 #Enter the ID of which roles need to be deleted from the users when running the bot for the first time.
 #This is to help a task which automatically gives users from your server the 'Unverified' role and removing the other roles.
+discord-bot-role:  #Enter the ID of the role that the bot has.
 roles-to-be-deleted:
   -
 
@@ -72,7 +73,7 @@ timeout-role-id:
 #Configure the Ban Channel and Banned Role ID. This is needed for users that are banned.
 ban-role-id:
 banned-users-channel:
-  id: 1465599359629656196
+  id:
 
   #Configure the embed that will be sent to the channel. For description, use '\n' for line breaks.
   embed-title: "HOW TO APPEAL"

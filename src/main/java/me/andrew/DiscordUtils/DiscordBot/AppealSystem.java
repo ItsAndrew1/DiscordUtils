@@ -193,7 +193,6 @@ public class AppealSystem extends ListenerAdapter {
                 e.printStackTrace();
             }
 
-            //Removing the role(s) from the targetUser
             String sql3 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
             String targetUserID = null;
             try(PreparedStatement ps = dbConnection.prepareStatement(sql3)){
@@ -205,6 +204,7 @@ public class AppealSystem extends ListenerAdapter {
                 e.printStackTrace();
             }
             event.getGuild().retrieveMemberById(targetUserID).queue(member -> {
+                //Removing the role(s) from the targetUser
                 long timeoutRoleID = botConfig.getLong("timeout-role-id");
                 Role timeoutRole = event.getGuild().getRoleById(timeoutRoleID);
                 long bannedRoleID = botConfig.getLong("ban-role-id");
@@ -212,6 +212,17 @@ public class AppealSystem extends ListenerAdapter {
 
                 if(member.getRoles().contains(bannedRole)) event.getGuild().removeRoleFromMember(member, bannedRole).queue();
                 if(member.getRoles().contains(timeoutRole)) event.getGuild().removeRoleFromMember(member, timeoutRole).queue();
+
+                //Now, if the user is verified, give him the 'Verified' role back
+                try {
+                    if(isUserVerified(member.getId(), dbConnection)){
+                        long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+                        Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
+                        event.getGuild().addRoleToMember(member, verifiedRole).queue();
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             });
 
             event.reply("Appeal for **Punishment "+punishmentID+"** has been **ACCEPTED**\n**Staff**: "+event.getUser().getName()).queue();
@@ -292,5 +303,15 @@ public class AppealSystem extends ListenerAdapter {
         }
 
         return null;
+    }
+
+    private boolean isUserVerified(String discordID, Connection dbConnection) throws SQLException {
+        String sql = "SELECT 1 FROM playersVerification WHERE discordId = ?";
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, discordID);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next();
+            }
+        }
     }
 }

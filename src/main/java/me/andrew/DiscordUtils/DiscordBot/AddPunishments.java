@@ -207,10 +207,11 @@ public class AddPunishments extends ListenerAdapter{
                         //Applying the timeout role if the type is perm mute and scope is discord or global
                         if(state.type == PunishmentType.PERM_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
 
+                        state.scope.applyPunishment(ctx, state.type);
+
                         //Inserting the logs (if they are toggled)
                         if(botConfig.getBoolean("use-logs")) new InsertLog(plugin, bot, state);
 
-                        state.scope.applyPunishment(ctx, state.type);
                         event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
 
                         addingStateMap.remove(event.getUser().getIdLong());
