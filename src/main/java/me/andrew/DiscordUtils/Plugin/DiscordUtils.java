@@ -112,6 +112,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         getServer().getPluginManager().registerEvents(PunishmentsGUI, this);
         getServer().getPluginManager().registerEvents(choosePunishTypeGUI, this);
         getServer().getPluginManager().registerEvents(choosePunishScopeGUI, this);
+        getServer().getPluginManager().registerEvents(new CommandLogSystem(this), this);
         getServer().getPluginManager().registerEvents(finalPunishmentGUI, this);
         getServer().getPluginManager().registerEvents(checkPlayerBanMute, this);
         getServer().getPluginManager().registerEvents(facingChoiceGUI, this);

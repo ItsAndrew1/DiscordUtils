@@ -14,7 +14,7 @@ roles-to-be-deleted:
 #Messages. They support MARKDOWN! 'Set ephemeral' makes the message appear only to that user
 invalid-expired-code-message: "**Invalid** or **expired** verification code!"
 iecm-set-ephemeral: true
-player-verified-message: "✅ You are now verified! Run **/verify** again in Minecraft!"
+player-verified-message: "✅ You are now verified! Have fun on our server!"
 pvm-set-ephemeral: true
 
 #Set the minutes for the interactions
@@ -33,6 +33,22 @@ minimum-length-appeal: 75 #In characters!
 maximum-length-appeal: 4000 #In characters! MAX IS 4000!!!
 placeholder-appeal: "In detail, explain anything related to the punishment you've received. \nMINIMUM 100 WORDS!"
 appeal-channel-id:  #The channel where the appeals will show up
+
+#Configure a task for command logging. You will need to set up a channel for this!
+command-logging:
+  toggle: true #Whether you want to use this feature or not.
+  channel-id:
+  embed-color:
+    RED: 0
+    GREEN: 255
+    BLUE: 255
+  embed-title: "COMMAND RAN BY **%player_name%**" #Use %player_name% to display the player's name
+  #Use '%command%' to display the command with it's arguments
+  embed-description: "
+  **Command Executed**: %command%
+  "
+  not-tracking-these-commands: #Here put the names of the commands you don't want to log
+    - ""
 
 #Configure the member join event. You will need to create 2 roles and a verify channel!
 verification:
