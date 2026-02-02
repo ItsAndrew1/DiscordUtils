@@ -509,6 +509,47 @@ public class SlashCommands extends ListenerAdapter{
                     throw new RuntimeException(e);
                 }
             }
+
+            case "refreshverification" -> {
+                //Checking if the user is banned
+                try {
+                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                //Checking if the user has permission
+                boolean hasPermission = false;
+                List<Long> psRemoveRoles = botConfig.getLongList("RefreshVerification-cmd-roles");
+                for(Long roleID : psRemoveRoles){
+                    Role role = botMain.getDiscordServer().getRoleById(roleID);
+                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                }
+                if(!hasPermission){
+                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                    return;
+                }
+
+                List<Member> memberList = event.getGuild().getMembers();
+                for(Member member : memberList){
+                    if(member.isOwner()) continue;
+
+                    //Removing the roles from the list (if the member has)
+                    List<Long> roleIdList = botConfig.getLongList("roles-to-be-deleted");
+                    for(Long roleID : roleIdList){
+                        Role roleFromList = event.getGuild().getRoleById(roleID);
+                        if(member.getRoles().contains(roleFromList)) event.getGuild().removeRoleFromMember(member, roleFromList).queue();
+                    }
+
+                    //Giving the unverified role
+                    long unverifiedRoleID = botConfig.getLong("verification.unverified-role-id");
+                    Role unverifiedRole = event.getGuild().getRoleById(unverifiedRoleID);
+                    event.getGuild().addRoleToMember(member, unverifiedRole).queue();
+                }
+            }
         }
     }
 

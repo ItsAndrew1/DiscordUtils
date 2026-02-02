@@ -72,7 +72,8 @@ public class BotMain extends ListenerAdapter {
                         .addOption(OptionType.STRING, "ign", "Enter the player's IGN.", true),
                 Commands.slash("psremove", "Remove a punishment from a player!")
                         .addOption(OptionType.STRING, "id", "Enter the ID of the punishment.", true),
-                Commands.slash("unverify", "Unverify the account you are linked with.")
+                Commands.slash("unverify", "Unverify the account you are linked with."),
+                Commands.slash("refreshverification", "Removes everyone's role and gives them the 'Unverified' Role.")
         ).queue();
 
         //Running the task to mark users as unverified if the bot is initialized for the first time.
