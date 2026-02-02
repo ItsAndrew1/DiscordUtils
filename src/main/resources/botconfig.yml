@@ -99,6 +99,9 @@ punish-cmd-roles:
 psremove-cmd-roles:
   -
 
+RefreshVerification-cmd-roles:
+  -
+
 #Configure the logs system. This is for staff to see each punishment that has been applied.
 use-logs: true #If you want to use logs or not.
 logs:

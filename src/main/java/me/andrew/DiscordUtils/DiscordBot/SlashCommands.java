@@ -510,7 +510,7 @@ public class SlashCommands extends ListenerAdapter{
                 }
             }
 
-            case "refreshverification" -> {
+            case "startverification" -> {
                 //Checking if the user is banned
                 try {
                     if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
@@ -549,6 +549,8 @@ public class SlashCommands extends ListenerAdapter{
                     Role unverifiedRole = event.getGuild().getRoleById(unverifiedRoleID);
                     event.getGuild().addRoleToMember(member, unverifiedRole).queue();
                 }
+
+                event.reply("Verification Process started!").setEphemeral(true).queue();
             }
         }
     }

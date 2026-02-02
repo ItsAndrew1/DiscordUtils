@@ -74,31 +74,8 @@ public class BotMain extends ListenerAdapter {
                 Commands.slash("psremove", "Remove a punishment from a player!")
                         .addOption(OptionType.STRING, "id", "Enter the ID of the punishment.", true),
                 Commands.slash("unverify", "Unverify the account you are linked with."),
-                Commands.slash("refreshverification", "Removes everyone's role and gives them the 'Unverified' Role.")
+                Commands.slash("startverification", "Removes roles from everyone and gives them the 'Unverified' Role.")
         ).queue();
-
-        //Running the task to mark users as unverified if the bot is initialized for the first time.
-        if(!plugin.botFile().getConfig().getBoolean("initialized", false)){
-            //First, getting the list of the roles that have to be deleted
-            List<Role> rolesToBeDeleted = new ArrayList<>();
-            for(long id : plugin.botFile().getConfig().getLongList("roles-to-be-deleted")){
-                rolesToBeDeleted.add(discordServer.getRoleById(id));
-            }
-
-            //Now removing each role and giving the unverified role
-            Bukkit.getLogger().warning("Member number: "+discordServer.getMembers().size());
-            for(Member member : discordServer.getMembers()){
-                long discordBotRoleID = plugin.botFile().getConfig().getLong("discord-bot-role");
-                if(member.isOwner() || member.getRoles().contains(discordServer.getRoleById(discordBotRoleID))) continue;
-
-                long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
-                Role unverifiedRole =  discordServer.getRoleById(unverifiedRoleID);
-                discordServer.modifyMemberRoles(member, unverifiedRole).queue(success -> {},  failure -> Bukkit.getLogger().warning("Failed to modify role for "+member.getNickname()+": "+failure.getMessage()));
-            }
-
-            plugin.botFile().getConfig().set("initialized", true);
-            plugin.botFile().saveConfig();
-        }
     }
 
     public JDA getJda() {
