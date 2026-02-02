@@ -198,7 +198,6 @@ public class FacingChoiceGUI implements Listener {
             setAllBooleansFalse();
             applyChanges = false;
             player.playSound(player.getLocation(), clickSound, 1f, 1f);
-            player.closeInventory();
             plugin.getBlockConfigurationGUI().showGUI(player);
             return;
         }
