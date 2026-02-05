@@ -1,3 +1,4 @@
+//Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.*;
