@@ -363,24 +363,6 @@ public class DatabaseManager {
         }
     }
 
-    public void debugging() throws SQLException { //Delete after everything is done
-        try(PreparedStatement ps = connection.prepareStatement("SELECT * FROM punishments")){
-            try(ResultSet rs = ps.executeQuery()){
-                while(rs.next()){
-                    int id = rs.getInt("id");
-                    String type =  rs.getString("type");
-                    String scope = rs.getString("scope");
-                    boolean active = rs.getBoolean("active");
-                    long created_ad =  rs.getLong("created_at");
-                    long expire_at = rs.getLong("expire_at");
-
-                    Bukkit.getLogger().warning("ID: "+id+" Type: "+type+" Scope: "+scope+" Active: "+ active +" Created At: "+created_ad+" Expires At: "+expire_at);
-                    Bukkit.getLogger().warning(" ");
-                }
-            }
-        }
-    }
-
     public Connection getConnection(){
         return connection;
     }
