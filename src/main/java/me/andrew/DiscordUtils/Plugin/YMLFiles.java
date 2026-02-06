@@ -40,4 +40,8 @@ public class YMLFiles {
             e.printStackTrace();
         }
     }
+
+    public void reloadConfig(){
+        config = YamlConfiguration.loadConfiguration(file);
+    }
 }

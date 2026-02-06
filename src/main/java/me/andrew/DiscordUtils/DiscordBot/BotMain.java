@@ -75,7 +75,8 @@ public class BotMain extends ListenerAdapter {
                 Commands.slash("psremove", "Remove a punishment from a player!")
                         .addOption(OptionType.STRING, "id", "Enter the ID of the punishment.", true),
                 Commands.slash("unverify", "Unverify the account you are linked with."),
-                Commands.slash("startverification", "Removes roles from everyone and gives them the 'Unverified' Role.")
+                Commands.slash("startverification", "Removes roles from everyone and gives them the 'Unverified' Role."),
+                Commands.slash("reload", "Reloads the botconfig.yml file. (and the bot itself)")
         ).queue();
     }
 

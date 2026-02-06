@@ -99,6 +99,9 @@ punish-cmd-roles:
 psremove-cmd-roles:
   -
 
+reload-cmd-roles:
+  -
+
 RefreshVerification-cmd-roles:
   -
 

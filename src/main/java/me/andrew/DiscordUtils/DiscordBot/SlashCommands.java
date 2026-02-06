@@ -553,6 +553,45 @@ public class SlashCommands extends ListenerAdapter{
 
                 event.reply("Verification Process started!").setEphemeral(true).queue();
             }
+
+            case "reload" -> {
+                //Checking if the user is banned
+                try {
+                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                //Checking if the user has permission
+                boolean hasPermission = false;
+                List<Long> psRemoveRoles = botConfig.getLongList("RefreshVerification-cmd-roles");
+                for(Long roleID : psRemoveRoles){
+                    Role role = botMain.getDiscordServer().getRoleById(roleID);
+                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                }
+                if(!hasPermission){
+                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                    return;
+                }
+
+                event.reply("Bot is restarting...").setEphemeral(true).queue();
+
+                //Reloading the config file
+                plugin.botFile().reloadConfig();
+
+                //Restarting the bot
+                botMain.getJda().shutdownNow();
+                try {
+                    String token = botConfig.getString("bot-token");
+                    String serverID = botConfig.getString("guild-id");
+                    new BotMain(token, serverID, plugin);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 
