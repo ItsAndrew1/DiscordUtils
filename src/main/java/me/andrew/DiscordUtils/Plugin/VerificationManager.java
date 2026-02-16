@@ -98,15 +98,4 @@ public class VerificationManager{
 
         return verificationCode.toString();
     }
-
-    private String getUserID(String targetUUID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-            ps.setString(1, targetUUID);
-            ResultSet rs = ps.executeQuery();
-            return rs.getString("discordId");
-        }
-    }
 }

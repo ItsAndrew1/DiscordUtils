@@ -1,11 +1,10 @@
+//Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
@@ -24,7 +23,6 @@ import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 import java.awt.*;
-import java.awt.Color;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -533,24 +531,66 @@ public class SlashCommands extends ListenerAdapter{
                     return;
                 }
 
-                List<Member> memberList = event.getGuild().getMembers();
-                for(Member member : memberList){
-                    if(member.isOwner()) continue;
+                event.getGuild().loadMembers().onSuccess(members -> {
+                    for(Member member : members){
+                        //Skipping the bot and the owner.
+                        if(member.getUser().isBot()) continue;
+                        if(member.isOwner()) continue;
 
-                    //Removing the roles from the list (if the member has)
-                    List<Long> roleIdList = botConfig.getLongList("roles-to-be-deleted");
-                    for(Long roleID : roleIdList){
-                        Role roleFromList = event.getGuild().getRoleById(roleID);
-                        if(member.getRoles().contains(roleFromList)) event.getGuild().removeRoleFromMember(member, roleFromList).queue();
+                        //Removing the roles from the list (if the member has)
+                        List<Long> roleIdList = botConfig.getLongList("roles-to-be-deleted");
+                        for(Long roleID : roleIdList){
+                            Role roleFromList = event.getGuild().getRoleById(roleID);
+                            if(member.getRoles().contains(roleFromList)) event.getGuild().removeRoleFromMember(member, roleFromList).queue();
+                        }
+
+                        //Giving the unverified role
+                        long unverifiedRoleID = botConfig.getLong("verification.unverified-role-id");
+                        Role unverifiedRole = event.getGuild().getRoleById(unverifiedRoleID);
+                        event.getGuild().addRoleToMember(member, unverifiedRole).queue();
                     }
-
-                    //Giving the unverified role
-                    long unverifiedRoleID = botConfig.getLong("verification.unverified-role-id");
-                    Role unverifiedRole = event.getGuild().getRoleById(unverifiedRoleID);
-                    event.getGuild().addRoleToMember(member, unverifiedRole).queue();
-                }
+                });
 
                 event.reply("Verification Process started!").setEphemeral(true).queue();
+            }
+
+            case "reload" -> {
+                //Checking if the user is banned
+                try {
+                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                        return;
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                //Checking if the user has permission
+                boolean hasPermission = false;
+                List<Long> psRemoveRoles = botConfig.getLongList("RefreshVerification-cmd-roles");
+                for(Long roleID : psRemoveRoles){
+                    Role role = botMain.getDiscordServer().getRoleById(roleID);
+                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                }
+                if(!hasPermission){
+                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                    return;
+                }
+
+                event.reply("Bot is restarting...").setEphemeral(true).queue();
+
+                //Reloading the config file
+                plugin.botFile().reloadConfig();
+
+                //Restarting the bot
+                botMain.getJda().shutdownNow();
+                try {
+                    String token = botConfig.getString("bot-token");
+                    String serverID = botConfig.getString("guild-id");
+                    new BotMain(token, serverID, plugin);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
