@@ -3,7 +3,7 @@
 <p align="center">
  <img src="https://img.shields.io/badge/plugin%20version-1.0.1-blue?style=for-the-badge"><img src="https://img.shields.io/badge/Minecraft%20Version-1.19%2B-green?style=for-the-badge&labelColor=gray"><img src="https://img.shields.io/github/license/ItsAndrew1/DiscordUtils?style=for-the-badge&label=License&color=purple"> <br>
  <a href="https://www.youtube.com/watch?v=nlR4cYXFHXk">
-  <img src="https://img.shields.io/badge/demo-video-red?style=for-the-badge&logo=youtube">
+  <img src="https://img.shields.io/badge/demo-video (outdated)-red?style=for-the-badge&logo=youtube">
  </a>
 </p>
 
@@ -21,7 +21,7 @@
 And **more**! Check `config.yml` for every feature!  
 
 🔴 **DiscordUtils** works best with a *PAPER server*, because it uses some stuff which work **ONLY** on it.  
-    For more information, check the showcase video (tap on the **demo video**).
+    For more information, check the showcase video (**outdated**, will do a new and improved one).
 
 ---
 
