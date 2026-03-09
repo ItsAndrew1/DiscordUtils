@@ -119,8 +119,8 @@ public class Commands implements CommandExecutor{
             }
 
             switch(strings[0]){
-                case "blockConfig":
-                    if(!player.hasPermission("discordutils.commands.blockconfig")){
+                case "mainconfig":
+                    if(!player.hasPermission("discordutils.commands.mainconfig")){
                         player.sendMessage(ChatColor.translateAlternateColorCodes('&', commandNoPermissionMessage));
                         return true;
                     }
@@ -144,6 +144,11 @@ public class Commands implements CommandExecutor{
                     break;
 
                 case "help":
+                    if(!player.hasPermission("discordutils.commands.help")){
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', commandNoPermissionMessage));
+                        return true;
+                    }
+
                     List<String> helpBookPages = plugin.getConfig().getStringList("help-message-book-pages");
                     ItemStack helpBook = new ItemStack(Material.WRITTEN_BOOK);
                     BookMeta hbMeta = (BookMeta) helpBook.getItemMeta();
@@ -197,7 +202,7 @@ public class Commands implements CommandExecutor{
         }
 
         if(command.getName().equalsIgnoreCase("discord")){
-            if(!player.hasPermission("discordutils.use")){
+            if(!player.hasPermission("discordutils.discord")){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
@@ -208,7 +213,7 @@ public class Commands implements CommandExecutor{
         }
 
         if(command.getName().equalsIgnoreCase("verify")){
-            if(!player.hasPermission("discordutils.use")){
+            if(!player.hasPermission("discordutils.verify")){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
@@ -223,7 +228,7 @@ public class Commands implements CommandExecutor{
 
         if(command.getName().equalsIgnoreCase("unverify")){
             //Checking if the player has permission to run the command
-            if(!player.hasPermission("discordutils.use")){
+            if(!player.hasPermission("discordutils.unverify")){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
@@ -278,7 +283,7 @@ public class Commands implements CommandExecutor{
 
         if(command.getName().equalsIgnoreCase("history")){
             //Checking if the player has the permission
-            if(!player.hasPermission("discordutils.use")){
+            if(!player.hasPermission("discordutils.viewhistory")){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;

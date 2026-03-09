@@ -28,32 +28,100 @@ commands:
     permission: discordutils.use
 
 permissions:
-  discordutils.use:
-    description: Allows the players to use the plugin's essentials
+
+  #Default permissions, for default player commands
+  discordutils.discord:
+    description: Allows the players to run /discord
+    default: true
+  discordutils.verify:
+    description: Allows the player to start the verification process
+    default: true
+  discordutils.unverify:
+    description: Allows the player to unverify himself
+    default: true
+  discordutils.viewhistory:
+    description: Allows the player to see his punishments history
     default: true
 
+  #Permissions for configuration commands
   discordutils.commands:
-    description: Allows the player to use the plugin's commands
+    description: Allows the player to use the plugin's configuration commands
     default: op
-
   discordutils.commands.reload:
     description: Allows the player to run '/dcutils reload'
     default: op
-
-  discordutils.commands.blockconfig:
-    description: Allows the player to run '/dcutils blockconfig'
+  discordutils.commands.mainconfig:
+    description: Allows the player to access the main configuration
     default: op
-
+  discordutils.commands.help:
+    description: Allows the player to open the Help Manual
+    default: op
   discordutils.commands.punishments:
     description: Gives access to the punishments command
     default: op
 
+  #Permissions for adding punishments
   discordutils.punishments.add:
     description: Gives access to add punishments
     default: op
+  discordutils.punishments.add.permban:
+    description: Allows the player to add a permanent ban
+    default: op
+  discordutils.punishments.add.tempban:
+    description: Allows the player to add a temporary ban
+    default: op
+  discordutils.punishments.add.kick:
+    description: Allows the player to add a kick
+    default: op
+  discordutils.punishments.add.permbanwarn:
+    description: Allows the player to apply a permanent ban warn
+    default: op
+  discordutils.punishments.add.tempbanwarn:
+    description: Allows the player to apply a temporary ban warn
+    default: op
+  discordutils.punishments.add.permmute:
+    description: Allows the player to apply a permanent mute/timeout
+    default: op
+  discordutils.punishments.add.tempmute:
+    description: Allows the player to apply a temporary mute/timeout
+    default: op
+  discordutils.punishments.add.permmutewarn:
+    description: Allows the player to apply a permanent mute/timeout warning
+    default: op
+  discordutils.punishments.add.tempmutewarn:
+    description: Allows the player to apply a temporary mute/timeout warning
+    default: op
 
+  #Permissions for removing punishments
   discordutils.punishments.remove:
     description: Gives access to remove punishments
+    default: op
+  discordutils.punishments.remove.permban:
+    description: Allows the player to remove a permanent ban
+    default: op
+  discordutils.punishments.remove.tempban:
+    description: Allows the player to remove a temporary ban
+    default: op
+  discordutils.punishments.remove.kick:
+    description: Allows the player to remove a kick
+    default: op
+  discordutils.punishments.remove.permbanwarn:
+    description: Allows the player to remove a permanent ban warn
+    default: op
+  discordutils.punishments.remove.tempbanwarn:
+    description: Allows the player to remove a temporary ban warn
+    default: op
+  discordutils.punishments.remove.permmute:
+    description: Allows the player to remove a permanent mute/timeout
+    default: op
+  discordutils.punishments.remove.tempmute:
+    description: Allows the player to remove a temporary mute/timeout
+    default: op
+  discordutils.punishments.remove.permmutewarn:
+    description: Allows the player to remove a permanent mute/timeout warning
+    default: op
+  discordutils.punishments.remove.tempmutewarn:
+    description: Allows the player to remove a temporary mute/timeout warning
     default: op
 
   discordutils.punishments.playerhistory:

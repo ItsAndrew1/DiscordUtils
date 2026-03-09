@@ -189,72 +189,125 @@ public class ChoosePunishTypeGUI implements Listener{
         if(meta.getDisplayName().contains("PERMANENT BAN WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.PERM_BAN_WARN;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterReason(player, state);
-            return;
         }
 
         if(clickedMat.equals(Material.NETHERITE_AXE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.PERM_BAN;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterReason(player, state);
-            return;
         }
 
         if(meta.getDisplayName().contains("TEMPORARY BAN WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.TEMP_BAN_WARN;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+            }
+
             player.closeInventory();
             enterReason(player, state);
-            return;
         }
 
         if(clickedMat.equals(Material.IRON_AXE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.TEMP_BAN;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterDuration(player, state);
-            return;
         }
 
         if(clickedMat.equals(Material.LEATHER_BOOTS)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.KICK;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterReason(player, state);
-            return;
         }
 
         if(meta.getDisplayName().contains("TEMPORARY MUTE WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.TEMP_MUTE_WARN;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterReason(player, state);
-            return;
         }
 
         if(clickedMat.equals(Material.LANTERN)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.TEMP_MUTE;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterDuration(player, state);
-            return;
         }
 
         if(meta.getDisplayName().contains("PERMANENT MUTE WARN")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.PERM_MUTE_WARN;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterReason(player, state);
-            return;
         }
 
         if(clickedMat.equals(Material.SOUL_LANTERN)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.type = PunishmentType.PERM_MUTE;
+
+            if(!state.type.hasPermission(player)){
+                noPermission(player);
+                return;
+            }
+
             player.closeInventory();
             enterReason(player, state);
         }
+    }
+
+    private void noPermission(Player player){
+        String chatPrefix = plugin.getConfig().getString("chat-prefix");
+
+        player.closeInventory();
+        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou don't have permission to do this! Contact the server administrators if you think this is an issue."));
+        player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
     }
 }
