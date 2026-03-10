@@ -123,8 +123,6 @@ public class ChoosePunishTypeGUI implements Listener{
             }
 
             state.duration = durationMillis;
-
-            enterReason(player, state);
         });
     }
 
@@ -141,8 +139,9 @@ public class ChoosePunishTypeGUI implements Listener{
 
             state.lastInteraction = System.currentTimeMillis();
             state.reason = input;
-            plugin.getChoosePunishScopeGUI().showGui(player);
         });
+
+        if(!state.type.isPermanent()) enterDuration(player, state);
     }
 
     //Method for parsing from the cooldown string to milliseconds
@@ -176,131 +175,40 @@ public class ChoosePunishTypeGUI implements Listener{
         if(meta == null) return;
 
         AddingState state = plugin.getPunishmentsAddingStates().get(player.getUniqueId());
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
 
         //If the player clicks on return button
         if(clickedMat.equals(Material.SPECTRAL_ARROW)){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
             plugin.getAddRemovePunishGUI().showGui(player);
             return;
         }
 
         //If the player clicks on the following buttons
-        if(meta.getDisplayName().contains("PERMANENT BAN WARN")){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.PERM_BAN_WARN;
+        if(meta.getDisplayName().contains("PERMANENT BAN WARN")) state.type = PunishmentType.PERM_BAN_WARN;
 
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
+        if(clickedMat.equals(Material.NETHERITE_AXE)) state.type = PunishmentType.PERM_BAN;
 
-            player.closeInventory();
-            enterReason(player, state);
+        if(meta.getDisplayName().contains("TEMPORARY BAN WARN")) state.type = PunishmentType.TEMP_BAN_WARN;
+
+        if(clickedMat.equals(Material.IRON_AXE)) state.type = PunishmentType.TEMP_BAN;
+
+        if(clickedMat.equals(Material.LEATHER_BOOTS)) state.type = PunishmentType.KICK;
+
+        if(meta.getDisplayName().contains("TEMPORARY MUTE WARN")) state.type = PunishmentType.TEMP_MUTE_WARN;
+
+        if(clickedMat.equals(Material.LANTERN)) state.type = PunishmentType.TEMP_MUTE;
+
+        if(meta.getDisplayName().contains("PERMANENT MUTE WARN")) state.type = PunishmentType.PERM_MUTE_WARN;
+
+        if(clickedMat.equals(Material.SOUL_LANTERN)) state.type = PunishmentType.PERM_MUTE;
+
+        if(!state.type.hasPermission(player)){
+            noPermission(player);
+            return;
         }
 
-        if(clickedMat.equals(Material.NETHERITE_AXE)){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.PERM_BAN;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
-
-            player.closeInventory();
-            enterReason(player, state);
-        }
-
-        if(meta.getDisplayName().contains("TEMPORARY BAN WARN")){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.TEMP_BAN_WARN;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-            }
-
-            player.closeInventory();
-            enterReason(player, state);
-        }
-
-        if(clickedMat.equals(Material.IRON_AXE)){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.TEMP_BAN;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
-
-            player.closeInventory();
-            enterDuration(player, state);
-        }
-
-        if(clickedMat.equals(Material.LEATHER_BOOTS)){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.KICK;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
-
-            player.closeInventory();
-            enterReason(player, state);
-        }
-
-        if(meta.getDisplayName().contains("TEMPORARY MUTE WARN")){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.TEMP_MUTE_WARN;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
-
-            player.closeInventory();
-            enterReason(player, state);
-        }
-
-        if(clickedMat.equals(Material.LANTERN)){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.TEMP_MUTE;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
-
-            player.closeInventory();
-            enterDuration(player, state);
-        }
-
-        if(meta.getDisplayName().contains("PERMANENT MUTE WARN")){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.PERM_MUTE_WARN;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
-
-            player.closeInventory();
-            enterReason(player, state);
-        }
-
-        if(clickedMat.equals(Material.SOUL_LANTERN)){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.type = PunishmentType.PERM_MUTE;
-
-            if(!state.type.hasPermission(player)){
-                noPermission(player);
-                return;
-            }
-
-            player.closeInventory();
-            enterReason(player, state);
-        }
+        enterReason(player, state);
     }
 
     private void noPermission(Player player){

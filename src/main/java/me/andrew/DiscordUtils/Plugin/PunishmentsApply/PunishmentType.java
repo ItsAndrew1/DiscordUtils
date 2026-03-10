@@ -123,5 +123,5 @@ public enum PunishmentType{
     }
 
     public abstract void apply(PunishmentContext ctx) throws SQLException;
-    public abstract boolean hasPermission(Player player)
+    public abstract boolean hasPermission(Player player);
 }

@@ -184,6 +184,17 @@ public class AddRemoveHistoryGUI implements Listener{
 
             //Getting the punishment with that ID
             Punishment targetP = getPunishment(ID);
+
+            //Checking if the player has the permission to remove the punishment
+            PunishmentType psType = targetP.getPunishmentType();
+            if(!psType.hasPermission(staff)){
+                staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have permission to do this. Contact the server administrators if you think this is an issue."));
+                staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+
+                Bukkit.getScheduler().runTaskLater(plugin, () -> showGui(staff), 10L);
+                return;
+            }
+
             plugin.getDatabaseManager().removePunishment(targetP.getPunishmentType(), targetP.getUuid());
 
             //If the scope is discord/global, I have to unban/remove the target user's timeout
@@ -191,7 +202,7 @@ public class AddRemoveHistoryGUI implements Listener{
                 String targetUserID = getTargetUserID(targetP.getUuid());
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
-                if(targetP.getPunishmentType() == PunishmentType.PERM_BAN || targetP.getPunishmentType() == PunishmentType.TEMP_BAN){
+                if(psType == PunishmentType.PERM_BAN || psType == PunishmentType.TEMP_BAN){
                     //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
                     dcServer.retrieveMemberById(targetUserID).queue(member -> {
                         long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
@@ -206,7 +217,7 @@ public class AddRemoveHistoryGUI implements Listener{
                     });
                 }
 
-                if(targetP.getPunishmentType() == PunishmentType.TEMP_MUTE || targetP.getPunishmentType() == PunishmentType.PERM_MUTE){
+                if(psType == PunishmentType.TEMP_MUTE || psType == PunishmentType.PERM_MUTE){
                     //Removing the timeout role
                     long timeoutRoleID = plugin.botFile().getConfig().getLong("timeout-role-id");
                     dcServer.retrieveMemberById(targetUserID).queue(member ->{
