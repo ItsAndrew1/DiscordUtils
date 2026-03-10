@@ -10,6 +10,7 @@ import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.*;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
@@ -312,6 +313,14 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         String message = event.getMessage();
         Consumer<String> callback = chatInput.remove(playerUUID);
         Bukkit.getScheduler().runTask(this, () -> callback.accept(message));
+    }
+
+    public String parsePP(Player player, String text){
+        if(text == null) return null;
+
+        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) return text;
+
+        return PlaceholderAPI.setPlaceholders(player, text);
     }
 
     public void waitForPlayerInput(Player player, Consumer<String> callback){

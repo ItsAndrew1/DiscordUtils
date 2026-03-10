@@ -39,8 +39,8 @@ public class DiscordGUI implements Listener {
         Inventory gui = Bukkit.createInventory(null, plugin.getGuiSize(), plugin.getGuiTitle());
 
         //Checks if use-custom-head and use-normal-material have the same value
-        boolean useCustomHead = plugin.getConfig().getBoolean("discord-gui.discord-item.use-custom-head");
-        boolean useNormalMaterial =  plugin.getConfig().getBoolean("discord-gui.discord-item.use-normal-material");
+        boolean useCustomHead = plugin.getConfig().getBoolean("discord-gui.discord-item.use-custom-head", false);
+        boolean useNormalMaterial =  plugin.getConfig().getBoolean("discord-gui.discord-item.use-normal-material", true);
         if(useCustomHead && useNormalMaterial){
             error(player);
             Bukkit.getLogger().warning("[DISCORDUTILS] The value of both 'use-custom-head' and 'use-normal-material' are TRUE");
@@ -114,6 +114,7 @@ public class DiscordGUI implements Listener {
 
             //Setting the display name
             String iiDisplayName =  plugin.getConfig().getString("discord-gui.info-item.display-name");
+            iiDisplayName = plugin.parsePP(player, iiDisplayName);
             infoMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', iiDisplayName));
 
             //Setting the lore (if there is any)
@@ -174,6 +175,7 @@ public class DiscordGUI implements Listener {
 
         //Display the 'discord item' (with a custom-head or with a material)
         String diDisplayName = plugin.getConfig().getString("discord-gui.discord-item.display-name");
+        diDisplayName = plugin.parsePP(player, diDisplayName);
 
         //Check the slot for discord-item
         int diSlot =  plugin.getConfig().getInt("discord-gui.discord-item.slot");
@@ -216,6 +218,7 @@ public class DiscordGUI implements Listener {
                 List<String> coloredLore =  new ArrayList<>();
                 for(String loreLine : diLore){
                     String coloredLoreLine = ChatColor.translateAlternateColorCodes('&', loreLine);
+                    coloredLoreLine = plugin.parsePP(player, coloredLoreLine);
                     coloredLore.add(coloredLoreLine);
                 }
                 diMeta.setLore(coloredLore);
@@ -265,11 +268,7 @@ public class DiscordGUI implements Listener {
 
     //Manages the error task
     private void error(Player player){
-        Sound errorGUI = Registry.SOUNDS.get(NamespacedKey.minecraft("open-discord-gui-sound"));
-        float egVolume = plugin.getConfig().getInt("odgs-volume");
-        float egPitch = plugin.getConfig().getInt("odgs-pitch");
-
-        player.playSound(player.getLocation(), errorGUI, egVolume, egPitch);
+        player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("error-gui-message")));
     }
 
