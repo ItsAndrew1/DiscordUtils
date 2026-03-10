@@ -92,6 +92,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         appearanceChoiceGUI = new AppearanceChoiceGUI(this);
         facingChoiceGUI = new FacingChoiceGUI(this);
 
+        reloadConfig();
+        botConfig.reloadConfig();
+
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(commands);
         getCommand("verify").setExecutor(commands);
@@ -128,8 +131,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             getDiscordBlockManager().startParticleTask();
         }
 
-        //Starts the discord bot and other stuff
-        if(getConfig().getBoolean("open-discord-bot")){
+        //Starts the discord bot and other stuff (if the bot is toggled)
+        boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);
+        if(getConfig().getBoolean("open-discord-bot") && toggleDiscordBot){
             //Creates the database
             try {
                 databaseManager.connectDb();
@@ -144,11 +148,10 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 String botToken = botFile().getConfig().getString("bot-token");
                 String guildId = botFile().getConfig().getString("guild-id");
 
-                if(botToken == null || guildId == null){
-                    Bukkit.getLogger().warning("[DISCORDUTILS] Bot Token and/or Guild ID is null. The bot won't start!");
-                }
+                if((botToken == null || guildId == null)) Bukkit.getLogger().warning("[DISCORDUTILS] Bot Token and/or Guild ID is null. The bot won't start!");
                 else discordBot = new BotMain(botToken, guildId, this);
             } catch (Exception e){
+                getServer().getPluginManager().disablePlugin(this);
                 Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. The bot won't start. See message:");
                 Bukkit.getLogger().warning(e.getMessage());
             }
