@@ -42,6 +42,7 @@ public class CheckPlayerBanMute implements Listener{
 
                 //Displaying the message
                 String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.perm-ban-message"));
+                message = plugin.parsePP(player, message);
                 e.disallow(PlayerLoginEvent.Result.KICK_BANNED, message
                         .replace("%scope%", getColoredScope(permBan.getScope()))
                         .replace("%reason%", reason)
@@ -75,6 +76,7 @@ public class CheckPlayerBanMute implements Listener{
 
                 //Displaying the message
                 String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.temp-ban-message"));
+                message = plugin.parsePP(player, message);
                 e.disallow(PlayerLoginEvent.Result.KICK_BANNED, message
                         .replace("%scope%", getColoredScope(tempBan.getScope()))
                         .replace("%reason%", reason)
@@ -115,11 +117,14 @@ public class CheckPlayerBanMute implements Listener{
 
                 //Sending the message
                 List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
-                for(String messageLine: message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                        .replace("%scope%", scope)
-                        .replace("%reason%", reason)
-                        .replace("%id%", permMute.getId())
-                ));
+                for(String messageLine: message){
+                    messageLine = plugin.parsePP(player, messageLine);
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
+                            .replace("%scope%", scope)
+                            .replace("%reason%", reason)
+                            .replace("%id%", permMute.getId())
+                    ));
+                }
             }
         }
 
@@ -149,13 +154,16 @@ public class CheckPlayerBanMute implements Listener{
 
                 //Sends the message to the player
                 List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-message");
-                for(String messageLine : message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                        .replace("%scope%", scope)
-                        .replace("%reason%", reason)
-                        .replace("%time_left%", timeLeftString)
-                        .replace("%expiration_time%", expiresAtString)
-                        .replace("%id%", tempMute.getId())
-                ));
+                for(String messageLine : message){
+                    messageLine = plugin.parsePP(player, messageLine);
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
+                            .replace("%scope%", scope)
+                            .replace("%reason%", reason)
+                            .replace("%time_left%", timeLeftString)
+                            .replace("%expiration_time%", expiresAtString)
+                            .replace("%id%", tempMute.getId())
+                    ));
+                }
             }
         }
     }

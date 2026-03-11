@@ -38,23 +38,26 @@ autobroadcast:
 
 #Configure the discord block. Used for players to click it and get the link.
 #TIP: For the custom head, go to https://minecraft-heads.com/ , search for a head and copy-paste the VALUE
-toggle-discord-block: true #Whether you want this block or not.
+discord-block:
+  toggle: true #Whether you want this block or not.
 
-toggle-discord-block-particles: true #Whether you want particles or not
-discord-block-particle: PORTAL #TIP: Go to https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Particle.html to see each particle's name
-particle-count: 40 #The number of particles spawned each time
-offsetX: 0.4 #The maximum random offset on the X axis
-offsetY: 0.5 #The maximum random offset on the Y axis
-offsetZ: 0.4 #The maximum random offset on the Z axis
-extra: 0 #Extra data for particle (usually speed)
-#TIP: Try to play with these values and experiment :)
+  #Configure the particles
+  particles:
+    toggle: true #Whether you want particles or not.
+    particle: PORTAL #TIP: Go to https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Particle.html to see each particle's name
+    count: 40 #The number of particles spawned each time
+    offsetX: 0.4 #The maximum random offset on the X axis
+    offsetY: 0.5 #The maximum random offset on the Y axis
+    offsetZ: 0.4 #The maximum random offset on the Z axis
+    extra: 0 #Extra data for the particle (usually speed)
 
-block-world: . #TIP: Look in your server's folder for the world name (ex: world, world_nether, world_the_end etc.)
-block-x: .
-block-y: .
-block-z: .
-facing: . #Values: NORTH, WEST, SOUTH, WEST, NORTH-EAST, NORTH-WEST, SOUTH-EAST, SOUTH-WEST
-custom-head: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19"
+  world: "" #TIP: Look in your server's folder for the world name (ex: world, world_nether, world_the_end etc.)
+  location: #Set the location for the block
+    x:
+    y:
+    z:
+  facing:  #Set the facing for the block. (e.g. NORTH, WEST, EAST, SOUTH, NORTH_WEST etc.)
+  custom-head: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19"
 
 #Configure the task of giving players the link.
 discord-link: "" #Enter your discord's server invite link
@@ -108,8 +111,7 @@ discord-gui:
     use-custom-head: true
     custom-head: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTNiMTgzYjE0OGI5YjRlMmIxNTgzMzRhZmYzYjViYjZjMmMyZGJiYzRkNjdmNzZhN2JlODU2Njg3YTJiNjIzIn19fQ=="
 
-    #This uses a normal minecraft item
-    use-normal-material: false
+    #This uses a normal minecraft item. The 'use-custom-head' value must be set to FALSE for this to work.
     material: blue_concrete
 
     slot: 22

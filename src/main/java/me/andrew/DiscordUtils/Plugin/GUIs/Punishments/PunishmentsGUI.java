@@ -254,7 +254,10 @@ public class PunishmentsGUI implements Listener{
         itemLore.add(" ");
         itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aScope: "+punishmentScope));
         itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aStaff: &e&l"+p.getStaff()));
-        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aReason: &e"+p.getReason()));
+
+        String reason = p.getReason();
+        reason = plugin.parsePP(Bukkit.getPlayer(p.getUuid()), reason);
+        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aReason: &e"+reason));
         itemLore.add(" ");
 
         //Setting the status
@@ -301,7 +304,6 @@ public class PunishmentsGUI implements Listener{
             selfMap.remove(player.getUniqueId());
 
             plugin.getAddRemovePunishGUI().showGui(player);
-            return;
         }
 
         //If the player clicks on exit button
@@ -313,21 +315,18 @@ public class PunishmentsGUI implements Listener{
             selfMap.remove(player.getUniqueId());
 
             player.closeInventory();
-            return;
         }
 
         //If the player clicks on next page
         if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&caNext Page"))){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             showGui(player, getPageNrFromTitle(event.getView().getTitle()) + 1, selfMap.get(player.getUniqueId()));
-            return;
         }
 
         //If the player clicks on previous page
         if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&cPrevious Page"))){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             showGui(player, getPageNrFromTitle(event.getView().getTitle()) - 1, selfMap.get(player.getUniqueId()));
-            return;
         }
 
         //If the player clicks on the filtering buttons

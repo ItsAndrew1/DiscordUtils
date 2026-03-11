@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public final class DiscordUtils extends JavaPlugin implements Listener{
-    private int guiSize;
     private String guiTitle;
     private DiscordGUI discordGUI;
     private DiscordTask discordTaskManager;
@@ -65,13 +64,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     public void onEnable(){
         saveDefaultConfig();
         startBroadcasting(); //Broadcasts the message over an interval of seconds
-
-        //Checks the GUI size
-        int guiRows = getConfig().getInt("discord-gui.rows");
-        if(guiRows < 1 || guiRows > 6) {
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value of 'discord-gui.rows' is invalid! The GUI won't show up.");
-        }
-        guiSize = guiRows * 9; //Sets the GUI size
 
         guiTitle = ChatColor.translateAlternateColorCodes('&', getConfig().getString("discord-gui.title"));
         discordTaskManager = new DiscordTask(this);
@@ -484,9 +476,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public VerificationManager getVerificationManager() {
         return verificationManager;
-    }
-    public int getGuiSize() {
-        return guiSize;
     }
     public String getGuiTitle() {
         return guiTitle;

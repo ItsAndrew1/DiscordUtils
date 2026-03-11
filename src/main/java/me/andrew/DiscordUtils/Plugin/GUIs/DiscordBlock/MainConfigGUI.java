@@ -29,8 +29,6 @@ public class MainConfigGUI implements Listener {
     }
 
     public void showGUI(Player player){
-        FileConfiguration config = plugin.getConfig();
-
         //Create the inventory
         GUIName = "Main Configuration";
         Inventory mainConfigGUI = Bukkit.createInventory(null, 54, GUIName);

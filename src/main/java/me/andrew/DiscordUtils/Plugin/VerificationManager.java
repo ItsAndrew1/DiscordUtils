@@ -83,6 +83,7 @@ public class VerificationManager{
             String parsedLine = line
                     .replace("%code%", verificationCode)
                     .replace("%expire_at%", String.valueOf(durationMinutes));
+            parsedLine = plugin.parsePP(player, parsedLine);
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', parsedLine));
         }
     }

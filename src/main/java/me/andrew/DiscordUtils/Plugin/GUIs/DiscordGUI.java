@@ -30,34 +30,20 @@ public class DiscordGUI implements Listener {
     }
 
     public void showGUI(Player player){
-        //Checks the gui size
-        if(plugin.getGuiSize() < 9 || plugin.getGuiSize() > 54){
-            error(player);
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value of 'discord-gui.rows' is invalid! Set a valid one and restart the server.");
-            return;
-        }
-        Inventory gui = Bukkit.createInventory(null, plugin.getGuiSize(), plugin.getGuiTitle());
+        //Getting the gui size
+        int guiRows = plugin.getConfig().getInt("discord-gui.rows", 6);
+        if(guiRows < 0 || guiRows > 6) guiRows = 6;
+        int guiSize = guiRows * 9;
 
-        //Checks if use-custom-head and use-normal-material have the same value
-        boolean useCustomHead = plugin.getConfig().getBoolean("discord-gui.discord-item.use-custom-head", false);
-        boolean useNormalMaterial =  plugin.getConfig().getBoolean("discord-gui.discord-item.use-normal-material", true);
-        if(useCustomHead && useNormalMaterial){
-            error(player);
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value of both 'use-custom-head' and 'use-normal-material' are TRUE");
-            return;
-        }
-        if(!useCustomHead && !useNormalMaterial){
-            error(player);
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value of both 'use-custom-head' and 'use-normal-material' are FALSE");
-            return;
-        }
+        //Creating the GUI
+        Inventory gui = Bukkit.createInventory(null, guiSize, plugin.getGuiTitle());
 
         //Displays the decorations if they are toggled
-        boolean toggleDecorations = plugin.getConfig().getBoolean("discord-gui.decorations.toggle");
+        boolean toggleDecorations = plugin.getConfig().getBoolean("discord-gui.decorations.toggle", true);
         if(toggleDecorations){
             //Getting the info of the item
-            String itemString = plugin.getConfig().getString("discord-gui.decorations.material");
-            String diDisplayName = plugin.getConfig().getString("discord-gui.decorations.display-name");
+            String itemString = plugin.getConfig().getString("discord-gui.decorations.material", "black_stained_glass_pane");
+            String diDisplayName = plugin.getConfig().getString("discord-gui.decorations.display-name", " ");
 
             //Check the material from config
             Material decoItemMat = Material.matchMaterial(itemString.toUpperCase());
@@ -72,9 +58,11 @@ public class DiscordGUI implements Listener {
 
             for(int i = 0; i<=8; i++){
                 //Skip the slot of the info item if it is toggled
-                boolean toggleInfoItem = plugin.getConfig().getBoolean("discord-gui.info-item.toggle");
+                boolean toggleInfoItem = plugin.getConfig().getBoolean("discord-gui.info-item.toggle", false);
                 if(toggleInfoItem){
-                    int iiSlot = plugin.getConfig().getInt("discord-gui.info-item.slot");
+                    int iiSlot = plugin.getConfig().getInt("discord-gui.info-item.slot", 4);
+                    if(iiSlot < 0 || iiSlot > gui.getSize()) iiSlot = 4;
+
                     if(i == iiSlot) continue;
                 }
 
@@ -91,150 +79,109 @@ public class DiscordGUI implements Listener {
         }
 
         //Display the info item if it is toggled
-        boolean toggleInfoItem = plugin.getConfig().getBoolean("discord-gui.info-item.toggle");
+        boolean toggleInfoItem = plugin.getConfig().getBoolean("discord-gui.info-item.toggle", false);
         if(toggleInfoItem){
             //Check the material from the config
-            Material iiMaterial = Material.matchMaterial(plugin.getConfig().getString("discord-gui.info-item.material").toUpperCase());
+            Material iiMaterial = Material.matchMaterial(plugin.getConfig().getString("discord-gui.info-item.material", "oak_sign").toUpperCase());
             if(iiMaterial == null){
                 error(player);
                 Bukkit.getLogger().warning("[DISCORDUTILS] The material for info-item is INVALID!");
                 return;
             }
 
-            ItemStack infoItem = new ItemStack(iiMaterial);
-            ItemMeta infoMeta = infoItem.getItemMeta();
-            int infoItemSlot = plugin.getConfig().getInt("discord-gui.info-item.slot");
+            int infoItemSlot = plugin.getConfig().getInt("discord-gui.info-item.slot", 4);
+            if(infoItemSlot < 0 || infoItemSlot > gui.getSize()) infoItemSlot = 4;
 
-            //Check if the slot is valid
-            if(infoItemSlot < 1 || infoItemSlot > plugin.getGuiSize()){
-                error(player);
-                Bukkit.getLogger().warning("[DISCORDUTILS] The slot for info-item is INVALID!");
-                return;
-            }
-
-            //Setting the display name
             String iiDisplayName =  plugin.getConfig().getString("discord-gui.info-item.display-name");
             iiDisplayName = plugin.parsePP(player, iiDisplayName);
-            infoMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', iiDisplayName));
-
-            //Setting the lore (if there is any)
             List<String> infoItemLore = plugin.getConfig().getStringList("discord-gui.info-item.lore");
-            if(infoItemLore.isEmpty()) infoMeta.setLore(Collections.emptyList());
-            else{
-                List<String> coloredIILore = new ArrayList<>();
-                for(String loreLine : infoItemLore){
-                    String coloredLine = ChatColor.translateAlternateColorCodes('&', loreLine);
-                    coloredIILore.add(coloredLine);
-                }
-                infoMeta.setLore(coloredIILore);
-            }
-            infoItem.setItemMeta(infoMeta);
+
+            ItemStack infoItem = createItem(iiMaterial, iiDisplayName, infoItemLore, player);
             gui.setItem(infoItemSlot, infoItem);
         }
 
         //Display the exit item if it is toggled
-        boolean toggleExitItem =  plugin.getConfig().getBoolean("discord-gui.exit-item.toggle");
+        boolean toggleExitItem =  plugin.getConfig().getBoolean("discord-gui.exit-item.toggle", true);
         if(toggleExitItem){
             //Check the material from the config
-            Material eiMaterial = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material").toUpperCase());
+            Material eiMaterial = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material", "red_concrete").toUpperCase());
             if(eiMaterial == null){
                 error(player);
-                Bukkit.getLogger().warning("[DISCORDUTILS] The material for exit-item is INVALID!");
+                Bukkit.getLogger().warning("[DISCORDUTILS] The material for exit-item in Discord GUI is INVALID!");
                 return;
             }
 
-            ItemStack exitItem = new ItemStack(eiMaterial);
-            ItemMeta exitMeta = exitItem.getItemMeta();
+            List<String> exitItemLore = plugin.getConfig().getStringList("discord-gui.exit-item.lore");
+            String eiDisplayName =  plugin.getConfig().getString("discord-gui.exit-item.display-name", "&c&lEXIT");
+            eiDisplayName = plugin.parsePP(player, eiDisplayName);
+
+            ItemStack exitItem = createItem(eiMaterial, eiDisplayName, exitItemLore, player);
 
             //Check the slot for exit-item
-            int exitItemSlot = plugin.getConfig().getInt("discord-gui.exit-item.slot");
-            if(exitItemSlot < 1 || exitItemSlot > plugin.getGuiSize()){
-                error(player);
-                Bukkit.getLogger().warning("[DISCORDUTILS]  The slot for exit-item is INVALID!");
-                return;
-            }
-            String eiDisplayName =  plugin.getConfig().getString("discord-gui.exit-item.display-name");
+            int exitItemSlot = plugin.getConfig().getInt("discord-gui.exit-item.slot", 40);
+            if(exitItemSlot < 0 || exitItemSlot > gui.getSize()) exitItemSlot = 40;
 
-            //Setting the display name
-            exitMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', eiDisplayName));
-
-            //Setting the lore (if there is any)
-            List<String> exitItemLore = plugin.getConfig().getStringList("discord-gui.exit-item.lore");
-            if(exitItemLore.isEmpty()) exitMeta.setLore(Collections.emptyList());
-            else{
-                List<String> coloredLore =  new ArrayList<>();
-                for(String loreLine : exitItemLore){
-                    String coloredLine = ChatColor.translateAlternateColorCodes('&', loreLine);
-                    coloredLore.add(coloredLine);
-                }
-                exitMeta.setLore(coloredLore);
-            }
-            exitItem.setItemMeta(exitMeta);
             gui.setItem(exitItemSlot, exitItem);
         }
 
         //Display the 'discord item' (with a custom-head or with a material)
-        String diDisplayName = plugin.getConfig().getString("discord-gui.discord-item.display-name");
+        String diDisplayName = plugin.getConfig().getString("discord-gui.discord-item.display-name", "&9Click to get the &linvite link&9!");
         diDisplayName = plugin.parsePP(player, diDisplayName);
 
-        //Check the slot for discord-item
-        int diSlot =  plugin.getConfig().getInt("discord-gui.discord-item.slot");
-        if(diSlot < 1 || diSlot > plugin.getGuiSize()){
-            error(player);
-            Bukkit.getLogger().warning("[DISCORDUTILS] The slot for discord-item is INVALID!");
-            return;
-        }
+        int diSlot =  plugin.getConfig().getInt("discord-gui.discord-item.slot", 22);
+        if(diSlot < 0 || diSlot > gui.getSize()) diSlot = 22;
 
+        boolean useCustomHead = plugin.getConfig().getBoolean("discord-gui.discord-item.use-custom-head", true);
         if(useCustomHead){
-            String customHeadValue = plugin.getConfig().getString("discord-gui.discord-item.custom-head");
-            if(customHeadValue == null){
-                error(player);
-                Bukkit.getLogger().warning("[DISCORDUTILS] Value for custom-head is NULL!");
-                return;
-            }
-
+            String customHeadValue = plugin.getConfig().getString("discord-gui.discord-item.custom-head", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTNiMTgzYjE0OGI5YjRlMmIxNTgzMzRhZmYzYjViYjZjMmMyZGJiYzRkNjdmNzZhN2JlODU2Njg3YTJiNjIzIn19fQ==");
             discordItem = getHead(customHeadValue, diDisplayName);
             gui.setItem(diSlot, discordItem);
         }
-        if(useNormalMaterial){
+        else{
             //Check if the material is correct
-            Material diMaterial = Material.matchMaterial(plugin.getConfig().getString("discord-gui.discord-item.material").toUpperCase());
+            Material diMaterial = Material.matchMaterial(plugin.getConfig().getString("discord-gui.discord-item.material", "blue_concrete").toUpperCase());
             if(diMaterial == null){
                 error(player);
                 Bukkit.getLogger().warning("[DISCORDUTILS] Material for discord-item is INVALID!");
                 return;
             }
 
-            ItemStack discordItem = new ItemStack(diMaterial);
-            ItemMeta diMeta = discordItem.getItemMeta();
-
-            //Sets the display name
-            diMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', diDisplayName));
-
-            //Sets the lore (if there is any)
             List<String> diLore =  plugin.getConfig().getStringList("discord-gui.discord-item.lore");
-            if(diLore.isEmpty()) diMeta.setLore(Collections.emptyList());
-            else{
-                List<String> coloredLore =  new ArrayList<>();
-                for(String loreLine : diLore){
-                    String coloredLoreLine = ChatColor.translateAlternateColorCodes('&', loreLine);
-                    coloredLoreLine = plugin.parsePP(player, coloredLoreLine);
-                    coloredLore.add(coloredLoreLine);
-                }
-                diMeta.setLore(coloredLore);
-            }
-
-            discordItem.setItemMeta(diMeta);
+            ItemStack discordItem = createItem(diMaterial, diDisplayName, diLore, player);
             gui.setItem(diSlot, discordItem);
         }
 
         //Gets the sound from config
         Sound openGuiSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("open-discord-gui-sound").toLowerCase()));
-        float ogsVolume = plugin.getConfig().getInt("odgs-volume");
-        float ogsPitch = plugin.getConfig().getInt("odgs-pitch");
+        float ogsVolume = plugin.getConfig().getInt("odgs-volume", 1);
+        float ogsPitch = plugin.getConfig().getInt("odgs-pitch", 1);
 
         player.playSound(player.getLocation(), openGuiSound, ogsVolume, ogsPitch); //Plays the sound from config
         player.openInventory(gui); //Opens the inventory
+    }
+
+    private ItemStack createItem(Material material, String displayName, List<String> lore, Player player){
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+
+        //Setting the display name
+        displayName = plugin.parsePP(player, displayName);
+        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&',  displayName));
+
+        //Setting the lore
+        if(lore != null) {
+            //Parsing the placeholders
+            List<String> parsedLore = new ArrayList<>();
+            for(String loreLine : lore){
+                loreLine = plugin.parsePP(player, loreLine);
+                parsedLore.add(loreLine);
+            }
+
+            meta.setLore(parsedLore);
+        }
+
+        item.setItemMeta(meta);
+        return item;
     }
 
     //Gets the custom head for the discord button
@@ -288,12 +235,11 @@ public class DiscordGUI implements Listener {
         Material exitItem = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material").toUpperCase());
         if(clickedItem.getType().equals(exitItem)){
             Sound exitItemSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("exit-item-sound").toLowerCase()));
-            float eisVolume = plugin.getConfig().getInt("eis-volume");
-            float eisPitch = plugin.getConfig().getInt("eis-pitch");
+            float eisVolume = plugin.getConfig().getInt("eis-volume", 1);
+            float eisPitch = plugin.getConfig().getInt("eis-pitch", 1);
 
             player.playSound(player.getLocation(), exitItemSound, eisVolume, eisPitch);
             player.closeInventory();
-            return;
         }
 
         //If the player clicks on discord-item, runs the task.

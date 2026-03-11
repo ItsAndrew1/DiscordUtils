@@ -33,7 +33,7 @@ permissions:
 
   #Default permissions, for default player commands
   discordutils.discord:
-    description: Allows the players to run /discord
+    description: Allows the players to run /discord and to interact with the discord block
     default: true
   discordutils.verify:
     description: Allows the player to start the verification process
