@@ -10,7 +10,7 @@ guild-id:  #This is the ID your discord server has. To get it, turn on 'Develope
 bot-token:  #This is the token of a bot. To run the bot, you will need to create an app yourself in the Discord Developer Portal.
 #After you create an app, go to 'bot' section, copy the token and paste it here. To invite the bot to your server, go to 'OAuth2' section and generate a URL.
 
-#Enter the ID of which roles need to be deleted from the users when running the bot for the first time.
+#Enter the ID of which roles need to be deleted from the users when running '/startverification'.
 #This is to help a task which automatically gives users from your server the 'Unverified' role and removing the other roles.
 roles-to-be-deleted:
   -
@@ -36,12 +36,12 @@ maximum-length-duration: 15
 minimum-length-appeal: 75 #In characters!
 maximum-length-appeal: 4000 #In characters! MAX IS 4000!!!
 placeholder-appeal: "In detail, explain anything related to the punishment you've received. \nMINIMUM 100 WORDS!"
-appeal-channel-id:  #The channel where the appeals will show up
+appeal-channel-id: "" #The channel where the appeals will show up
 
 #Configure a task for command logging. You will need to set up a channel for this!
 command-logging:
   toggle: true #Whether you want to use this feature or not.
-  channel-id:
+  channel-id: "" #The id for the specific channel
   embed-color:
     RED: 0
     GREEN: 255
@@ -56,9 +56,9 @@ command-logging:
 
 #Configure the member join event. You will need to create 2 roles and a verify channel!
 verification:
-  verified-role-id:  #This role will be a 'Member' type role. It will be used to let the user see the other channels
-  unverified-role-id:  #This one is used to only show the 'verify' channel
-  verify-channel-id:  #The ID of the verification channel. IT MUST BE EMPTY, WITH NO TEXT HISTORY!!!
+  verified-role-id: "" #This role will be a 'Member' type role. It will be used to let the user see the other channels
+  unverified-role-id: "" #This one is used to only show the 'verify' channel
+  verify-channel-id: "" #The ID of the verification channel. IT MUST BE EMPTY, WITH NO TEXT HISTORY!!!
 
   #Configure the verify channel embed. It is helpful for players to know what to do when they join the server.
   #For description, you can use '\n' for line breaks.
@@ -71,12 +71,12 @@ verification:
     BLUE: 226
 
 #Configure the Timeout Role for the punishments. You will also have to create one for this.
-timeout-role-id:
+timeout-role-id: ""
 
 #Configure the Ban Channel and Banned Role ID. This is needed for users that are banned.
-ban-role-id:
+ban-role-id: ""
 banned-users-channel:
-  id:
+  id: ""
 
   #Configure the embed that will be sent to the channel. For description, use '\n' for line breaks.
   embed-title: "HOW TO APPEAL"
@@ -113,12 +113,12 @@ RefreshVerification-cmd-roles:
 use-logs: true #If you want to use logs or not.
 logs:
   use-only-one-channel: false #This is if you want to use only one channel for ALL logs. (false -> no / true -> yes)
-  channel-id:  #The ID of the channel. Ignore this if you typed 'false' in 'use-only-one-channel'!!
+  channel-id: "" #The ID of the channel. Ignore this if you typed 'false' in 'use-only-one-channel'!!
   multiple-channel-id:
-    warnings-channel-id:  #The ID for the warnings channel. This channel will only show warnings!
-    kicks-channel-id:  #The ID for the kicks channel. This channel will only show kicks!
-    mutes-channel-id:  #The ID for the mute channel. This channel will only show mutes!
-    bans-channel-id:  #The ID for the ban channel. This channel will only show mutes!
+    warnings-channel-id: "" #The ID for the warnings channel. This channel will only show warnings!
+    kicks-channel-id: "" #The ID for the kicks channel. This channel will only show kicks!
+    mutes-channel-id: "" #The ID for the mute channel. This channel will only show mutes!
+    bans-channel-id: "" #The ID for the ban channel. This channel will only show mutes!
 
 #Punishments Messages in user's DM. These trigger when you apply a punishment. They are also vital for appealing!
 user-punishments-messages:

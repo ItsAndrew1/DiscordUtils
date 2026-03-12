@@ -130,7 +130,7 @@ public class AppealSystem extends ListenerAdapter {
         }
     }
 
-    public String formatTime(long millis){
+    private String formatTime(long millis){
         Instant instant = Instant.ofEpochMilli(millis);
         LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss");
