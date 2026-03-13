@@ -124,19 +124,19 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             getDiscordBlockManager().startParticleTask();
         }
 
+        //Creates the database
+        try {
+            databaseManager.connectDb();
+            Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
+        } catch (SQLException e) {
+            Bukkit.getLogger().warning("[DISCORDUTILS] Failed to create database connection. See message: ");
+            Bukkit.getLogger().warning("[DISCORDUTILS]: "+e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+        }
+
         //Starts the discord bot and other stuff (if the bot is toggled)
         boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);
         if(getConfig().getBoolean("open-discord-bot") && toggleDiscordBot){
-            //Creates the database
-            try {
-                databaseManager.connectDb();
-                Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
-            } catch (SQLException e) {
-                Bukkit.getLogger().warning("[DISCORDUTILS] Failed to create database connection. See message: ");
-                Bukkit.getLogger().warning("[DISCORDUTILS]: "+e.getMessage());
-                getServer().getPluginManager().disablePlugin(this);
-            }
-
             try{
                 String botToken = botFile().getConfig().getString("bot-token");
                 String guildId = botFile().getConfig().getString("guild-id");
@@ -159,7 +159,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are null!");
             }
             else{
-                long verifyChannelIDlong = 0;
+                long verifyChannelIDlong;
 
                 try{
                     long verifiedRoleIDlong =  Long.parseLong(verifiedRoleID);
@@ -168,6 +168,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 } catch (Exception e){
                     Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are invalid!");
                     Bukkit.getLogger().warning(e.getMessage());
+                    getServer().getPluginManager().disablePlugin(this);
+                    return;
                 }
 
                 try{
@@ -175,20 +177,22 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                     verifyChannel.getHistory().retrievePast(1).queue(messages -> {
                         if(messages.isEmpty()){
                             //Getting the color
-                            int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED");
-                            int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE");
-                            int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN");
+                            int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED", 138);
+                            int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE", 226);
+                            int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN", 43);
                             Color embedColor = Color.fromRGB(redValue, blueValue, greenValue);
 
                             //Getting the title and the description
-                            String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title");
-                            String description = botConfig.getConfig().getString("verification.verify-channel-embed-description");
+                            String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title", "VERIFY YOUR ACCOUNT!");
+                            String description = botConfig.getConfig().getString("verification.verify-channel-embed-description", "**Welcome to %server_name%!**\n\nTo start your adventure: \n1.) Head over to our **Minecraft Server**\n2.) Run */verify* to get a **code**\n3.) Come back here and run */verify <code>*\n4.) Have fun on our server!");
                             verifyChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
                         }
                     });
                 } catch (Exception e){
-                    Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when a sending the embed to the 'verify' channel. See message:");
+                    Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when sending the embed to the 'verify' channel. See message:");
                     Bukkit.getLogger().warning(e.getMessage());
+                    getServer().getPluginManager().disablePlugin(this);
+                    return;
                 }
             }
 
@@ -215,6 +219,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             } catch(Exception e){
                 Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'banned-users-channel (botconfig.yml)'. See message:");
                 Bukkit.getLogger().warning(e.getMessage());
+                getServer().getPluginManager().disablePlugin(this);
+                return;
             }
 
             //Runs a task to auto expire the punishments

@@ -4,22 +4,18 @@ package me.andrew.DiscordUtils.DiscordBot;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.events.guild.member.GenericGuildMemberEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.jspecify.annotations.NonNull;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 public class MemberJoinEvent extends ListenerAdapter {
     private final DiscordUtils plugin;
@@ -29,8 +25,13 @@ public class MemberJoinEvent extends ListenerAdapter {
     }
 
     @Override
-    public void onGuildMemberJoin(GuildMemberJoinEvent event) {
+    public void onGuildMemberJoin(@NonNull GuildMemberJoinEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
+
+        //This event should only fire when the discord bot is toggled
+        boolean toggleDcBot = botConfig.getBoolean("toggle-discord-bot", false);
+        if(!toggleDcBot) return;
+
         String userId = event.getUser().getId();
 
         event.getGuild().retrieveMemberById(userId).queue(member -> {

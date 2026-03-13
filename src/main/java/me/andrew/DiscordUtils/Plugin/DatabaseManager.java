@@ -25,7 +25,7 @@ public class DatabaseManager {
     //Creates the database
     public void connectDb() throws SQLException {
         //Gets the database type (SQLite or MySQL)
-        String databaseType = plugin.getConfig().getString("database-system.type");
+        String databaseType = plugin.getConfig().getString("database-system.type", "sqlite");
 
         //If the type is 'sqlite', creates the database file in DiscordUtils folder
         if(databaseType.equals("sqlite")){

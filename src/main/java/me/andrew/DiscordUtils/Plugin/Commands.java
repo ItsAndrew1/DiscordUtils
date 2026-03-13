@@ -135,6 +135,12 @@ public class Commands implements CommandExecutor{
                         return true;
                     }
 
+                    //Checking if the database is setup properly
+                    if(plugin.getDatabaseManager() == null){
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou cannot do this since the database didn't setup properly!"));
+                        return true;
+                    }
+
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
                     try {
                         plugin.getPlayerHeadsGUIs().showGui(player, 1);

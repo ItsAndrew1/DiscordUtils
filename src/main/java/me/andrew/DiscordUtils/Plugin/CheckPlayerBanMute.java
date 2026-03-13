@@ -26,6 +26,10 @@ public class CheckPlayerBanMute implements Listener{
 
     @EventHandler
     public void onLogin(PlayerLoginEvent e) throws SQLException {
+        //This event should only fire when the discord bot is toggled
+        boolean toggleDcBot = plugin.botFile().getConfig().getBoolean("toggle-discord-bot", false);
+        if(!toggleDcBot) return;
+
         Player player = e.getPlayer();
 
         //Checks if the player is perm banned (with scope minecraft/global)
@@ -103,6 +107,10 @@ public class CheckPlayerBanMute implements Listener{
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent e) throws SQLException{
+        //This event should only fire when the discord bot is toggled
+        boolean toggleDcBot = plugin.botFile().getConfig().getBoolean("toggle-discord-bot", false);
+        if(!toggleDcBot) return;
+
         Player player = e.getPlayer();
 
         //Check if the player is perm muted (with scope minecraft/global)

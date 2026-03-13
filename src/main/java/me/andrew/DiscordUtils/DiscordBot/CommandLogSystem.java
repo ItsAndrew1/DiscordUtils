@@ -24,6 +24,10 @@ public class CommandLogSystem implements Listener {
     public void onCommand(PlayerCommandPreprocessEvent e) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
+        //This event should only fire when the discord bot is toggled
+        boolean toggleDcBot = botConfig.getBoolean("toggle-discord-bot", false);
+        if(!toggleDcBot) return;
+
         //Checking if the feature is toggled
         if(botConfig.getBoolean("command-logging.toggle")){
             Guild dcServer = plugin.getDiscordBot().getDiscordServer();
