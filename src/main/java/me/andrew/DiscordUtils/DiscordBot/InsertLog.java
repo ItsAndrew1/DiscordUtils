@@ -21,6 +21,7 @@ import java.util.UUID;
 public class InsertLog {
     private final BotMain bot;
     private final FileConfiguration botConfig;
+    private final DiscordUtils plugin;
 
     //Necessary data
     private final PunishmentType type;
@@ -37,6 +38,7 @@ public class InsertLog {
 
         //Getting the botConfig file
         this.botConfig = plugin.botFile().getConfig();
+        this.plugin = plugin;
 
         //Assigning the necessary data
         this.type = state.type;
@@ -86,8 +88,20 @@ public class InsertLog {
         channel.sendMessageEmbeds(eb.build()).queue();
     }
 
+    private boolean isBotConfigured(){
+        String guildId = plugin.botFile().getConfig().getString("guild-id");
+        String botToken = plugin.botFile().getConfig().getString("bot-token");
+
+        return guildId != null && botToken != null;
+    }
+
     private void multipleChannels(){
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(targetUUID);
+
+        //Checking if the bot is toggled
+        boolean toggleDcBot = botConfig.getBoolean("toggle-discord-bot", false);
+        boolean openDiscordBot = plugin.getConfig().getBoolean("open-discord-bot", false);
+        if(!toggleDcBot || !openDiscordBot || !isBotConfigured()) return;
 
         if(type == PunishmentType.KICK){
             String kickChannelId = botConfig.getString("logs.multiple-channel-id.kicks-channel-id");

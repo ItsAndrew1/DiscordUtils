@@ -136,7 +136,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
         //Starts the discord bot and other stuff (if the bot is toggled)
         boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);
-        if(getConfig().getBoolean("open-discord-bot") && toggleDiscordBot){
+        if(getConfig().getBoolean("open-discord-bot", false) && toggleDiscordBot){
             try{
                 String botToken = botFile().getConfig().getString("bot-token");
                 String guildId = botFile().getConfig().getString("guild-id");
@@ -285,7 +285,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 }
             }, 0L, 20L*5); //Runs every 5 seconds
         }
-
     }
 
     @Override

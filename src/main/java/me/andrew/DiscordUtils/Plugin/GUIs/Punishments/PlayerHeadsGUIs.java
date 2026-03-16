@@ -31,6 +31,12 @@ public class PlayerHeadsGUIs implements Listener{
         String invTitle = "Select Player (page "+page+")";
         Inventory gui = Bukkit.createInventory(null, inventorySize, invTitle);
 
+        if(plugin.getDatabaseManager().getConnection() == null){
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cDatabase is not connected! Set it up first to access this menu."));
+            player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+            return;
+        }
+
         OfflinePlayer[] players = Bukkit.getOfflinePlayers();
         int headsPerPage = 35;
         int startIndex = (page-1)*headsPerPage;

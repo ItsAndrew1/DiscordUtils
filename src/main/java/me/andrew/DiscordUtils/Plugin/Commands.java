@@ -37,66 +37,68 @@ public class Commands implements CommandExecutor{
         Player player = (Player) sender;
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
 
-        try {
-            //Check if the player is muted temporarily
-            Punishment tempMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
-            if(tempMute != null && (tempMute.getScope() == PunishmentScopes.MINECRAFT || tempMute.getScope() == PunishmentScopes.GLOBAL)){
-                if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getCrt());
-                else{
-                    //Sends the player a message (if the messages are toggled)
-                    boolean toggleMessage = plugin.getConfig().getBoolean("player-punishments-messages.toggle");
-                    if(toggleMessage){
-                        //Getting the reason
-                        String reason = tempMute.getReason();
+        if(plugin.getDatabaseManager().getConnection() != null){
+            try {
+                //Check if the player is muted temporarily
+                Punishment tempMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
+                if(tempMute != null && (tempMute.getScope() == PunishmentScopes.MINECRAFT || tempMute.getScope() == PunishmentScopes.GLOBAL)){
+                    if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getCrt());
+                    else{
+                        //Sends the player a message (if the messages are toggled)
+                        boolean toggleMessage = plugin.getConfig().getBoolean("player-punishments-messages.toggle");
+                        if(toggleMessage){
+                            //Getting the reason
+                            String reason = tempMute.getReason();
 
-                        //Getting the scope
-                        String scope =  getColoredScope(tempMute.getScope());
+                            //Getting the scope
+                            String scope =  getColoredScope(tempMute.getScope());
 
-                        //Getting the durations
-                        long expiresAt = tempMute.getExpiresAt();
-                        Instant expiresAtInstant = Instant.ofEpochMilli(expiresAt);
-                        LocalDateTime time = LocalDateTime.ofInstant(expiresAtInstant, ZoneId.systemDefault());
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss"); //Make configurable!!!
-                        String expiresAtString = time.format(formatter);
+                            //Getting the durations
+                            long expiresAt = tempMute.getExpiresAt();
+                            Instant expiresAtInstant = Instant.ofEpochMilli(expiresAt);
+                            LocalDateTime time = LocalDateTime.ofInstant(expiresAtInstant, ZoneId.systemDefault());
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss"); //Make configurable!!!
+                            String expiresAtString = time.format(formatter);
 
-                        long timeLeft = expiresAt - System.currentTimeMillis();
-                        String timeLeftString =  plugin.formatTime(timeLeft);
+                            long timeLeft = expiresAt - System.currentTimeMillis();
+                            String timeLeftString =  plugin.formatTime(timeLeft);
 
-                        //Sends the message to the player
-                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-message");
-                        for(String messageLine : message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
+                            //Sends the message to the player
+                            List<String> message = plugin.getConfig().getStringList("player-punishments-messages.temp-mute-message");
+                            for(String messageLine : message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
+                                    .replace("%scope%", scope)
+                                    .replace("%reason%", reason)
+                                    .replace("%time_left%", timeLeftString)
+                                    .replace("%expiration_time%", expiresAtString)
+                                    .replace("%id%", tempMute.getId())
+                            ));
+                        }
+                        return true;
+                    }
+                }
+
+                //Check if the player is muted permanently
+                Punishment permMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.PERM_MUTE);
+                if(permMute != null && (permMute.getScope() == PunishmentScopes.MINECRAFT || permMute.getScope() == PunishmentScopes.GLOBAL)){
+                    if(permMute.isActive()){
+                        //Sends the target player a message (if the messages are toggled)
+                        //Getting the reason and scope
+                        String reason = permMute.getReason();
+                        String scope = getColoredScope(permMute.getScope());
+
+                        //Sending the message
+                        List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
+                        for(String messageLine: message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
                                 .replace("%scope%", scope)
                                 .replace("%reason%", reason)
-                                .replace("%time_left%", timeLeftString)
-                                .replace("%expiration_time%", expiresAtString)
-                                .replace("%id%", tempMute.getId())
+                                .replace("%id%", permMute.getId())
                         ));
+                        return true;
                     }
-                    return true;
                 }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
             }
-
-            //Check if the player is muted permanently
-            Punishment permMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.PERM_MUTE);
-            if(permMute != null && (permMute.getScope() == PunishmentScopes.MINECRAFT || permMute.getScope() == PunishmentScopes.GLOBAL)){
-                if(permMute.isActive()){
-                    //Sends the target player a message (if the messages are toggled)
-                    //Getting the reason and scope
-                    String reason = permMute.getReason();
-                    String scope = getColoredScope(permMute.getScope());
-
-                    //Sending the message
-                    List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
-                    for(String messageLine: message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                            .replace("%scope%", scope)
-                            .replace("%reason%", reason)
-                            .replace("%id%", permMute.getId())
-                    ));
-                    return true;
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
 
         //Checking if the player has permission for commands
@@ -141,9 +143,9 @@ public class Commands implements CommandExecutor{
                         return true;
                     }
 
-                    player.playSound(player.getLocation(), good, 1f, 1.4f);
                     try {
                         plugin.getPlayerHeadsGUIs().showGui(player, 1);
+                        player.playSound(player.getLocation(), good, 1f, 1.4f);
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }

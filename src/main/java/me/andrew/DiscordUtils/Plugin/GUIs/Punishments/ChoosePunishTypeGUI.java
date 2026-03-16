@@ -123,11 +123,13 @@ public class ChoosePunishTypeGUI implements Listener{
             }
 
             state.duration = durationMillis;
+            plugin.getChoosePunishScopeGUI().showGui(player);
         });
     }
 
     //Method for entering the reason for the punishment
     private void enterReason(Player player, AddingState state){
+        player.closeInventory();
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the reason for the punishment. Type &c&lcancel &ato return."));
         plugin.waitForPlayerInput(player, input -> {
             if(input.equalsIgnoreCase("cancel")){
@@ -139,9 +141,10 @@ public class ChoosePunishTypeGUI implements Listener{
 
             state.lastInteraction = System.currentTimeMillis();
             state.reason = input;
-        });
 
-        if(!state.type.isPermanent()) enterDuration(player, state);
+            if(!state.type.isPermanent()) enterDuration(player, state);
+            else plugin.getChoosePunishScopeGUI().showGui(player);
+        });
     }
 
     //Method for parsing from the cooldown string to milliseconds

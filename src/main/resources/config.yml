@@ -136,7 +136,7 @@ player-verified-message: #You can have more lines.
   - "&aCongrats! You have officially been verified."
 
 #Set the number of digits for the Punishment IDs.
-punishment-id-length: 6 #The ID structure is '#'+the digits!
+punishment-id-length: 6 #The ID structure is '#' + the digits!
 
 #Set the MINUTES for the inactivity. Helps to clean the AddingState map.
 inactivity-minutes: 1
@@ -145,10 +145,7 @@ inactivity-minutes: 1
 rewards:
   toggle-giving-rewards: false #Whether you want to give rewards when a player verifies or not
   exp: 0 #In levels. It cannot be < 0!
-  items: #Items, you have an example here of how to write them. You can add as many rewards as you want.
-    bread:
-      material: bread
-      quantity: 32
+  items: "" #The items for the reward. 
 
 #Configure the punishment messages.
 player-punishments-messages:

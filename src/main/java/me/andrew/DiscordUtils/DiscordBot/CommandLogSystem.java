@@ -29,7 +29,7 @@ public class CommandLogSystem implements Listener {
         if(!toggleDcBot) return;
 
         //Checking if the feature is toggled
-        if(botConfig.getBoolean("command-logging.toggle")){
+        if(botConfig.getBoolean("command-logging.toggle", false)){
             Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
             //Checking if the command is one of the ones that don't need to be logged

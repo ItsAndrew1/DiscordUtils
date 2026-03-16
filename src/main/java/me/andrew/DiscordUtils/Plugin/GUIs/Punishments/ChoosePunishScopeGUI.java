@@ -99,73 +99,6 @@ public class ChoosePunishScopeGUI implements Listener {
         item.setItemMeta(meta);
         return item;
     }
-    private void error(Player player, PunishmentScopes scope, PunishmentType punishmentType){
-        String chatPrefix = plugin.getConfig().getString("chat-prefix");
-        OfflinePlayer targetPlayer = plugin.getPlayerHeadsGUIs().getClickedPlayer();
-        String message = "";
-
-        player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-        switch(punishmentType){
-            case PunishmentType.PERM_BAN:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&l BAN");
-                    case PunishmentScopes.GLOBAL -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL BAN");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix + "&cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&l BAN");
-                }
-                break;
-            case PunishmentType.PERM_MUTE:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&l MUTE");
-                    case PunishmentScopes.GLOBAL -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL  MUTE");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix + "&cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&lMUTE");
-                }
-                break;
-            case PunishmentType.TEMP_BAN:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&lBAN");
-                    case PunishmentScopes.GLOBAL -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL BAN");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix + "&cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&lBAN");
-                }
-                break;
-            case PunishmentType.TEMP_MUTE:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&lMUTE");
-                    case PunishmentScopes.GLOBAL -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL MUTE");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix + "&cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&lMUTE");
-                }
-                break;
-            case PunishmentType.PERM_BAN_WARN:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&lBAN");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&lBAN");
-                    case PunishmentScopes.GLOBAL -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL BAN");
-                }
-                break;
-            case PunishmentType.PERM_MUTE_WARN:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&lMUTE");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&lMUTE");
-                    case PunishmentScopes.GLOBAL ->message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL MUTE");
-                }
-                break;
-            case PunishmentType.TEMP_BAN_WARN:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&lBAN!");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&lBAN");
-                    case PunishmentScopes.GLOBAL ->message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL BAN");
-                }
-                break;
-            case PunishmentType.TEMP_MUTE_WARN:
-                switch(scope){
-                    case PunishmentScopes.DISCORD -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &9&lDISCORD &e&lMUTE!");
-                    case PunishmentScopes.MINECRAFT -> message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive MINECRAFT &e&lMUTE");
-                    case PunishmentScopes.GLOBAL ->message = ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cPlayer &e"+targetPlayer.getName()+" &calready has an &a&lactive &e&lGLOBAL MUTE");
-                }
-                break;
-        }
-
-        player.sendMessage(message);
-    }
 
     private void checkForWarns(Player staff, OfflinePlayer targetPlayer, AddingState state) throws SQLException {
         PunishmentType type = state.type;
@@ -257,119 +190,35 @@ public class ChoosePunishScopeGUI implements Listener {
         }
 
         OfflinePlayer targetPlayer =  plugin.getPlayerHeadsGUIs().getClickedPlayer();
+
         //If the player clicks on discord scope button
-        if(clickedMaterial.equals(Material.PLAYER_HEAD) && clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD"))){
-            //Checking if the bot is configured properly
-            if(!isBotConfigured()){
-                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThe &9&lDiscord Bot &cis not set up properly!"));
+        if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD"))){
+            //Checking if the bot is configured
+            if(!isBotConfigured()) {
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThe bot is not configured. Please configure it in the &ebotconfig.yml&c file."));
                 return;
             }
 
-            //Check if the target player is banned on discord
-            if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, state.type);
-                return;
-            }
-
-            //Check if the target player is banned globally
-            if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, state.type);
-                return;
-            }
-
-            //Check if the target player is muted on discord
-            if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, state.type);
-                return;
-            }
-
-            //Check if the target player is muted globally
-            if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, state.type);
-                return;
-            }
-
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.scope = PunishmentScopes.DISCORD;
         }
 
         //If the player clicks on minecraft scope button
-        if(clickedMaterial.equals(Material.PLAYER_HEAD) && clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&2&lMINECRAFT"))){
-            //Check if the target player is banned on minecraft
-            if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT, state.type);
-                return;
-            }
-
-            //Check if the target player is banned globally
-            if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, state.type);
-                return;
-            }
-
-            //Check if the target player is muted on minecraft
-            if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT, state.type);
-                return;
-            }
-
-            //Check if the target player is muted globally
-            if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)){
-                error(player, PunishmentScopes.GLOBAL, state.type);
-                return;
-            }
-
-            player.playSound(player.getLocation(),  Sound.UI_BUTTON_CLICK, 1f, 1f);
-            state.scope = PunishmentScopes.MINECRAFT;
-        }
+        if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&2&lMINECRAFT"))) state.scope = PunishmentScopes.MINECRAFT;
 
         //If the player clicks on global scope button
-        String chatPrefix = plugin.getConfig().getString("chat-prefix");
-        if(clickedMaterial.equals(Material.PLAYER_HEAD) && clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&6&lGLOBAL"))){
-            //Check if the player is banned globally
-            if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)) {
-                error(player, PunishmentScopes.GLOBAL, state.type);
+        if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&6&lGLOBAL"))) {
+            if(!isBotConfigured()) {
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThe bot is not configured. Please configure it in the &ebotconfig.yml&c file."));
                 return;
             }
 
-            //Check if the player is banned on discord
-            if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, state.type);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &a&lMINECRAFT &coption instead!"));
-                return;
-            }
-
-            //Check if the player is banned on minecraft
-            if(plugin.getDatabaseManager().isPlayerBanned(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT, state.type);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &9&lDISCORD &coption instead!"));
-                return;
-            }
-
-            //Check if the player is muted globally
-            if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.GLOBAL)) {
-                error(player, PunishmentScopes.GLOBAL, state.type);
-                return;
-            }
-
-            //Check if the target player is muted on discord
-            if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.DISCORD)){
-                error(player, PunishmentScopes.DISCORD, state.type);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &a&lMINECRAFT &coption instead!"));
-                return;
-            }
-
-            //Check if the target player is muted on minecraft
-            if(plugin.getDatabaseManager().isPlayerMuted(targetPlayer.getUniqueId(), PunishmentScopes.MINECRAFT)){
-                error(player, PunishmentScopes.MINECRAFT, state.type);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cYou may choose the &9&lDISCORD &coption instead!"));
-                return;
-            }
-
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             state.scope = PunishmentScopes.GLOBAL;
         }
+
+        //Checking if the target player already has a punishment of that scope.
+        if(state.scope.playerAlreadyHasPunishment(state.type, targetPlayer, player, plugin)) return;
 
         checkForWarns(player, targetPlayer, state);
     }

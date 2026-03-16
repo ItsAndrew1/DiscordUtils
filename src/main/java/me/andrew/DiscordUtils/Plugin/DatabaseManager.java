@@ -266,6 +266,22 @@ public class DatabaseManager {
         }
     }
 
+    public boolean playerHasPunishment(UUID uuid, PunishmentType type, PunishmentScopes scope) throws SQLException {
+        boolean has = false;
+
+        String statement = "SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?";
+        try(PreparedStatement ps = connection.prepareStatement(statement)){
+            ps.setString(1, uuid.toString());
+            ps.setString(2, type.toString());
+            ps.setString(3, scope.name());
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()) has = true;
+            }
+        }
+
+        return has;
+    }
+
     public boolean isPlayerBanned(UUID uuid, PunishmentScopes scope) throws SQLException {
         boolean permBanned = false;
         try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
