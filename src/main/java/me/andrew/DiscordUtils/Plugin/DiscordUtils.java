@@ -419,11 +419,10 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("             DiscordUtils has been initialized successfully!");
         Bukkit.getLogger().info(" ");
-        Bukkit.getLogger().info("IMPORTANT: To toggle on the discord-block, run /dcutils configuration,");
-        Bukkit.getLogger().info("          configure the block, and then run /dcutils reload!");
+        Bukkit.getLogger().info("  If you don't know how to set up the bot and all, watch the Demo Video,");
+        Bukkit.getLogger().info("              as it shows a lot of important information.");
         Bukkit.getLogger().info(" ");
-        Bukkit.getLogger().info("ALSO IMPORTANT: For the discord bot, go into config.yml and configure the bot.");
-        Bukkit.getLogger().info("         Then, restart the server. More instructions are there!");
+        Bukkit.getLogger().info("      Also, I wrote information in both .yml files, so read thoroughly!");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("                 Thank you for using DiscordUtils!");
         Bukkit.getLogger().info(" ");
