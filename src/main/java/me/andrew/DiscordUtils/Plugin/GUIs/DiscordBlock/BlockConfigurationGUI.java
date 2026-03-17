@@ -133,7 +133,7 @@ public class BlockConfigurationGUI implements Listener {
 
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the &lworld &afor the block: "));
             plugin.waitForPlayerInput(player, input->{
-                plugin.getConfig().set("block-world", input);
+                plugin.getConfig().set("discord-block.world", input);
                 plugin.saveConfig();
 
                 Sound goodWorld = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
@@ -173,7 +173,7 @@ public class BlockConfigurationGUI implements Listener {
                 double coordinateX;
                 try{
                     coordinateX = Double.parseDouble(input1);
-                    plugin.getConfig().set("block-x", coordinateX);
+                    plugin.getConfig().set("discord-block.location.x", coordinateX);
                     plugin.saveConfig();
                 } catch (Exception e){
                     Sound invalidCoordinate = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
@@ -199,7 +199,7 @@ public class BlockConfigurationGUI implements Listener {
                     double coordinateY;
                     try{
                         coordinateY = Double.parseDouble(input2);
-                        plugin.getConfig().set("block-y", coordinateY);
+                        plugin.getConfig().set("discord-block.location.y", coordinateY);
                         plugin.saveConfig();
                     } catch (Exception e){
                         Sound InvalidCoordinate = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
@@ -225,7 +225,7 @@ public class BlockConfigurationGUI implements Listener {
                         //Check if the coordinate is valid
                         try{
                             coordinateZ = Double.parseDouble(input3);
-                            plugin.getConfig().set("block-z", coordinateZ);
+                            plugin.getConfig().set("discord-block.location.z", coordinateZ);
                             plugin.saveConfig();
                         } catch (Exception e){
                             Sound invalidCoord = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));

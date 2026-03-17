@@ -296,7 +296,7 @@ public class FacingChoiceGUI implements Listener {
             e.setCancelled(true);
             player.closeInventory();
 
-            plugin.getConfig().set("facing", choice);
+            plugin.getConfig().set("discord-block.facing", choice);
             plugin.saveConfig();
 
             Sound savedChoice =  Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
