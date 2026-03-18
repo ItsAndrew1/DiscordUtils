@@ -16,11 +16,11 @@ database-system:
   file-name: "database.db" #This is ONLY for SQLite, and it is ONLY a name for the file
 
   #These are the settings for the MySQL database. If you don't use MySQL, you can ignore this.
-  host:
-  port:
-  database:
-  username:
-  password:
+  host: ""
+  port: ""
+  database: ""
+  username: ""
+  password: ""
 
 #Broadcast custom message configuration
 autobroadcast:

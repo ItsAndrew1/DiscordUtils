@@ -22,6 +22,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -295,7 +296,47 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             discordBot.getJda().shutdownNow(); //Shuts down the bot if it is turned on
         }
 
+        //Removing the cooldowns from the verification if the players have any
+        Connection dbConnection = getDatabaseManager().getConnection();
+        if(dbConnection != null){
+            for(Player player : Bukkit.getOnlinePlayers()){
+                //Checking if that player has ongoing verification
+                try {
+                    if(!getDatabaseManager().isPlayerVerifying(player.getUniqueId())) return;
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                try {
+                    UUID playerUUID = player.getUniqueId();
+                    getDatabaseManager().deleteExpiredCode(playerUUID);
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
+    }
+
+    //Quit event to remove the verification cooldown of the player.
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event){
+        Player player = event.getPlayer();
+        UUID playerUUID = player.getUniqueId();
+
+        //Checking if that player has ongoing verification
+        try {
+            if(!getDatabaseManager().isPlayerVerifying(player.getUniqueId())) return;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            getDatabaseManager().deleteExpiredCode(playerUUID);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     //Handles the chat input for different configurations of the plugin
