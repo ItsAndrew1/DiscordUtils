@@ -28,6 +28,10 @@ public class CommandLogSystem implements Listener {
         boolean toggleDcBot = botConfig.getBoolean("toggle-discord-bot", false);
         if(!toggleDcBot) return;
 
+        //Checking if the command logging channel is configured
+        String commandLogChannelId = botConfig.getString("command-logging.channel-id");
+        if(commandLogChannelId == null) return;
+
         //Checking if the feature is toggled
         if(botConfig.getBoolean("command-logging.toggle", false)){
             Guild dcServer = plugin.getDiscordBot().getDiscordServer();

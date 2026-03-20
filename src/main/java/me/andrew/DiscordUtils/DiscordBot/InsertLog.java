@@ -57,6 +57,8 @@ public class InsertLog {
 
     private void onlyOneChannel(){
         String channelId = botConfig.getString("logs.channel-id");
+        if(channelId == null) return;
+
         TextChannel channel = bot.getDiscordServer().getTextChannelById(channelId);
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(targetUUID);
 
@@ -105,6 +107,8 @@ public class InsertLog {
 
         if(type == PunishmentType.KICK){
             String kickChannelId = botConfig.getString("logs.multiple-channel-id.kicks-channel-id");
+            if(kickChannelId == null) return;
+
             TextChannel channel = bot.getDiscordServer().getTextChannelById(kickChannelId);
 
             //Building the Embed
@@ -122,6 +126,8 @@ public class InsertLog {
 
         if(isAWarn(type)){
             String warnsChannelID = botConfig.getString("logs.multiple-channel-id.warnings-channel-id");
+            if(warnsChannelID == null) return;
+
             TextChannel channel = bot.getDiscordServer().getTextChannelById(warnsChannelID);
 
             //Building the Embed
@@ -147,6 +153,8 @@ public class InsertLog {
 
         if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
             String bansChannelID = botConfig.getString("logs.multiple-channel-id.bans-channel-id");
+            if(bansChannelID == null) return;
+
             TextChannel channel = bot.getDiscordServer().getTextChannelById(bansChannelID);
 
             //Building the Embed
@@ -173,6 +181,8 @@ public class InsertLog {
 
         if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
             String mutesChannelID = botConfig.getString("logs.multiple-channel-id.mutes-channel-id");
+            if(mutesChannelID == null) return;
+
             TextChannel channel = bot.getDiscordServer().getTextChannelById(mutesChannelID);
 
             //Building the Embed

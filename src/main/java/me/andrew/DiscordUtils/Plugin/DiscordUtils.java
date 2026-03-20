@@ -150,79 +150,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 Bukkit.getLogger().warning(e.getMessage());
             }
 
-            //Sends an embed on the verification channel, but first I check if everything is alright with the channel and the roles
-            String verifiedRoleID = botFile().getConfig().getString("verification.verified-role-id");
-            String unverifiedRoleID = botFile().getConfig().getString("verification.unverified-role-id");
-            String verifyChannelID = botFile().getConfig().getString("verification.verify-channel-id");
-
-            //Checking if the IDs are empty
-            if(verifiedRoleID == null || unverifiedRoleID == null || verifyChannelID == null){
-                Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are null!");
-            }
-            else{
-                long verifyChannelIDlong;
-
-                try{
-                    long verifiedRoleIDlong =  Long.parseLong(verifiedRoleID);
-                    long unverifiedRoleIDlong =  Long.parseLong(unverifiedRoleID);
-                    verifyChannelIDlong = Long.parseLong(verifyChannelID);
-                } catch (Exception e){
-                    Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are invalid!");
-                    Bukkit.getLogger().warning(e.getMessage());
-                    getServer().getPluginManager().disablePlugin(this);
-                    return;
-                }
-
-                try{
-                    TextChannel verifyChannel = discordBot.getJda().getTextChannelById(verifyChannelIDlong);
-                    verifyChannel.getHistory().retrievePast(1).queue(messages -> {
-                        if(messages.isEmpty()){
-                            //Getting the color
-                            int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED", 138);
-                            int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE", 226);
-                            int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN", 43);
-                            Color embedColor = Color.fromRGB(redValue, blueValue, greenValue);
-
-                            //Getting the title and the description
-                            String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title", "VERIFY YOUR ACCOUNT!");
-                            String description = botConfig.getConfig().getString("verification.verify-channel-embed-description", "**Welcome to %server_name%!**\n\nTo start your adventure: \n1.) Head over to our **Minecraft Server**\n2.) Run */verify* to get a **code**\n3.) Come back here and run */verify <code>*\n4.) Have fun on our server!");
-                            verifyChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
-                        }
-                    });
-                } catch (Exception e){
-                    Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when sending the embed to the 'verify' channel. See message:");
-                    Bukkit.getLogger().warning(e.getMessage());
-                    getServer().getPluginManager().disablePlugin(this);
-                    return;
-                }
-            }
-
-            //Sending the embed in the banUsersChannel.
-            String banUsersChannelIDs = botConfig.getConfig().getString("banned-users-channel.id");
-            try{
-                long banUsersChannelID = Long.parseLong(banUsersChannelIDs);
-                TextChannel bannedUsersChannel = discordBot.getJda().getTextChannelById(banUsersChannelID);
-
-                bannedUsersChannel.getHistory().retrievePast(1).queue(messages -> {
-                    if(messages.isEmpty()){
-                        //Getting the color
-                        int redValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.RED");
-                        int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.GREEN");
-                        int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.BLUE");
-                        Color embedColor = Color.fromRGB(redValue, greenValue, blueValue);
-
-                        //Getting the title and description
-                        String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed-title");
-                        String description = botConfig.getConfig().getString("banned-users-channel.embed-description");
-                        bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).addComponents(ActionRow.of(Button.primary("getbantype", "Get Your Ban ID"))).queue();
-                    }
-                });
-            } catch(Exception e){
-                Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'banned-users-channel (botconfig.yml)'. See message:");
-                Bukkit.getLogger().warning(e.getMessage());
-                getServer().getPluginManager().disablePlugin(this);
-                return;
-            }
+            sendEmbedInVerificationChannel();
+            sendEmbedInBannedChannel();
 
             //Runs a task to auto expire the punishments
             Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
@@ -256,6 +185,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                                         if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
                                             //Removing the banned role (and giving the 'Verified' role) from the member if he has the role
                                             long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
+                                            long verifiedRoleID = botConfig.getConfig().getLong("verification.verified-role-id");
                                             Role bannedRole = dcServer.getRoleById(bannedRoleID);
                                             dcServer.retrieveMemberById(userId).queue(member -> {
                                                 if(member.getRoles().contains(bannedRole)){
@@ -263,7 +193,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                                                     dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
                                                 }
                                             });
-
                                         }
                                         if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
                                             //Removes the timeout role of the member if he has the role
@@ -285,6 +214,79 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                     throw new RuntimeException(e);
                 }
             }, 0L, 20L*5); //Runs every 5 seconds
+        }
+    }
+
+    private void sendEmbedInBannedChannel(){
+        //Sending the embed in the banUsersChannel.
+        String banUsersChannelIDs = botConfig.getConfig().getString("banned-users-channel.id");
+        try{
+            long banUsersChannelID = Long.parseLong(banUsersChannelIDs);
+            TextChannel bannedUsersChannel = discordBot.getJda().getTextChannelById(banUsersChannelID);
+
+            bannedUsersChannel.getHistory().retrievePast(1).queue(messages -> {
+                if(messages.isEmpty()){
+                    //Getting the color
+                    int redValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.RED");
+                    int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.GREEN");
+                    int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.BLUE");
+                    Color embedColor = Color.fromRGB(redValue, greenValue, blueValue);
+
+                    //Getting the title and description
+                    String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed-title");
+                    String description = botConfig.getConfig().getString("banned-users-channel.embed-description");
+                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).addComponents(ActionRow.of(Button.primary("getbantype", "Get Your Ban ID"))).queue();
+                }
+            });
+        } catch(Exception e){
+            Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'banned-users-channel (botconfig.yml)'. See message:");
+            Bukkit.getLogger().warning(e.getMessage());
+        }
+    }
+
+    private void sendEmbedInVerificationChannel(){
+        //Sends an embed on the verification channel, but first I check if everything is alright with the channel and the roles
+        String verifiedRoleID = botFile().getConfig().getString("verification.verified-role-id");
+        String unverifiedRoleID = botFile().getConfig().getString("verification.unverified-role-id");
+        String verifyChannelID = botFile().getConfig().getString("verification.verify-channel-id");
+
+        //Checking if the IDs are empty
+        if(verifiedRoleID == null || unverifiedRoleID == null || verifyChannelID == null){
+            Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are null!");
+        }
+        else{
+            long verifyChannelIDlong;
+
+            try{
+                long verifiedRoleIDlong =  Long.parseLong(verifiedRoleID);
+                long unverifiedRoleIDlong =  Long.parseLong(unverifiedRoleID);
+                verifyChannelIDlong = Long.parseLong(verifyChannelID);
+            } catch (Exception e){
+                Bukkit.getLogger().warning("[DISCORDUTILS] One/More IDs in 'verification' section - botconfig.yml are invalid!");
+                Bukkit.getLogger().warning(e.getMessage());
+                return;
+            }
+
+            try{
+                TextChannel verifyChannel = discordBot.getJda().getTextChannelById(verifyChannelIDlong);
+                verifyChannel.getHistory().retrievePast(1).queue(messages -> {
+                    if(messages.isEmpty()){
+                        //Getting the color
+                        int redValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.RED", 138);
+                        int blueValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.BLUE", 226);
+                        int greenValue = botConfig.getConfig().getInt("verification.verify-channel-embed-color.GREEN", 43);
+                        Color embedColor = Color.fromRGB(redValue, blueValue, greenValue);
+
+                        //Getting the title and the description
+                        String embedTitle = botConfig.getConfig().getString("verification.verify-channel-embed-title", "VERIFY YOUR ACCOUNT!");
+                        String description = botConfig.getConfig().getString("verification.verify-channel-embed-description", "**Welcome to %server_name%!**\n\nTo start your adventure: \n1.) Head over to our **Minecraft Server**\n2.) Run */verify* to get a **code**\n3.) Come back here and run */verify <code>*\n4.) Have fun on our server!");
+                        verifyChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).queue();
+                    }
+                });
+            } catch (Exception e){
+                Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem when sending the embed to the 'verify' channel. See message:");
+                Bukkit.getLogger().warning(e.getMessage());
+            }
         }
     }
 
