@@ -57,7 +57,7 @@ public class InsertLog {
 
     private void onlyOneChannel(){
         String channelId = botConfig.getString("logs.channel-id");
-        if(channelId == null) return;
+        if(channelId == null || channelId.isEmpty()) return;
 
         TextChannel channel = bot.getDiscordServer().getTextChannelById(channelId);
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(targetUUID);
@@ -107,7 +107,7 @@ public class InsertLog {
 
         if(type == PunishmentType.KICK){
             String kickChannelId = botConfig.getString("logs.multiple-channel-id.kicks-channel-id");
-            if(kickChannelId == null) return;
+            if(kickChannelId == null || kickChannelId.isEmpty()) return;
 
             TextChannel channel = bot.getDiscordServer().getTextChannelById(kickChannelId);
 
@@ -126,7 +126,7 @@ public class InsertLog {
 
         if(isAWarn(type)){
             String warnsChannelID = botConfig.getString("logs.multiple-channel-id.warnings-channel-id");
-            if(warnsChannelID == null) return;
+            if(warnsChannelID == null || warnsChannelID.isEmpty()) return;
 
             TextChannel channel = bot.getDiscordServer().getTextChannelById(warnsChannelID);
 
@@ -153,7 +153,7 @@ public class InsertLog {
 
         if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
             String bansChannelID = botConfig.getString("logs.multiple-channel-id.bans-channel-id");
-            if(bansChannelID == null) return;
+            if(bansChannelID == null || bansChannelID.isEmpty()) return;
 
             TextChannel channel = bot.getDiscordServer().getTextChannelById(bansChannelID);
 
@@ -181,7 +181,7 @@ public class InsertLog {
 
         if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
             String mutesChannelID = botConfig.getString("logs.multiple-channel-id.mutes-channel-id");
-            if(mutesChannelID == null) return;
+            if(mutesChannelID == null || mutesChannelID.isEmpty()) return;
 
             TextChannel channel = bot.getDiscordServer().getTextChannelById(mutesChannelID);
 
