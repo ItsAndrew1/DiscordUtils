@@ -54,7 +54,7 @@ public enum PunishmentType{
         }
     },
 
-    KICK(false){
+    KICK(true){
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyKick();
         }

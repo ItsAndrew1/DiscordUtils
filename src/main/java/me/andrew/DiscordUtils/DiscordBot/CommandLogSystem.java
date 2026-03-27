@@ -29,8 +29,8 @@ public class CommandLogSystem implements Listener {
         if(!toggleDcBot) return;
 
         //Checking if the command logging channel is configured
-        String commandLogChannelId = botConfig.getString("command-logging.channel-id");
-        if(commandLogChannelId == null) return;
+        String commandLogChannelId = botConfig.getString("command-logging.channel-id", null);
+        if(commandLogChannelId == null || commandLogChannelId.isEmpty()) return;
 
         //Checking if the feature is toggled
         if(botConfig.getBoolean("command-logging.toggle", false)){
