@@ -20,7 +20,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.jspecify.annotations.NonNull;
 
 import java.awt.*;
 import java.sql.Connection;
@@ -40,7 +39,7 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     @Override
-    public void onSlashCommandInteraction(@NonNull SlashCommandInteractionEvent event) {
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
         switch (event.getName()) {

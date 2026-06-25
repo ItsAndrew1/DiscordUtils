@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.jspecify.annotations.NonNull;
 
 //Helper class to automatically delete the messages the users may send in those channels.
 public class MessageDeleteSystem extends ListenerAdapter {
@@ -18,7 +17,7 @@ public class MessageDeleteSystem extends ListenerAdapter {
     }
 
     @Override
-    public void onMessageReceived(@NonNull MessageReceivedEvent event){
+    public void onMessageReceived(MessageReceivedEvent event){
         if(event.getAuthor().isBot()) return;
 
         FileConfiguration botConfig = plugin.botFile().getConfig();

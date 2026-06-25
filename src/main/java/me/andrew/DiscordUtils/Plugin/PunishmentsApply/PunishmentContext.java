@@ -3,11 +3,7 @@ package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import org.bukkit.Bukkit;
@@ -15,7 +11,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.jspecify.annotations.NonNull;
 
 import java.awt.*;
 import java.security.SecureRandom;

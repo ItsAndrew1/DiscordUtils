@@ -312,9 +312,9 @@ public class Commands implements CommandExecutor{
     }
     private String getColoredScope(PunishmentScopes scope){
         return switch(scope){
-            case PunishmentScopes.DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
-            case PunishmentScopes.GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
-            case PunishmentScopes.MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
+            case DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
+            case GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
+            case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
         };
     }
 }

@@ -70,9 +70,9 @@ public class ChoosePunishScopeGUI implements Listener {
         AddingState state = plugin.getPunishmentsAddingStates().get(staff.getUniqueId());
 
         return switch(state.scope){
-            case PunishmentScopes.DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
-            case PunishmentScopes.MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
-            case PunishmentScopes.GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
+            case DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
+            case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
+            case GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
         };
     }
     private ItemStack createButton(Material mat, String displayName, List<String> lore, String customHeadValue){

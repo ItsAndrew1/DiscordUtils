@@ -190,11 +190,11 @@ public class PunishmentsGUI implements Listener{
     private ItemStack createPunishmentItem(Punishment p){
         //Setting the material based on the punishment type
         Material pmMat = switch(p.getPunishmentType()){
-            case PunishmentType.PERM_BAN, PERM_BAN_WARN -> Material.NETHERITE_AXE;
-            case PunishmentType.TEMP_BAN, TEMP_BAN_WARN -> Material.IRON_AXE;
-            case PunishmentType.KICK -> Material.LEATHER_BOOTS;
-            case PunishmentType.PERM_MUTE, PERM_MUTE_WARN -> Material.SOUL_LANTERN;
-            case PunishmentType.TEMP_MUTE, TEMP_MUTE_WARN -> Material.LANTERN;
+            case PERM_BAN, PERM_BAN_WARN -> Material.NETHERITE_AXE;
+            case TEMP_BAN, TEMP_BAN_WARN -> Material.IRON_AXE;
+            case KICK -> Material.LEATHER_BOOTS;
+            case PERM_MUTE, PERM_MUTE_WARN -> Material.SOUL_LANTERN;
+            case TEMP_MUTE, TEMP_MUTE_WARN -> Material.LANTERN;
         };
 
         ItemStack punishmentItem = new ItemStack(pmMat);
@@ -202,15 +202,15 @@ public class PunishmentsGUI implements Listener{
 
         //Setting the display name based on the punishment type
         String displayName = switch(p.getPunishmentType()){
-            case PunishmentType.PERM_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN");
-            case PunishmentType.PERM_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN WARN");
-            case PunishmentType.TEMP_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN");
-            case PunishmentType.TEMP_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN WARN");
-            case PunishmentType.KICK -> ChatColor.translateAlternateColorCodes('&', "&e&lKICK");
-            case PunishmentType.PERM_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE");
-            case PunishmentType.PERM_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE WARN");
-            case PunishmentType.TEMP_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE");
-            case PunishmentType.TEMP_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE WARN");
+            case PERM_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN");
+            case PERM_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN WARN");
+            case TEMP_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN");
+            case TEMP_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN WARN");
+            case KICK -> ChatColor.translateAlternateColorCodes('&', "&e&lKICK");
+            case PERM_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE");
+            case PERM_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE WARN");
+            case TEMP_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE");
+            case TEMP_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE WARN");
         };
         punishmentItemMeta.setDisplayName(displayName);
 
@@ -237,9 +237,9 @@ public class PunishmentsGUI implements Listener{
 
         //Formats the scope of the punishment
         String punishmentScope = switch(p.getScope()){
-            case PunishmentScopes.MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
-            case PunishmentScopes.DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
-            case PunishmentScopes.GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
+            case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
+            case DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
+            case GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
         };
 
         //Adds enchant glint if the punishment is a warning

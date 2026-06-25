@@ -9,7 +9,6 @@ import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.jspecify.annotations.NonNull;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,7 +24,7 @@ public class MemberJoinEvent extends ListenerAdapter {
     }
 
     @Override
-    public void onGuildMemberJoin(@NonNull GuildMemberJoinEvent event) {
+    public void onGuildMemberJoin(GuildMemberJoinEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
         //This event should only fire when the discord bot is toggled
