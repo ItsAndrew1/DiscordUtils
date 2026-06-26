@@ -27,44 +27,22 @@ public class DiscordBlock implements Listener {
         this.plugin = plugin;
     }
 
-    public void removeDiscordBlock(){
-        FileConfiguration config = plugin.getConfig();
-
-        int blockX = config.getInt("discord-block.location.x", 0);
-        int blockY = config.getInt("discord-block.location.y", 0);
-        int blockZ = config.getInt("discord-block.location.z", 0);
-
-        World world = Bukkit.getWorld(config.getString("discord-block.world"));
-
-        if(blockX == 0 || blockY == 0 || blockZ == 0 || world == null) return;
-
-        Location rawLocation = new Location(world, blockX, blockY, blockZ);
-        Location blockLocation = new Location(world, rawLocation.getBlockX(), rawLocation.getBlockY(), rawLocation.getBlockZ());
-        Block discordBlock = blockLocation.getBlock();
-        discordBlock.setType(Material.AIR, false);
-    }
-
     public void spawnDiscordBlock(){
         //Get the block coordinates and checks them
         int blockX, blockY, blockZ;
-        try{
-            String StringBlockX = plugin.getConfig().getString("discord-block.location.x");
-            String StringBlockY = plugin.getConfig().getString("discord-block.location.y");
-            String StringBlockZ = plugin.getConfig().getString("discord-block.location.z");
+        String StringBlockX = plugin.getConfig().getString("discord-block.location.x");
+        String StringBlockY = plugin.getConfig().getString("discord-block.location.y");
+        String StringBlockZ = plugin.getConfig().getString("discord-block.location.z");
 
-            //Check if one of the coordinates is null
-            if(StringBlockX == null || StringBlockY == null || StringBlockZ == null){
-                Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is NULL! Block will not show up.");
-                return;
-            }
-
-            blockX = Integer.parseInt(StringBlockX);
-            blockY = Integer.parseInt(StringBlockY);
-            blockZ = Integer.parseInt(StringBlockZ);
-        } catch (Exception e){
-            Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is INVALID! Block will not show up.");
+        //Check if one of the coordinates is null
+        if(StringBlockX == null || StringBlockY == null || StringBlockZ == null){
+            Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is NULL! Block will not show up.");
             return;
         }
+
+        blockX = Integer.parseInt(StringBlockX);
+        blockY = Integer.parseInt(StringBlockY);
+        blockZ = Integer.parseInt(StringBlockZ);
 
         if(blockX < 0) blockX--;
         if(blockZ < 0) blockZ--;
@@ -117,15 +95,17 @@ public class DiscordBlock implements Listener {
 
     public void startParticleTask(){
         FileConfiguration config = plugin.getConfig();
-
-        //Checks if the particles are toggled
         boolean toggleParticle = config.getBoolean("discord-block.particles.toggle", true);
+        if(!toggleParticle){
+            getParticleTask().cancel();
+            return;
+        }
+
         if(!toggleParticle && getParticleTask() != null && !getParticleTask().isCancelled()){
             getParticleTask().cancel();
             return;
         }
 
-        //Returns if the particles are already toggled
         if(getParticleTask() != null && !getParticleTask().isCancelled()) return;
 
         //Gets the particle
@@ -151,8 +131,8 @@ public class DiscordBlock implements Listener {
                 return;
             }
 
-            blockX = Integer.parseInt(StringBlockX);
             blockY = Integer.parseInt(StringBlockY);
+            blockX = Integer.parseInt(StringBlockX);
             blockZ = Integer.parseInt(StringBlockZ);
         } catch (Exception e){
             Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is INVALID! Particle will not show up.");
@@ -165,6 +145,13 @@ public class DiscordBlock implements Listener {
             Bukkit.getLogger().warning("[DISCORDUTILS] World for discord-block NOT found! Particle will not show up.");
             return;
         }
+
+        //Correcting the X/Z Coordinates
+        if(blockX < 0) blockX -= 0.5;
+        else blockX += 0.5;
+
+        if(blockZ < 0) blockZ -= 0.5;
+        else blockZ += 0.5;
 
         double offsetX = config.getDouble("discord-block.particles.offsetX", 0.4);
         double offsetY = config.getDouble("discord-block.particles.offsetY", 0.5);
