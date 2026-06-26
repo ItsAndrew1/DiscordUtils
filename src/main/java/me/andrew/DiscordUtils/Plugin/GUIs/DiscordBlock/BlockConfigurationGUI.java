@@ -170,9 +170,9 @@ public class BlockConfigurationGUI implements Listener {
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the coordinate X:"));
             plugin.waitForPlayerInput(player, input1->{
                 //Checks if the coordinate X is valid
-                double coordinateX;
+                int coordinateX;
                 try{
-                    coordinateX = Double.parseDouble(input1);
+                    coordinateX = Integer.parseInt(input1);
                     plugin.getConfig().set("discord-block.location.x", coordinateX);
                     plugin.saveConfig();
                 } catch (Exception e){
@@ -196,9 +196,9 @@ public class BlockConfigurationGUI implements Listener {
                 //Coordinate Y
                 plugin.waitForPlayerInput(player, input2->{
                     //Check if the coordinate is valid
-                    double coordinateY;
+                    int coordinateY;
                     try{
-                        coordinateY = Double.parseDouble(input2);
+                        coordinateY = Integer.parseInt(input2);
                         plugin.getConfig().set("discord-block.location.y", coordinateY);
                         plugin.saveConfig();
                     } catch (Exception e){
@@ -221,10 +221,10 @@ public class BlockConfigurationGUI implements Listener {
 
                     //Coordinate Z
                     plugin.waitForPlayerInput(player, input3->{
-                        double coordinateZ;
+                        int coordinateZ;
                         //Check if the coordinate is valid
                         try{
-                            coordinateZ = Double.parseDouble(input3);
+                            coordinateZ = Integer.parseInt(input3);
                             plugin.getConfig().set("discord-block.location.z", coordinateZ);
                             plugin.saveConfig();
                         } catch (Exception e){

@@ -27,9 +27,26 @@ public class DiscordBlock implements Listener {
         this.plugin = plugin;
     }
 
+    public void removeDiscordBlock(){
+        FileConfiguration config = plugin.getConfig();
+
+        int blockX = config.getInt("discord-block.location.x", 0);
+        int blockY = config.getInt("discord-block.location.y", 0);
+        int blockZ = config.getInt("discord-block.location.z", 0);
+
+        World world = Bukkit.getWorld(config.getString("discord-block.world"));
+
+        if(blockX == 0 || blockY == 0 || blockZ == 0 || world == null) return;
+
+        Location rawLocation = new Location(world, blockX, blockY, blockZ);
+        Location blockLocation = new Location(world, rawLocation.getBlockX(), rawLocation.getBlockY(), rawLocation.getBlockZ());
+        Block discordBlock = blockLocation.getBlock();
+        discordBlock.setType(Material.AIR, false);
+    }
+
     public void spawnDiscordBlock(){
         //Get the block coordinates and checks them
-        double blockX, blockY, blockZ;
+        int blockX, blockY, blockZ;
         try{
             String StringBlockX = plugin.getConfig().getString("discord-block.location.x");
             String StringBlockY = plugin.getConfig().getString("discord-block.location.y");
@@ -41,13 +58,16 @@ public class DiscordBlock implements Listener {
                 return;
             }
 
-            blockX = Double.parseDouble(StringBlockX);
-            blockY = Double.parseDouble(StringBlockY);
-            blockZ = Double.parseDouble(StringBlockZ);
+            blockX = Integer.parseInt(StringBlockX);
+            blockY = Integer.parseInt(StringBlockY);
+            blockZ = Integer.parseInt(StringBlockZ);
         } catch (Exception e){
             Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is INVALID! Block will not show up.");
             return;
         }
+
+        if(blockX < 0) blockX--;
+        if(blockZ < 0) blockZ--;
 
         //Get and check the world
         World world = Bukkit.getWorld(plugin.getConfig().getString("discord-block.world"));
@@ -61,11 +81,10 @@ public class DiscordBlock implements Listener {
 
         //Spawning/despawning the block
         boolean toggleBlock = plugin.getConfig().getBoolean("discord-block.toggle", false);
-        Location blockLocation = new Location(world, blockX, blockY, blockZ);
-        Block discordBlock = blockLocation.getBlock();
-        if(toggleBlock) discordBlock.setType(Material.PLAYER_HEAD);
+        Block discordBlock = world.getBlockAt(blockX, blockY, blockZ);
+        if(toggleBlock) discordBlock.setType(Material.PLAYER_HEAD, false);
         else{
-            discordBlock.setType(Material.AIR); //Despawns the block
+            discordBlock.setType(Material.AIR, false); //Despawns the block
             return;
         }
 
@@ -132,9 +151,9 @@ public class DiscordBlock implements Listener {
                 return;
             }
 
-            blockX = Double.parseDouble(StringBlockX);
-            blockY = Double.parseDouble(StringBlockY);
-            blockZ = Double.parseDouble(StringBlockZ);
+            blockX = Integer.parseInt(StringBlockX);
+            blockY = Integer.parseInt(StringBlockY);
+            blockZ = Integer.parseInt(StringBlockZ);
         } catch (Exception e){
             Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is INVALID! Particle will not show up.");
             return;
@@ -195,15 +214,23 @@ public class DiscordBlock implements Listener {
         }
 
         //Get the location of the discord-block, then check if it matches with the clicked block
-        double blockX, blockY, blockZ;
+        int blockX, blockY, blockZ;
         World world;
-        blockX = plugin.getConfig().getDouble("discord-block.location.x");
-        blockY = plugin.getConfig().getDouble("discord-block.location.y");
-        blockZ = plugin.getConfig().getDouble("discord-block.location.z");
+        blockX = plugin.getConfig().getInt("discord-block.location.x");
+        blockY = plugin.getConfig().getInt("discord-block.location.y");
+        blockZ = plugin.getConfig().getInt("discord-block.location.z");
+
+        if(blockX < 0) blockX--;
+        if(blockZ < 0) blockZ--;
+
         world = Bukkit.getWorld(plugin.getConfig().getString("discord-block.world"));
         Location discordBlockLocation = new Location(world, blockX, blockY, blockZ);
 
-        if(clickedBlockLocation.equals(discordBlockLocation)){
+        if(clickedBlockLocation.getBlockX() == discordBlockLocation.getBlockX() &&
+                clickedBlockLocation.getBlockY() == discordBlockLocation.getBlockY() &&
+                clickedBlockLocation.getBlockZ() == discordBlockLocation.getBlockZ() &&
+                clickedBlockLocation.getWorld().equals(discordBlockLocation.getWorld())){
+
             e.setCancelled(true); //Makes the block unbreakable
             //Checking if the fetching data task is toggled
             boolean toggleMiniTask = plugin.getConfig().getBoolean("fetching-data.toggle", false);

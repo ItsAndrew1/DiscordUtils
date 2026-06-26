@@ -182,7 +182,9 @@ public class Commands implements CommandExecutor{
                     }
 
                     plugin.reloadConfig();
+                    plugin.getDiscordBlockManager().removeDiscordBlock();
                     plugin.getDiscordBlockManager().spawnDiscordBlock(); //Spawns the discord block
+                    if(plugin.getDiscordBlockManager().getParticleTask() != null) plugin.getDiscordBlockManager().getParticleTask().cancel();
                     plugin.getDiscordBlockManager().startParticleTask(); //Spawns the particles
 
                     //Starts the broadcastingTask with a new one, so the task's don't pile up
