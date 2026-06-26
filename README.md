@@ -1,10 +1,9 @@
 ![DiscordUtils banner](https://github.com/user-attachments/assets/e0ef9048-17ce-4383-b84c-ca5ef383d292)
 
 <p align="center">
- <img src="https://img.shields.io/badge/plugin%20version-1.1-blue?style=for-the-badge"><img src="https://img.shields.io/badge/Minecraft%20Version-1.19%2B-green?style=for-the-badge&labelColor=gray"><img src="https://img.shields.io/github/license/ItsAndrew1/DiscordUtils?style=for-the-badge&label=License&color=purple"> <br>
- <a href="https://youtu.be/cGq81EZOdig">
-  <img src="https://img.shields.io/badge/showcase-video-red?style=for-the-badge&logo=youtube">
- </a>
+ <img src="https://img.shields.io/badge/plugin%20version-1.2-blue?style=for-the-badge"> <img src="https://img.shields.io/badge/Minecraft%20Version-1.18%2B-green?style=for-the-badge&labelColor=gray"> <a href="https://youtu.be/cGq81EZOdig"><img src="https://img.shields.io/badge/showcase-video-red?style=for-the-badge&logo=youtube"></a>
+ <br>
+ <a href = "https://modrinth.com/plugin/discordutils-plugin"><img src = "https://img.shields.io/modrinth/dt/5jL59axp?style=for-the-badge&label=Modrinth%20Downloads&color=dark%20green"></a> <a href = "https://www.spigotmc.org/resources/discordutils-track-and-manage-your-servers-players-discord-bot-update-1-19-26-1.130790/"><img src = "https://img.shields.io/spiget/downloads/130790?style=for-the-badge&label=Spigot%20Downloads&color=yellow"></a>
 </p>
 
 **DiscordUtils** is a *lightweight*, *discord utility minecraft plugin*, designed to help every server owner *connect* the players with **his discord server**. **Control the punishments** of the players, track them using **logs** in specific channels, let players **appeal** their punishments and much more!
