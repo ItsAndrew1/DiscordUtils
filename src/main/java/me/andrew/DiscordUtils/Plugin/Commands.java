@@ -161,6 +161,9 @@ public class Commands implements CommandExecutor{
                     ItemStack helpBook = new ItemStack(Material.WRITTEN_BOOK);
                     BookMeta hbMeta = (BookMeta) helpBook.getItemMeta();
 
+                    hbMeta.setTitle(ChatColor.translateAlternateColorCodes('&', "&l&9DiscordUtils Help"));
+                    hbMeta.setAuthor(ChatColor.translateAlternateColorCodes('&', "&l&b_ItsAndrew_"));
+
                     //Adds the pages from config to the help book
                     for(String page : helpBookPages){
                         String coloredPage = ChatColor.translateAlternateColorCodes('&', page);
@@ -180,16 +183,7 @@ public class Commands implements CommandExecutor{
 
                     plugin.reloadConfig();
                     plugin.getDiscordBlockManager().spawnDiscordBlock(); //Spawns the discord block
-
-                    //If the task is null or disabled, starts it
-                    if(plugin.getDiscordBlockManager().getParticleTask() == null || plugin.getDiscordBlockManager().getParticleTask().isCancelled()){
-                        plugin.getDiscordBlockManager().startParticleTask();
-                    }
-                    //Else, if the task is active, it resets it
-                    else if(!plugin.getDiscordBlockManager().getParticleTask().isCancelled()){
-                        plugin.getDiscordBlockManager().getParticleTask().cancel();
-                        plugin.getDiscordBlockManager().startParticleTask();
-                    }
+                    plugin.getDiscordBlockManager().startParticleTask(); //Spawns the particles
 
                     //Starts the broadcastingTask with a new one, so the task's don't pile up
                     if(!plugin.getBroadcastTask().isCancelled()){

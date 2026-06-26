@@ -100,8 +100,14 @@ public class DiscordBlock implements Listener {
         FileConfiguration config = plugin.getConfig();
 
         //Checks if the particles are toggled
-        boolean toggleParticle = config.getBoolean("discord-block.particles.toggle", false);
-        if(!toggleParticle) return;
+        boolean toggleParticle = config.getBoolean("discord-block.particles.toggle", true);
+        if(!toggleParticle && getParticleTask() != null && !getParticleTask().isCancelled()){
+            getParticleTask().cancel();
+            return;
+        }
+
+        //Returns if the particles are already toggled
+        if(getParticleTask() != null && !getParticleTask().isCancelled()) return;
 
         //Gets the particle
         Particle blockParticle;
@@ -126,9 +132,9 @@ public class DiscordBlock implements Listener {
                 return;
             }
 
-            blockX = Double.parseDouble(StringBlockX) + 0.5;
+            blockX = Double.parseDouble(StringBlockX);
             blockY = Double.parseDouble(StringBlockY);
-            blockZ = Double.parseDouble(StringBlockZ) + 0.5;
+            blockZ = Double.parseDouble(StringBlockZ);
         } catch (Exception e){
             Bukkit.getLogger().warning("[DISCORDUTILS] One of the coordinates of the discord-block is INVALID! Particle will not show up.");
             return;

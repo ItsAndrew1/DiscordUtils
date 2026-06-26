@@ -65,7 +65,7 @@ public class DiscordTask {
         FileConfiguration config = plugin.getConfig();
 
         //Gets the appearance choice
-        String configChoice = plugin.getConfig().getString("link-appearance-choice");
+        String configChoice = plugin.getConfig().getString("link-appearance-choice", "book");
 
         //Get the giveLinkSound information
         Sound giveLinkSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("get-discord-link-sound").toLowerCase()));
@@ -90,21 +90,6 @@ public class DiscordTask {
             return;
         }
 
-        //Gets the appearance choice and checks if it is valid
-        if(configChoice == null || configChoice.isEmpty()){ //Check if it is null
-            player.playSound(player.getLocation(), taskErrorSound, tesVolume, tesPitch);
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("error-task-message")));
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value for 'link-appearance-choice' is null! Run /dcutils configuration and set it!");
-            return;
-        }
-        if(!configChoice.equalsIgnoreCase("book") && !configChoice.equalsIgnoreCase("chat-message")){ //Check if it has a valid value
-            player.playSound(player.getLocation(), taskErrorSound, tesVolume, tesPitch);
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("error-task-message")));
-            Bukkit.getLogger().warning("[DISCORDUTILS] The value for 'link-appearance-choice' is invalid! Run /dcutils configuration and set a valid one!");
-            return;
-        }
-        player.playSound(player.getLocation(), giveLinkSound, glsVolume, glsPitch); //Plays the good sound if there is no error
-
         //Opens the book if the choice is 'book'
         if(configChoice.equalsIgnoreCase("book")){
             discordLinkClickable = Component.text(discordWord)
@@ -114,7 +99,7 @@ public class DiscordTask {
             ItemStack discordBook = new ItemStack(Material.WRITTEN_BOOK);
             BookMeta dbMeta =  (BookMeta) discordBook.getItemMeta();
 
-            List<String> bookPages = config.getStringList("book-pages");
+            List<String> bookPages = config.getStringList("discord-link-book.pages");
             List<Component> bookPagesComponents = new ArrayList<>();
             for(String page : bookPages){
                 Component bookPage = LegacyComponentSerializer.legacyAmpersand().deserialize(page);
@@ -129,6 +114,8 @@ public class DiscordTask {
             }
 
             dbMeta.pages(bookPagesComponents);
+            dbMeta.setAuthor(ChatColor.translateAlternateColorCodes('&', config.getString("discord-link-book.author", "Our Staff")));
+            dbMeta.setTitle(ChatColor.translateAlternateColorCodes('&', config.getString("discord-link-book.title", "Join Our Discord!")));
             discordBook.setItemMeta(dbMeta);
             player.openBook(discordBook);
         }

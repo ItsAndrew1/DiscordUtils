@@ -68,8 +68,13 @@ message-lines: #Use the discord-link-word in your message! The discord-link-word
   - "&c&lClick &9&lhere &c&lto join our discord server!"
 
 #TIP: You may include as many details as you can if using the book!
-book-pages: #Use the discord-link-word in your page! The discord-link-word is 'here', so I use 'here' in the page.
-  - "&4&lOUR DISCORD\n\n&c&lClick &9&lhere &c&lto join our discord server!"
+discord-link-book:
+  #These 2 don't really matter. But if they don't exist, the book won't open.
+  title: "Join Our Discord!"
+  author: "Our Staff"
+
+  pages: #Use the 'discord-link-word' in your page! The discord-link-word is 'here', so I use 'here' in the page. Use '\n' for line breaks.
+    - "&4&lOUR DISCORD\n\n&c&lClick &9&lhere &c&lto join our discord server!"
 
 #Configure a 'fetching-data' mini task. This task runs after the player clicks on the discord-item in the GUI.
 #P.S: It is only for 'professional appearance' :)
