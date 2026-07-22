@@ -146,7 +146,7 @@ public class AddPunishments extends ListenerAdapter{
 
             try {
                 //Checking if the target user/player is verified or not. (If the scope is DISCORD or GLOBAL)
-                if((state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && !plugin.getDatabaseManager().isVerified(state.targetUUID)){
+                if((state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && !plugin.getVerifiedPlayers().contains(targetPlayer.getUniqueId())){
                     event.reply("Player **"+targetPlayer.getName()+"** is *NOT* verified on the discord server! You may use the **MINECRAFT** scope instead.").setEphemeral(true).queue();
                     addingStateMap.remove(event.getUser().getIdLong());
                     return;
@@ -211,7 +211,7 @@ public class AddPunishments extends ListenerAdapter{
                         state.scope.applyPunishment(ctx, state.type);
 
                         //Inserting the logs (if they are toggled)
-                        if(botConfig.getBoolean("use-logs")) new InsertLog(plugin, bot, state);
+                        if(botConfig.getBoolean("use-logs", false)) new InsertLog(plugin, bot, state);
 
                         event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
 
@@ -288,26 +288,28 @@ public class AddPunishments extends ListenerAdapter{
             state.duration = parseDuration(durationString);
 
             //Applies the punishment
-            OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
-            try{
-                PunishmentContext ctx = new PunishmentContext(
-                        plugin,
-                        getPlayerStaff(event.getUser().getId()),
-                        state
-                );
-                state.scope.applyPunishment(ctx, state.type);
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
+                try{
+                    PunishmentContext ctx = new PunishmentContext(
+                            plugin,
+                            getPlayerStaff(event.getUser().getId()),
+                            state
+                    );
+                    state.scope.applyPunishment(ctx, state.type);
 
-                //Inserting the logs (if they are toggled)
-                if(plugin.botFile().getConfig().getBoolean("use-logs")) new InsertLog(plugin, bot, state);
+                    //Inserting the logs (if they are toggled)
+                    if(plugin.botFile().getConfig().getBoolean("use-logs", false)) new InsertLog(plugin, bot, state);
 
-                //Giving the timeout role if the type is temp mute and scope is discord or global
-                if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+                    //Giving the timeout role if the type is temp mute and scope is discord or global
+                    if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
 
-                event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
-                addingStateMap.remove(event.getUser().getIdLong());
-            } catch (Exception e){
-                throw new RuntimeException(e);
-            }
+                    event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
+                    addingStateMap.remove(event.getUser().getIdLong());
+                } catch (Exception e){
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 

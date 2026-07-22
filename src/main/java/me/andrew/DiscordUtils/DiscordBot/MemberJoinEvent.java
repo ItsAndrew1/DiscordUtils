@@ -48,26 +48,28 @@ public class MemberJoinEvent extends ListenerAdapter {
 
             if(verifiedRole == null || unverifiedRole == null || timeoutRole == null || bannedRole == null) return;
 
-            try {
-                if(isUserVerified(event.getUser().getId())){
-                    event.getGuild().addRoleToMember(member, verifiedRole).queue();
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    if(isUserVerified(event.getUser().getId())){
+                        event.getGuild().addRoleToMember(member, verifiedRole).queue();
 
-                    //Modifying their nickname after their MC ign
-                    member.modifyNickname(getUserIGN(member.getId())).queue();
+                        //Modifying their nickname after their MC ign
+                        member.modifyNickname(getUserIGN(member.getId())).queue();
+                    }
+
+                    //Giving the user the 'Timeout' Role if he is still on timeout (on discord/globally)
+                    if(isUserOnTimeout(member.getId(), PunishmentScopes.GLOBAL) || isUserOnTimeout(member.getId(), PunishmentScopes.DISCORD)) event.getGuild().addRoleToMember(member, timeoutRole).queue();
+
+                    //Giving the user the 'Banned' Role if he is still banned (on discord / globally).
+                    if(isUserBanned(member.getId(), PunishmentScopes.GLOBAL) || isUserBanned(member.getId(), PunishmentScopes.DISCORD)){
+                        event.getGuild().removeRoleFromMember(member, verifiedRole).queue();
+                        event.getGuild().addRoleToMember(member, bannedRole).queue();
+                    }
+                    else event.getGuild().addRoleToMember(member, unverifiedRole).queue();
+                } catch (SQLException e) {
+                    plugin.getLogger().warning("[DC] Coulnd't apply the necesarry roles for the new user. See message: "+e.getMessage());
                 }
-
-                //Giving the user the 'Timeout' Role if he is still on timeout (on discord/globally)
-                if(isUserOnTimeout(member.getId(), PunishmentScopes.GLOBAL) || isUserOnTimeout(member.getId(), PunishmentScopes.DISCORD)) event.getGuild().addRoleToMember(member, timeoutRole).queue();
-
-                //Giving the user the 'Banned' Role if he is still banned (on discord / globally).
-                if(isUserBanned(member.getId(), PunishmentScopes.GLOBAL) || isUserBanned(member.getId(), PunishmentScopes.DISCORD)){
-                    event.getGuild().removeRoleFromMember(member, verifiedRole).queue();
-                    event.getGuild().addRoleToMember(member, bannedRole).queue();
-                }
-                else event.getGuild().addRoleToMember(member, unverifiedRole).queue();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            });
         });
     }
 

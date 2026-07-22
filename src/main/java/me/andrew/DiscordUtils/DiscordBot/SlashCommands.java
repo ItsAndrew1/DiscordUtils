@@ -247,7 +247,7 @@ public class SlashCommands extends ListenerAdapter{
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                     try{
                         if(isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL) || isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD)){
-                            event.getHook().sendMessage("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                            event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
                             return;
                         }
 
@@ -259,7 +259,7 @@ public class SlashCommands extends ListenerAdapter{
                             if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
                         }
                         if(!hasPermission){
-                            event.getHook().sendMessage("You don't have permission to use this command!").setEphemeral(true).queue();
+                            event.getHook().sendMessage("You don't have permission to use this command!").queue();
                             return;
                         }
 
@@ -267,14 +267,14 @@ public class SlashCommands extends ListenerAdapter{
                         String ign = event.getOption("ign").getAsString();
                         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
 
-                        if (targetPlayer == getUserPlayer(event.getUser().getId())) {
-                            event.getHook().sendMessage("You cannot punish yourself!").setEphemeral(true).queue();
+                        if (targetPlayer == Bukkit.getOfflinePlayer(getUserPlayerIGN(event.getUser().getId()))) {
+                            event.getHook().sendMessage("You cannot punish yourself!").queue();
                             return;
                         }
 
                         //Check if the target player has played on the server
                         if (!targetPlayer.hasPlayedBefore()) {
-                            event.getHook().sendMessage("Player **\\" + targetPlayer.getName() + "** does not exist on the server. Please enter a valid name!").setEphemeral(true).queue();
+                            event.getHook().sendMessage("Player **\\" + targetPlayer.getName() + "** does not exist on the server. Please enter a valid name!").queue();
                             return;
                         }
 
@@ -286,204 +286,192 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "psremove" -> {
-                //Checking if the user is banned
-                try {
-                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
-                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
-                        return;
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                event.deferReply(true).queue();
 
-                //Checking if the user has the necessary roles
-                boolean hasPermission = false;
-                List<Long> psRemoveRoles = botConfig.getLongList("psremove-cmd-roles");
-                for(Long roleID : psRemoveRoles){
-                    Role role = botMain.getDiscordServer().getRoleById(roleID);
-                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
-                }
-                if(!hasPermission){
-                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
-                    return;
-                }
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                   try{
+                       //Checking if the user is banned
+                       if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                           event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
+                           return;
+                       }
 
-                try{
-                    //Getting the ID from the command
-                    String ID = event.getOption("id").getAsString();
+                       //Checking if the user has the necessary roles
+                       boolean hasPermission = false;
+                       List<Long> psRemoveRoles = botConfig.getLongList("psremove-cmd-roles");
+                       for(Long roleID : psRemoveRoles){
+                           Role role = botMain.getDiscordServer().getRoleById(roleID);
+                           if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                       }
+                       if(!hasPermission){
+                           event.getHook().sendMessage("You don't have permission to use this command!").queue();
+                           return;
+                       }
 
-                    //Checking if there is a punishment with that ID
-                    if(!punishmentExists(ID)){
-                        event.reply("There is **no punishment** with that ID!").setEphemeral(true).queue();
-                        return;
-                    }
+                       //Getting the ID from the command
+                       String ID = event.getOption("id").getAsString();
 
-                    //Expiring the punishment that has the typed ID
-                    Connection dbConnection = plugin.getDatabaseManager().getConnection();
-                    String SQL = "UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE id = ?";
+                       //Checking if there is a punishment with that ID
+                       if(!punishmentExists(ID)){
+                           event.getHook().sendMessage("There is **no punishment** with that ID!").queue();
+                           return;
+                       }
 
-                    PreparedStatement ps = dbConnection.prepareStatement(SQL);
-                    ps.setLong(1, System.currentTimeMillis());
-                    ps.setString(2, ID);
-                    ps.executeUpdate();
+                       //Expiring the punishment that has the typed ID
+                       Connection dbConnection = plugin.getDatabaseManager().getConnection();
+                       String SQL = "UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE id = ?";
 
-                    //Getting the punishment scope and type
-                    String SQL2 = "SELECT type, scope, uuid FROM punishments WHERE id = ?";
-                    PreparedStatement ps2 = dbConnection.prepareStatement(SQL2);
-                    ps2.setString(1, ID);
-                    ResultSet rs = ps2.executeQuery();
+                       PreparedStatement ps = dbConnection.prepareStatement(SQL);
+                       ps.setLong(1, System.currentTimeMillis());
+                       ps.setString(2, ID);
+                       ps.executeUpdate();
 
-                    if(rs.next()){
-                        PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
-                        final PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
-                        UUID targetUUID = UUID.fromString(rs.getString("uuid"));
+                       //Getting the punishment scope and type
+                       String SQL2 = "SELECT type, scope, uuid FROM punishments WHERE id = ?";
+                       PreparedStatement ps2 = dbConnection.prepareStatement(SQL2);
+                       ps2.setString(1, ID);
+                       ResultSet rs = ps2.executeQuery();
 
-                        //If the scope is Discord or Global, I have to unban/remove the timeout of the user
-                        if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
-                            Guild dcServer = botMain.getDiscordServer();
+                       if(rs.next()){
+                           PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
+                           final PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
+                           UUID targetUUID = UUID.fromString(rs.getString("uuid"));
 
-                            botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
-                                if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                                    //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
-                                    dcServer.retrieveMemberById(targetUser.getId()).queue(member -> {
-                                        long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
-                                        Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                           //If the scope is Discord or Global, I have to unban/remove the timeout of the user
+                           if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
+                               Guild dcServer = botMain.getDiscordServer();
 
-                                        long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
-                                        Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
-                                        if(member.getRoles().contains(bannedRole)){
-                                            dcServer.removeRoleFromMember(member, bannedRole).queue();
-                                            dcServer.addRoleToMember(member, verifiedRole).queue();
-                                        }
-                                    });
-                                }
+                               botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
+                                   if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                                       //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
+                                       dcServer.retrieveMemberById(targetUser.getId()).queue(member -> {
+                                           long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
+                                           Role bannedRole = dcServer.getRoleById(bannedRoleID);
 
-                                if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-                                    //Removes the timeout role from the member if he has it
-                                    dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
-                                        long timeoutRoleID = botConfig.getLong("timeout-role-id");
-                                        Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
-                                        if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
-                                    });
+                                           long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                                           Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
+                                           if(member.getRoles().contains(bannedRole)){
+                                               dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                               dcServer.addRoleToMember(member, verifiedRole).queue();
+                                           }
+                                       });
+                                   }
 
-                                    if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
-                                }
-                            });
-                        }
-                    }
+                                   if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
+                                       //Removes the timeout role from the member if he has it
+                                       dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
+                                           long timeoutRoleID = botConfig.getLong("timeout-role-id");
+                                           Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
+                                           if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                       });
 
-                    event.reply("Punishment with ID **"+ID+"** has been removed!").setEphemeral(true).queue();
-                } catch (Exception e){
-                    throw new RuntimeException(e);
-                }
+                                       if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
+                                   }
+                               });
+                           }
+                       }
+
+                       event.getHook().sendMessage("Punishment with ID **"+ID+"** has been removed!").queue();
+                   } catch (SQLException e){
+                       throw new RuntimeException(e);
+                   }
+                });
             }
 
             case "unverify" -> {
+                event.deferReply(true).queue();
                 String userID = event.getUser().getId();
 
-                //Checking if the user is banned
-                try {
-                    if(isUserBanned(userID, PunishmentScopes.DISCORD) || isUserBanned(userID, PunishmentScopes.GLOBAL)){
-                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
-                        return;
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try{
+                        //Checking if the user is banned
+                        if(isUserBanned(userID, PunishmentScopes.DISCORD) || isUserBanned(userID, PunishmentScopes.GLOBAL)){
+                            event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
+                            return;
+                        }
+
+                        //Checking if the user is verified
+                        if(!isUserVerified(userID)){
+                            event.getHook().sendMessage("You *don't have* any MC account linked to your DC account! Use **/verify** to link one!").queue();
+                            return;
+                        }
+
+                        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+                        String sql = "DELETE FROM playersVerification WHERE discordId = ?";
+
+                        try(PreparedStatement ps = dbConnection.prepareStatement(sql)) {
+                            //Removing the user from the playersVerification table
+                            ps.setString(1, userID);
+                            ps.executeUpdate();
+
+                            //Removing from the user the 'Verified' role and giving him the Unverified role
+                            long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+                            Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
+
+                            Member targetMember = event.getMember();
+                            assert targetMember != null;
+
+                            if (targetMember.getRoles().contains(verifiedRole)) botMain.getDiscordServer().removeRoleFromMember(targetMember, verifiedRole).queue();
+
+                            String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
+                            Role unverified = botMain.getDiscordServer().getRoleById(unverifiedRoleID);
+                            botMain.getDiscordServer().addRoleToMember(targetMember, unverified).queue();
+
+                            //Resetting the nickname
+                            if (!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
+
+                            //Removing the player from the Verified Players maps
+                            plugin.getVerifiedPlayers().remove(Bukkit.getOfflinePlayer(getUserPlayerIGN(userID)).getUniqueId());
+
+                            event.getHook().sendMessage("Unverified successfully!").queue();
+                        }
+                    } catch (SQLException e){
+                        throw new RuntimeException(e);
                     }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-
-                Connection dbConnection = plugin.getDatabaseManager().getConnection();
-                String sql = "DELETE FROM playersVerification WHERE discordId = ?";
-
-                //Checking if the user is verified
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                    if(!isUserVerified(userID)){
-                        event.reply("You *don't have* any MC account linked to your DC account! Use **/verify** to link one!").setEphemeral(true).queue();
-                        return;
-                    }
-
-                    //Removing the user from the playersVerification table
-                    ps.setString(1, userID);
-                    ps.executeUpdate();
-
-                    //Removing from the user the 'Verified' role and giving him the Unverified role
-                    long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
-                    Role verifiedRole =  botMain.getDiscordServer().getRoleById(verifiedRoleID);
-
-                    Member targetMember = event.getMember();
-                    if(targetMember.getRoles().contains(verifiedRole)) botMain.getDiscordServer().removeRoleFromMember(targetMember, verifiedRole).queue();
-
-                    String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
-                    Role unverified = botMain.getDiscordServer().getRoleById(unverifiedRoleID);
-                    botMain.getDiscordServer().addRoleToMember(targetMember, unverified).queue();
-
-                    //Resetting the nickname
-                    if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
-
-                    event.reply("Unverified successfully!").setEphemeral(true).queue();
-                } catch (Exception e){
-                    throw new RuntimeException(e);
-                }
+                });
             }
 
             case "appeal" -> {
                 String punishmentID = event.getOption("id").getAsString();
 
-                try {
-                    //Checking if the punishment still exists and hasn't expired
-                    if(!punishmentExists(punishmentID)){
-                        event.reply("This punishment has already been **removed** or has **expired**!").setEphemeral(true).queue();
-                        return;
-                    }
+                //Opening a modal with the appealing form
+                int maximumLength = botConfig.getInt("maximum-length-appeal");
+                int minimumLength = botConfig.getInt("minimum-length-appeal");
+                String placeholder = botConfig.getString("placeholder-appeal");
 
-                    //Checking if the appeal was declined
-                    if(wasAppealDeclined(punishmentID)){
-                        event.reply("This appeal has been declined. You cannot appeal again.").setEphemeral(true).queue();
-                        return;
-                    }
+                TextInput reasonForm = TextInput.create("reasonForm", TextInputStyle.PARAGRAPH)
+                        .setPlaceholder(placeholder)
+                        .setRequired(true)
+                        .setMinLength(minimumLength)
+                        .setMaxLength(maximumLength).build();
 
-                    //Checking if the punishment is already in appeal state
-                    if(isPunishmentInPendingState(punishmentID)){
-                        event.reply("You have already sent an appeal for this punishment! Please be patient while our staff reviews your appeal.").setEphemeral(true).queue();
-                        return;
-                    }
+                Modal formModal = Modal.create("appeal_form:"+punishmentID, "Appeal Your Punishment")
+                        .addComponents(Label.of("Form", reasonForm))
+                        .build();
 
-                    //Opening a modal with the appealing form
-                    int maximumLength = botConfig.getInt("maximum-length-appeal");
-                    int minimumLength = botConfig.getInt("minimum-length-appeal");
-                    String placeholder = botConfig.getString("placeholder-appeal");
-
-                    TextInput reasonForm = TextInput.create("reasonForm", TextInputStyle.PARAGRAPH)
-                            .setPlaceholder(placeholder)
-                            .setRequired(true)
-                            .setMinLength(minimumLength)
-                            .setMaxLength(maximumLength).build();
-
-                    Modal formModal = Modal.create("appeal_form:"+punishmentID, "Appeal Your Punishment")
-                            .addComponents(Label.of("Form", reasonForm))
-                            .build();
-
-                    event.replyModal(formModal).queue();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                event.replyModal(formModal).queue();
             }
 
             case "appealstatus" -> {
+                event.deferReply(true).queue();
+
                 //Getting the punishment ID
                 String pID = event.getOption("id").getAsString();
 
-                try {
-                    //If the status is 'PENDING'
-                    if(isPunishmentInPendingState(pID)) event.reply("Punishment ID: "+pID+"\n**Status**: PENDING").setEphemeral(true).queue();
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try {
+                        //If the status is 'PENDING'
+                        if(isPunishmentInPendingState(pID)) event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: PENDING").queue();
 
-                    //If the status is 'DECLINED'
-                    if(wasAppealDeclined(pID)) event.reply("Punishment ID: "+pID+"\n**Status**: DECLINED").setEphemeral(true).queue();
+                        //If the status is 'DECLINED'
+                        if(wasAppealDeclined(pID)) event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: DECLINED").queue();
 
-                    //If the status is 'ACCEPTED'
-                    if(wasAppealAccepted(pID)) event.reply("Punishment ID: "+pID+"\n**Status**: ACCEPTED").setEphemeral(true).queue();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                        //If the status is 'ACCEPTED'
+                        if(wasAppealAccepted(pID)) event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: ACCEPTED").queue();
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
             }
 
             case "startverification" -> {
@@ -533,42 +521,47 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "reload" -> {
-                //Checking if the user is banned
-                try {
-                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
-                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
-                        return;
+                event.deferReply(true).queue();
+
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try{
+                        //Checking if the user is banned
+                        if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                            event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                            return;
+                        }
+
+                        //Checking if the user has permission
+                        boolean hasPermission = false;
+                        List<Long> psRemoveRoles = botConfig.getLongList("RefreshVerification-cmd-roles");
+                        for(Long roleID : psRemoveRoles){
+                            Role role = botMain.getDiscordServer().getRoleById(roleID);
+                            if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                        }
+                        if(!hasPermission){
+                            event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                            return;
+                        }
+
+                        event.reply("Bot is restarting...").setEphemeral(true).queue();
+
+                        //Reloading the config file
+                        plugin.botFile().reloadConfig();
+
+                        //Restarting the bot
+                        botMain.getJda().shutdownNow();
+
+                        try {
+                            String token = botConfig.getString("bot-token");
+                            String serverID = botConfig.getString("guild-id");
+                            new BotMain(token, serverID, plugin);
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Couldn't reload the bot! See message: "+e.getMessage());
+                        }
+                    }catch(SQLException e){
+                        throw new RuntimeException(e);
                     }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-
-                //Checking if the user has permission
-                boolean hasPermission = false;
-                List<Long> psRemoveRoles = botConfig.getLongList("RefreshVerification-cmd-roles");
-                for(Long roleID : psRemoveRoles){
-                    Role role = botMain.getDiscordServer().getRoleById(roleID);
-                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
-                }
-                if(!hasPermission){
-                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
-                    return;
-                }
-
-                event.reply("Bot is restarting...").setEphemeral(true).queue();
-
-                //Reloading the config file
-                plugin.botFile().reloadConfig();
-
-                //Restarting the bot
-                botMain.getJda().shutdownNow();
-                try {
-                    String token = botConfig.getString("bot-token");
-                    String serverID = botConfig.getString("guild-id");
-                    new BotMain(token, serverID, plugin);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                });
             }
         }
     }

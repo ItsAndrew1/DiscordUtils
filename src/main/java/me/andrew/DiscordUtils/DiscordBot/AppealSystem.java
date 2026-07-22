@@ -44,75 +44,98 @@ public class AppealSystem extends ListenerAdapter {
     @Override
     public void onModalInteraction(ModalInteractionEvent event){
         if(!event.getModalId().contains("appeal_form")) return;
+        event.deferReply(true).queue();
 
-        FileConfiguration botConfig = plugin.botFile().getConfig();
-        String reasonForm = event.getValue("reasonForm").getAsString();
-        String punishmentID = event.getModalId().split(":", 2)[1];
-        String userId = event.getUser().getId();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try{
+                String punishmentID = event.getModalId().replace("appeal_form:", "");
 
-        //Sends an embed with the data of the punishment tied to the ID
-        long appealsChannelId = botConfig.getLong("appeal-channel-id");
-        TextChannel appealsChannel = plugin.getDiscordBot().getJda().getTextChannelById(appealsChannelId);
-
-        EmbedBuilder embedFormBuilder = new EmbedBuilder();
-        embedFormBuilder.setTitle("Appeal for Punishment "+punishmentID);
-        embedFormBuilder.setColor(Color.PINK.getRGB());
-        embedFormBuilder.setFooter("User ID: "+userId);
-
-        //Getting the punishment data from the ID
-        UUID targetPlayerUUID;
-        PunishmentType type;
-        PunishmentScopes scope;
-        long expiresAt = 0;
-        long createdAt;
-
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String sql = "SELECT uuid, type, scope, created_at";
-        try {
-            if(isTemporary(punishmentID)) sql+=", expire_at";
-            sql+=" FROM punishments WHERE id = ?";
-
-            try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                ps.setString(1, punishmentID);
-                try(ResultSet rs = ps.executeQuery()){
-                    if(!rs.next()) return;
-                    targetPlayerUUID = UUID.fromString(rs.getString("uuid"));
-                    type = PunishmentType.valueOf(rs.getString("type"));
-                    scope = PunishmentScopes.valueOf(rs.getString("scope"));
-                    if(isTemporary(punishmentID)) expiresAt = rs.getLong("expire_at");
-                    createdAt = rs.getLong("created_at");
+                //Checking if the punishment still exists and hasn't expired
+                if(!punishmentExists(punishmentID)){
+                    event.getHook().sendMessage("This punishment has already been **removed** or has **expired**!").queue();
+                    return;
                 }
+
+                //Checking if the appeal was declined
+                if(wasAppealDeclined(punishmentID)){
+                    event.getHook().sendMessage("This appeal has been declined. You cannot appeal again.").queue();
+                    return;
+                }
+
+                //Checking if the punishment is already in appeal state
+                if(isPunishmentInPendingState(punishmentID)){
+                    event.getHook().sendMessage("You have already sent an appeal for this punishment! Please be patient while our staff reviews your appeal.").queue();
+                    return;
+                }
+
+                FileConfiguration botConfig = plugin.botFile().getConfig();
+                String reasonForm = event.getValue("reasonForm").getAsString();
+                String userId = event.getUser().getId();
+
+                //Sends an embed with the data of the punishment tied to the ID
+                long appealsChannelId = botConfig.getLong("appeal-channel-id");
+                TextChannel appealsChannel = plugin.getDiscordBot().getJda().getTextChannelById(appealsChannelId);
+
+                EmbedBuilder embedFormBuilder = new EmbedBuilder();
+                embedFormBuilder.setTitle("Appeal for Punishment "+punishmentID);
+                embedFormBuilder.setColor(Color.PINK.getRGB());
+                embedFormBuilder.setFooter("User ID: "+userId);
+
+                //Getting the punishment data from the ID
+                UUID targetPlayerUUID;
+                PunishmentType type;
+                PunishmentScopes scope;
+                long expiresAt = 0;
+                long createdAt;
+
+                Connection dbConnection = plugin.getDatabaseManager().getConnection();
+                String sql = "SELECT uuid, type, scope, created_at";
+
+                if(isTemporary(punishmentID)) sql+=", expire_at";
+                sql+=" FROM punishments WHERE id = ?";
+
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                    ps.setString(1, punishmentID);
+                    try(ResultSet rs = ps.executeQuery()){
+                        if(!rs.next()) return;
+                        targetPlayerUUID = UUID.fromString(rs.getString("uuid"));
+                        type = PunishmentType.valueOf(rs.getString("type"));
+                        scope = PunishmentScopes.valueOf(rs.getString("scope"));
+                        if(isTemporary(punishmentID)) expiresAt = rs.getLong("expire_at");
+                        createdAt = rs.getLong("created_at");
+                    }
+                }
+
+                String field =
+                        "Minecraft IGN: "+Bukkit.getOfflinePlayer(targetPlayerUUID).getName()+"\n\n"+
+                                "**Issued At**: "+formatTime(createdAt)
+                                +"\n**Scope**: "+scope.name()
+                                +"\n**Type**: "+type.name();
+                if(!type.isPermanent()) field+="\n**Expires In**: "+plugin.formatTime(expiresAt - System.currentTimeMillis());
+                field += "\n\n**Appeal Form**: \n" + reasonForm;
+                embedFormBuilder.setDescription(field);
+
+                //Sends the embed to the channel designated for appeals
+                appealsChannel.sendMessageEmbeds(embedFormBuilder.build()).addComponents(ActionRow.of(
+                        Button.success("appeal_accept:"+punishmentID, "Accept"),
+                        Button.danger("appeal_decline:"+punishmentID, "Decline")
+                )).queue();
+
+                //Updating the status of the appeal_state of the punishment
+                String sql2 = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
+                    ps.setString(1, "pending");
+                    ps.setString(2, punishmentID);
+                    ps.executeUpdate();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                event.getHook().sendMessage("Punishment appeal sent successfully!").queue();
+            } catch (SQLException e){
+                plugin.getLogger().warning("There was an error when a user used the Appeal Form. See message: "+e.getMessage());
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        String field =
-                "Minecraft IGN: "+Bukkit.getOfflinePlayer(targetPlayerUUID).getName()+"\n\n"+
-                "**Issued At**: "+formatTime(createdAt)
-                +"\n**Scope**: "+scope.name()
-                +"\n**Type**: "+type.name();
-        if(!type.isPermanent()) field+="\n**Expires In**: "+plugin.formatTime(expiresAt - System.currentTimeMillis());
-        field += "\n\n**Appeal Form**: \n" + reasonForm;
-        embedFormBuilder.setDescription(field);
-
-        //Sends the embed to the channel designated for appeals
-        appealsChannel.sendMessageEmbeds(embedFormBuilder.build()).addComponents(ActionRow.of(
-                Button.success("appeal_accept:"+punishmentID, "Accept"),
-                Button.danger("appeal_decline:"+punishmentID, "Decline")
-        )).queue();
-
-        //Updating the status of the appeal_state of the punishment
-        String sql2 = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
-            ps.setString(1, "pending");
-            ps.setString(2, punishmentID);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        event.reply("Punishment appeal sent successfully!").setEphemeral(true).queue();
+        });
     }
 
     private boolean isTemporary(String ID) throws SQLException {
@@ -140,110 +163,111 @@ public class AppealSystem extends ListenerAdapter {
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event){
         if(!event.getComponentId().contains("appeal_") && !event.getComponentId().contains("getbantype")) return;
+        event.deferReply(true).queue();
 
         FileConfiguration botConfig = plugin.botFile().getConfig();
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
 
-        if(event.getComponentId().equalsIgnoreCase("getbantype")){
-            try {
-                String userID = event.getUser().getId();
-                String id = getUserBanID(UUID.fromString(getUserMcUUID(userID, dbConnection)), dbConnection);
-
-                //Sending the ID
-                event.reply("Your ban ID is: **"+id+"**. Run /appeal <id> to appeal your ban!").setEphemeral(true).queue();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            return;
-        }
-
-        //Getting the punishment ID
-        String punishmentID =  event.getComponentId().split(":", 2)[1];
-
-        //Checking if the appeal has been already solved
-        if(appealWasAcceptedDecline(punishmentID)){
-            event.reply("This appeal has been solved.").setEphemeral(true).queue();
-            return;
-        }
-
-        //If the staff clicks on the Accept Button
-        if(event.getComponentId().contains("appeal_accept")){
-
-
-            String sql = "UPDATE punishments SET active = 0, removed = 1, removed_at = ?, appeal_state = ? WHERE id = ?";
-
-            try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                ps.setLong(1, System.currentTimeMillis());
-                ps.setString(2, "accepted");
-                ps.setString(3, punishmentID);
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-            //Getting the type of the punishment with that ID
-            String sql2 = "SELECT uuid FROM punishments WHERE id = ?";
-            UUID targetPlayerUUID = null;
-
-            try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
-                ps.setString(1, punishmentID);
-                try(ResultSet rs = ps.executeQuery()){
-                    if(rs.next()) targetPlayerUUID = UUID.fromString(rs.getString("uuid"));
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-            String sql3 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-            String targetUserID = null;
-            try(PreparedStatement ps = dbConnection.prepareStatement(sql3)){
-                ps.setString(1, targetPlayerUUID.toString());
-                try(ResultSet rs = ps.executeQuery()){
-                    if(rs.next()) targetUserID = rs.getString("discordId");
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            event.getGuild().retrieveMemberById(targetUserID).queue(member -> {
-                //Removing the role(s) from the targetUser
-                long timeoutRoleID = botConfig.getLong("timeout-role-id");
-                Role timeoutRole = event.getGuild().getRoleById(timeoutRoleID);
-                long bannedRoleID = botConfig.getLong("ban-role-id");
-                Role bannedRole = event.getGuild().getRoleById(bannedRoleID);
-
-                if(member.getRoles().contains(bannedRole)) event.getGuild().removeRoleFromMember(member, bannedRole).queue();
-                if(member.getRoles().contains(timeoutRole)) event.getGuild().removeRoleFromMember(member, timeoutRole).queue();
-
-                //Now, if the user is verified, give him the 'Verified' role back
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            if(event.getComponentId().equalsIgnoreCase("getbantype")){
                 try {
-                    if(isUserVerified(member.getId(), dbConnection)){
-                        long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
-                        Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
-                        event.getGuild().addRoleToMember(member, verifiedRole).queue();
+                    String userID = event.getUser().getId();
+                    String id = getUserBanID(UUID.fromString(getUserMcUUID(userID, dbConnection)), dbConnection);
+
+                    //Sending the ID
+                    event.reply("Your ban ID is: **"+id+"**. Run /appeal <id> to appeal your ban!").setEphemeral(true).queue();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+
+            //Getting the punishment ID
+            String punishmentID =  event.getComponentId().split(":", 2)[1];
+
+            //Checking if the appeal has been already solved
+            if(appealWasAcceptedDecline(punishmentID)){
+                event.getHook().sendMessage("This appeal has been solved.").queue();
+                return;
+            }
+
+            //If the staff clicks on the Accept Button
+            if(event.getComponentId().contains("appeal_accept")){
+                String sql = "UPDATE punishments SET active = 0, removed = 1, removed_at = ?, appeal_state = ? WHERE id = ?";
+
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                    ps.setLong(1, System.currentTimeMillis());
+                    ps.setString(2, "accepted");
+                    ps.setString(3, punishmentID);
+                    ps.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+
+                //Getting the type of the punishment with that ID
+                String sql2 = "SELECT uuid FROM punishments WHERE id = ?";
+                UUID targetPlayerUUID = null;
+
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
+                    ps.setString(1, punishmentID);
+                    try(ResultSet rs = ps.executeQuery()){
+                        if(rs.next()) targetPlayerUUID = UUID.fromString(rs.getString("uuid"));
                     }
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
-            });
 
-            event.reply("Appeal for **Punishment "+punishmentID+"** has been **ACCEPTED**\n**Staff**: "+event.getUser().getName()).queue();
-        }
+                String sql3 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
+                String targetUserID = null;
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql3)){
+                    ps.setString(1, targetPlayerUUID.toString());
+                    try(ResultSet rs = ps.executeQuery()){
+                        if(rs.next()) targetUserID = rs.getString("discordId");
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                event.getGuild().retrieveMemberById(targetUserID).queue(member -> {
+                    //Removing the role(s) from the targetUser
+                    long timeoutRoleID = botConfig.getLong("timeout-role-id");
+                    Role timeoutRole = event.getGuild().getRoleById(timeoutRoleID);
+                    long bannedRoleID = botConfig.getLong("ban-role-id");
+                    Role bannedRole = event.getGuild().getRoleById(bannedRoleID);
 
-        //If the staff clicks on the Decline Button
-        if(event.getComponentId().contains("appeal_decline")){
-            String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
+                    if(member.getRoles().contains(bannedRole)) event.getGuild().removeRoleFromMember(member, bannedRole).queue();
+                    if(member.getRoles().contains(timeoutRole)) event.getGuild().removeRoleFromMember(member, timeoutRole).queue();
 
-            //Setting the appeal state as 'Declined'
-            try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                ps.setString(1, "declined");
-                ps.setString(2, punishmentID);
-                ps.executeUpdate();
-            } catch (SQLException e){
-                e.printStackTrace();
+                    //Now, if the user is verified, give him the 'Verified' role back
+                    try {
+                        if(isUserVerified(member.getId(), dbConnection)){
+                            long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+                            Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
+                            event.getGuild().addRoleToMember(member, verifiedRole).queue();
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                });
+
+                event.getHook().sendMessage("Appeal for **Punishment "+punishmentID+"** has been **ACCEPTED**\n**Staff**: "+event.getUser().getName()).queue();
             }
 
-            event.reply("Appeal for **Punishment "+punishmentID+"** has been **DECLINED**\n**Staff**: "+event.getUser().getName()).queue();
-        }
+            //If the staff clicks on the Decline Button
+            if(event.getComponentId().contains("appeal_decline")){
+                String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
+
+                //Setting the appeal state as 'Declined'
+                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                    ps.setString(1, "declined");
+                    ps.setString(2, punishmentID);
+                    ps.executeUpdate();
+                } catch (SQLException e){
+                    e.printStackTrace();
+                }
+
+                event.reply("Appeal for **Punishment "+punishmentID+"** has been **DECLINED**\n**Staff**: "+event.getUser().getName()).queue();
+            }
+        });
     }
 
     private boolean appealWasAcceptedDecline(String ID){
@@ -312,6 +336,45 @@ public class AppealSystem extends ListenerAdapter {
             ps.setString(1, discordID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
+            }
+        }
+    }
+
+    private boolean punishmentExists(String ID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT 1 FROM punishments WHERE id = ? AND active = 1";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                return rs.next();
+            }
+        }
+    }
+
+    private boolean wasAppealDeclined(String ID) throws SQLException{
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, ID);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+                return rs.getString("appeal_state").equals("declined");
+            }
+        }
+    }
+
+    private boolean isPunishmentInPendingState(String punishmentID) throws SQLException {
+        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+        String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
+
+        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+            ps.setString(1, punishmentID);
+            try(ResultSet rs = ps.executeQuery()){
+                if(!rs.next()) return false;
+
+                return rs.getString("appeal_state").equals("pending");
             }
         }
     }
