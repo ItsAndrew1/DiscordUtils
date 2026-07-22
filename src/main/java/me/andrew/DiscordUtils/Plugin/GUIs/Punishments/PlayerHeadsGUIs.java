@@ -2,6 +2,7 @@
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -153,11 +154,7 @@ public class PlayerHeadsGUIs implements Listener{
 
             plugin.waitForPlayerInput(player, input->{
                     OfflinePlayer inputPlayer;
-                    try{
-                        inputPlayer = Bukkit.getOfflinePlayer(input);
-                    } catch(Exception e){
-                        throw new RuntimeException();
-                    }
+                    inputPlayer = Bukkit.getOfflinePlayer(PlainTextComponentSerializer.plainText().serialize(input));
 
                     if(!inputPlayer.hasPlayedBefore()){
                         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);

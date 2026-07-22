@@ -144,7 +144,7 @@ player-verified-message: #You can have more lines.
 punishment-id-length: 6 #The ID structure is '#' + the digits!
 
 #Set the MINUTES for the inactivity. Helps to clean the AddingState map.
-inactivity-minutes: 1
+inactivity-minutes: 10
 
 #Give rewards to the player when the player verifies.
 rewards:

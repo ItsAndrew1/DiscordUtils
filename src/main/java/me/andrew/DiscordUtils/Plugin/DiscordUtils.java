@@ -1,6 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
+import io.papermc.paper.event.player.AsyncChatEvent;
 import me.andrew.DiscordUtils.DiscordBot.*;
 import me.andrew.DiscordUtils.Plugin.GUIs.*;
 import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.BlockConfigurationGUI;
@@ -14,9 +15,12 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.utils.ComponentDeserializer;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.kyori.adventure.text.Component;
+import org.apache.logging.log4j.spi.CopyOnWrite;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,6 +35,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -46,7 +52,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private FacingChoiceGUI facingChoiceGUI;
     private VerificationManager verificationManager;
     private DatabaseManager databaseManager;
-    private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
+    private final Map<UUID, Consumer<Component>> chatInput = new HashMap<>();
+    private final CopyOnWriteArraySet<UUID> verifiedPlayers = new CopyOnWriteArraySet<>();
 
     //Punishments GUIs
     private PlayerHeadsGUIs playerHeadsGUIs;
@@ -214,6 +221,19 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                     throw new RuntimeException(e);
                 }
             }, 0L, 20L*5); //Runs every 5 seconds
+
+            //Adds the verified players to the map.
+            Set<UUID> playerUUIDs = new HashSet<>();
+            for(OfflinePlayer player : Bukkit.getOfflinePlayers())playerUUIDs.add(player.getUniqueId());
+            Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+                for(UUID uuid : playerUUIDs){
+                    try{
+                        if(getDatabaseManager().isVerified(uuid)) verifiedPlayers.add(uuid);
+                    } catch (Exception e){
+                        Bukkit.getScheduler().runTask(this, () -> getLogger().info("Couldn't add the verified players. See message: "+e.getMessage()));
+                    }
+                }
+            });
         }
     }
 
@@ -328,30 +348,27 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         UUID playerUUID = player.getUniqueId();
 
         //Checking if that player has ongoing verification
-        try {
-            if(!getDatabaseManager().isPlayerVerifying(player.getUniqueId())) return;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        try {
-            getDatabaseManager().deleteExpiredCode(playerUUID);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            try{
+                if(!getDatabaseManager().isPlayerVerifying(playerUUID)) return;
+                getDatabaseManager().deleteExpiredCode(playerUUID);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     //Handles the chat input for different configurations of the plugin
     @EventHandler
-    public void chatAsync(AsyncPlayerChatEvent event){
+    public void chatAsync(AsyncChatEvent event){
         Player player = event.getPlayer();
         UUID playerUUID = player.getUniqueId();
 
         if(!chatInput.containsKey(playerUUID)) return;
         event.setCancelled(true);
 
-        String message = event.getMessage();
-        Consumer<String> callback = chatInput.remove(playerUUID);
+        Component message = event.message();
+        Consumer<Component> callback = chatInput.remove(playerUUID);
         Bukkit.getScheduler().runTask(this, () -> callback.accept(message));
     }
 
@@ -363,7 +380,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         return PlaceholderAPI.setPlaceholders(player, text);
     }
 
-    public void waitForPlayerInput(Player player, Consumer<String> callback){
+    public void waitForPlayerInput(Player player, Consumer<Component> callback){
         chatInput.put(player.getUniqueId(), callback);
     }
 
@@ -533,5 +550,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     public BotMain getDiscordBot() {
         return discordBot;
+    }
+
+    public CopyOnWriteArraySet<UUID> getVerifiedPlayers(){
+        return verifiedPlayers;
     }
 }

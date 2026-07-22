@@ -2,6 +2,7 @@
 package me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -172,7 +173,7 @@ public class BlockConfigurationGUI implements Listener {
                 //Checks if the coordinate X is valid
                 int coordinateX;
                 try{
-                    coordinateX = Integer.parseInt(input1);
+                    coordinateX = Integer.parseInt(PlainTextComponentSerializer.plainText().serialize(input1));
                     plugin.getConfig().set("discord-block.location.x", coordinateX);
                     plugin.saveConfig();
                 } catch (Exception e){
@@ -198,7 +199,7 @@ public class BlockConfigurationGUI implements Listener {
                     //Check if the coordinate is valid
                     int coordinateY;
                     try{
-                        coordinateY = Integer.parseInt(input2);
+                        coordinateY = Integer.parseInt(PlainTextComponentSerializer.plainText().serialize(input2));
                         plugin.getConfig().set("discord-block.location.y", coordinateY);
                         plugin.saveConfig();
                     } catch (Exception e){
@@ -224,7 +225,7 @@ public class BlockConfigurationGUI implements Listener {
                         int coordinateZ;
                         //Check if the coordinate is valid
                         try{
-                            coordinateZ = Integer.parseInt(input3);
+                            coordinateZ = Integer.parseInt(PlainTextComponentSerializer.plainText().serialize(input3));
                             plugin.getConfig().set("discord-block.location.z", coordinateZ);
                             plugin.saveConfig();
                         } catch (Exception e){

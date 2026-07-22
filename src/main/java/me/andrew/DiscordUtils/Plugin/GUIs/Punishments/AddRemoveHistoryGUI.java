@@ -10,6 +10,8 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -164,8 +166,8 @@ public class AddRemoveHistoryGUI implements Listener{
         }
     }
 
-    private void removePunishment(String ID, Player staff){
-        if(ID.equalsIgnoreCase("cancel")){
+    private void removePunishment(Component ID, Player staff){
+        if(ID.equals(Component.text("cancel"))){
             showGui(staff);
             return;
         }
@@ -173,7 +175,7 @@ public class AddRemoveHistoryGUI implements Listener{
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
         try{
             //Checking if there is a punishment with that ID
-            if(!punishmentExists(ID)){
+            if(!punishmentExists(PlainTextComponentSerializer.plainText().serialize(ID))){
                 staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThere is no punishment with ID &l"+ID+"&c!"));
                 staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
@@ -183,7 +185,7 @@ public class AddRemoveHistoryGUI implements Listener{
             }
 
             //Getting the punishment with that ID
-            Punishment targetP = getPunishment(ID);
+            Punishment targetP = getPunishment(PlainTextComponentSerializer.plainText().serialize(ID));
 
             //Checking if the player has the permission to remove the punishment
             PunishmentType psType = targetP.getPunishmentType();

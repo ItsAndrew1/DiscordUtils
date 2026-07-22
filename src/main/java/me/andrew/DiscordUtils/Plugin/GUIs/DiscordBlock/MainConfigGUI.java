@@ -4,6 +4,7 @@ package me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -127,7 +128,7 @@ public class MainConfigGUI implements Listener {
             player.closeInventory();
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the discord invite link:"));
             plugin.waitForPlayerInput(player, input->{
-                if(!isUrlValid(input)){
+                if(!isUrlValid(PlainTextComponentSerializer.plainText().serialize(input))){
                     Sound invalidUrl = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
                     player.playSound(player.getLocation(), invalidUrl, 1f, 1f);
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThe URL is invalid! Please enter a valid one."));

@@ -55,32 +55,28 @@ public class SlashCommands extends ListenerAdapter{
                 }
 
                 //Checking if the user is already verified
-                Connection dbConnection = plugin.getDatabaseManager().getConnection();
-                String sql = "SELECT 1 FROM playersVerification WHERE discordId = ?";
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-                    ps.setString(1, userId);
-                    ResultSet rs = ps.executeQuery();
-
-                    if(rs.next()){
-                        event.reply("You are already verified!").setEphemeral(true).queue();
-                        return;
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                if(plugin.getVerifiedPlayers().contains(uuid)){
+                    event.reply("You are already verified!").setEphemeral(true).queue();
+                    return;
                 }
 
                 //Checking if the code expired or is invalid
                 if (uuid == null) {
                     boolean ephemeral = botConfig.getBoolean("iecm-set-ephemeral");
-                    String message = botConfig.getString("invalid-expired-code-message");
+                    String message = botConfig.getString("invalid-expired-code-message", "**Invalid** or **expired** verification code!");
                     event.reply(message).setEphemeral(ephemeral).queue();
                     return;
                 }
 
                 Player player = Bukkit.getPlayer(uuid);
+                assert player != null;
+
                 try {
                     plugin.getDatabaseManager().setPlayerVerified(uuid, userId);
                     plugin.getDatabaseManager().deleteExpiredCode(uuid);
+
+                    //Adding the player to the Verified Players map
+                    plugin.getVerifiedPlayers().add(uuid);
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         //Sends a message
@@ -101,13 +97,13 @@ public class SlashCommands extends ListenerAdapter{
                         });
 
                         //Sound
-                        Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound").toLowerCase()));
+                        Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound", "entity.player.levelup").toLowerCase()));
                         float phvsVolume = plugin.getConfig().getInt("phvs-volume");
                         float phvsPitch = plugin.getConfig().getInt("phvs-pitch");
                         player.playSound(player.getLocation(), hasVerifiedSound, phvsVolume, phvsPitch);
 
                         //Giving the rewards if there are any (and if rewards are toggled)
-                        boolean toggleRewards = plugin.getConfig().getBoolean("rewards.toggle-giving-rewards");
+                        boolean toggleRewards = plugin.getConfig().getBoolean("rewards.toggle-giving-rewards", false);
                         if(toggleRewards) {
                             //Giving exp if the value is over 0
                             int expLevels = plugin.getConfig().getInt("rewards.exp");
@@ -168,8 +164,8 @@ public class SlashCommands extends ListenerAdapter{
                         if(!member.isOwner()) member.modifyNickname(player.getName()).queue();
                     });
 
-                    String message = botConfig.getString("player-verified-message");
-                    boolean ephemeral = botConfig.getBoolean("pvm-set-ephemeral");
+                    String message = botConfig.getString("player-verified-message", "✅ You are now verified! Have fun on our server!");
+                    boolean ephemeral = botConfig.getBoolean("pvm-set-ephemeral", true);
                     event.reply(message).setEphemeral(ephemeral).queue();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
@@ -178,130 +174,115 @@ public class SlashCommands extends ListenerAdapter{
 
             //pshistory command
             case "pshistory" -> {
-                //Checking if the user is banned
-                try {
-                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
-                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
-                        return;
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                event.deferReply(true).queue();
 
-                OfflinePlayer userPlayer;
-                try {
-                    userPlayer = getUserPlayer(event.getUser().getId());
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-
-                //Check if the user is verified
-                if (userPlayer == null) {
-                    event.reply("You **are not** verified! Please run */verify* on our server and try again.").setEphemeral(true).queue();
-                    return;
-                }
-
-                if (event.getOption("ign") == null) {
-                    try {
-                        //Check if the user has any punishments
-                        if (!plugin.getDatabaseManager().playerHasPunishments(userPlayer.getUniqueId())) {
-                            event.reply("You **do not have** any punishments yet!").setEphemeral(true).queue();
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try{
+                        //Checking if the user is banned
+                        if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
+                            event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
                             return;
                         }
 
-                        event.deferReply().setEphemeral(true).queue();
-                        botMain.getPunishmentHistory().displayPunishments(event, userPlayer.getUniqueId(), PunishmentsFilter.ALL, true);
-                    } catch (SQLException e) {
+                        //Check if the user is verified
+                        String userPlayerIGN = getUserPlayerIGN(event.getUser().getId());
+                        if(userPlayerIGN == null){
+                            event.getHook().sendMessage("You **are not** verified! Please run */verify* on our server and try again.").queue();
+                            return;
+                        }
+
+                        OfflinePlayer userPlayer = Bukkit.getOfflinePlayer(userPlayerIGN);
+                        UUID userPlayerUUID = userPlayer.getUniqueId();
+
+                        if(event.getOption("ign") == null){
+                            boolean playerHasPunishments = plugin.getDatabaseManager().playerHasPunishments(userPlayerUUID);
+
+                            if(!playerHasPunishments){
+                                event.getHook().sendMessage("You **do not have** any punishments yet!").queue();
+                                return;
+                            }
+
+                            botMain.getPunishmentHistory().displayPunishments(event, userPlayerUUID, PunishmentsFilter.ALL, true);
+                            return;
+                        }
+
+                        //Checking if the user has permission to check the history of others
+                        boolean hasPermission = false;
+                        List<Long> psRemoveRoles = botConfig.getLongList("pshistory-cmd-roles");
+                        if(event.getMember() != null){
+                            for(Long roleID : psRemoveRoles){
+                                Role role = botMain.getDiscordServer().getRoleById(roleID);
+                                if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                            }
+                        }
+                        if(!hasPermission){
+                            event.getHook().sendMessage("You don't have permission to use this command!").queue();
+                            return;
+                        }
+
+                        //Getting the target player
+                        String ign = event.getOption("ign").getAsString();
+                        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
+                        UUID targetPlayerUUID = targetPlayer.getUniqueId();
+                        String targetPlayerName = targetPlayer.getName();
+
+                        //Check if the target player has any punishments
+                        boolean playerHasPunishments = plugin.getDatabaseManager().playerHasPunishments(targetPlayerUUID);
+                        if(!playerHasPunishments){
+                            event.getHook().sendMessage("Player **"+targetPlayerName+"** does not have any punishments yet!").queue();
+                            return;
+                        }
+
+                        botMain.getPunishmentHistory().displayPunishments(event, targetPlayerUUID, PunishmentsFilter.ALL, false);
+                    } catch (SQLException e){
                         throw new RuntimeException(e);
                     }
-                    return;
-                }
-
-                //Checking if the user has permission to check the history of others
-                boolean hasPermission = false;
-                List<Long> psRemoveRoles = botConfig.getLongList("pshistory-cmd-roles");
-                for(Long roleID : psRemoveRoles){
-                    Role role = botMain.getDiscordServer().getRoleById(roleID);
-                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
-                }
-                if(!hasPermission){
-                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
-                    return;
-                }
-
-                //Getting the target player
-                String ign = event.getOption("ign").getAsString();
-                OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
-
-                //Check if the target player is the user player
-                if (targetPlayer == userPlayer) {
-                    event.reply("You **cannot** do this! Use */pshistory* to view **your own** punishments.").setEphemeral(true).queue();
-                    return;
-                }
-
-                //Checking if the player exists on the server.
-                if (!targetPlayer.hasPlayedBefore()) {
-                    event.reply("Player " + targetPlayer.getName() + " doesn't exist on this server! Please enter a valid name.").setEphemeral(true).queue();
-                    return;
-                }
-
-                //Check if the target player has any punishments
-                try {
-                    if (!plugin.getDatabaseManager().playerHasPunishments(targetPlayer.getUniqueId())) {
-                        event.reply("Player **\\" + targetPlayer.getName() + "** does not have any punishments yet!").setEphemeral(true).queue();
-                        return;
-                    }
-
-                    event.deferReply().setEphemeral(true).queue(); //Getting the interaction hook
-                    botMain.getPunishmentHistory().displayPunishments(event, targetPlayer.getUniqueId(), PunishmentsFilter.ALL, false);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                });
             }
 
             case "punish" -> {
+                event.deferReply(true).queue();
+
                 //Checking if the user is banned
-                try {
-                    if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
-                        event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
-                        return;
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try{
+                        if(isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL) || isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD)){
+                            event.getHook().sendMessage("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                            return;
+                        }
+
+                        //Checking if the user has the necessary roles
+                        boolean hasPermission = false;
+                        List<Long> psRemoveRoles = botConfig.getLongList("punish-cmd-roles");
+                        for(Long roleID : psRemoveRoles){
+                            Role role = botMain.getDiscordServer().getRoleById(roleID);
+                            if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
+                        }
+                        if(!hasPermission){
+                            event.getHook().sendMessage("You don't have permission to use this command!").setEphemeral(true).queue();
+                            return;
+                        }
+
+                        //Getting the player from the ign
+                        String ign = event.getOption("ign").getAsString();
+                        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
+
+                        if (targetPlayer == getUserPlayer(event.getUser().getId())) {
+                            event.getHook().sendMessage("You cannot punish yourself!").setEphemeral(true).queue();
+                            return;
+                        }
+
+                        //Check if the target player has played on the server
+                        if (!targetPlayer.hasPlayedBefore()) {
+                            event.getHook().sendMessage("Player **\\" + targetPlayer.getName() + "** does not exist on the server. Please enter a valid name!").setEphemeral(true).queue();
+                            return;
+                        }
+
+                        botMain.getAddPunishments().punishPlayer(event, targetPlayer);
+                    } catch (SQLException e){
+                        throw new RuntimeException(e);
                     }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-
-                //Checking if the user has the necessary roles
-                boolean hasPermission = false;
-                List<Long> psRemoveRoles = botConfig.getLongList("punish-cmd-roles");
-                for(Long roleID : psRemoveRoles){
-                    Role role = botMain.getDiscordServer().getRoleById(roleID);
-                    if(event.getMember().getRoles().contains(role)) {hasPermission = true; break;}
-                }
-                if(!hasPermission){
-                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
-                    return;
-                }
-
-                try {
-                    //Getting the player from the ign
-                    String ign = event.getOption("ign").getAsString();
-                    OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
-
-                    if (targetPlayer == getUserPlayer(event.getUser().getId())) {
-                        event.reply("You cannot punish yourself!").setEphemeral(true).queue();
-                        return;
-                    }
-
-                    //Check if the target player has played on the server
-                    if (!targetPlayer.hasPlayedBefore()) {
-                        event.reply("Player **\\" + targetPlayer.getName() + "** does not exist on the server. Please enter a valid name!").setEphemeral(true).queue();
-                        return;
-                    }
-
-                    botMain.getAddPunishments().punishPlayer(event, targetPlayer);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                });
             }
 
             case "psremove" -> {
@@ -475,9 +456,7 @@ public class SlashCommands extends ListenerAdapter{
                             .setPlaceholder(placeholder)
                             .setRequired(true)
                             .setMinLength(minimumLength)
-                            .setMaxLength(maximumLength).build();;;;;;;;;;;;;;;;;;
-                            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  //Genta was here ☺
-                            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                            .setMaxLength(maximumLength).build();
 
                     Modal formModal = Modal.create("appeal_form:"+punishmentID, "Appeal Your Punishment")
                             .addComponents(Label.of("Form", reasonForm))
@@ -605,17 +584,17 @@ public class SlashCommands extends ListenerAdapter{
         }
     }
 
-    private OfflinePlayer getUserPlayer(String userId) throws SQLException {
+    private String getUserPlayerIGN(String userId) throws SQLException {
         Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        OfflinePlayer userPlayer = null;
 
         try(PreparedStatement ps = dbConnection.prepareStatement("SELECT ign FROM playersVerification WHERE discordId = ?")){
             ps.setString(1, userId);
             try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) userPlayer = Bukkit.getOfflinePlayer(rs.getString("ign"));
+                if(rs.next()) return rs.getString("ign");
             }
         }
-        return userPlayer;
+
+        return null;
     }
 
     private String getTargetPlayerUserID(UUID targetUUID) throws SQLException {

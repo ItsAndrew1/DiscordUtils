@@ -7,6 +7,8 @@ import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -112,13 +114,13 @@ public class ChoosePunishScopeGUI implements Listener {
             staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&ld &f-> &adays | &f&lh &f-> &ahours | &f&lm &f-> &aminutes | &f&ls-> &aseconds"));
 
             plugin.waitForPlayerInput(staff, input -> {
-                if(input.equalsIgnoreCase("cancel")){
+                if(input.equals(Component.text("cancel"))){
                     staff.playSound(staff.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                     state.scope = null;
                     showGui(staff);
                     return;
                 }
-                durationFromWarnings = parseCooldown(input);
+                durationFromWarnings = parseCooldown(PlainTextComponentSerializer.plainText().serialize(input));
 
                 if(durationFromWarnings == 0){
                     staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);

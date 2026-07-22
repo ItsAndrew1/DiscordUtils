@@ -4,6 +4,8 @@ package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -100,13 +102,13 @@ public class ChoosePunishTypeGUI implements Listener{
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&ld &f-> &adays | &f&lh &f-> &ahours | &f&lm &f-> &aminutes | &f&ls-> &aseconds"));
 
         plugin.waitForPlayerInput(player, input -> {
-            if(input.equalsIgnoreCase("cancel")){
+            if(input.equals(Component.text("cancel"))){
                 plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                 plugin.getAddRemovePunishGUI().showGui(player);
                 return;
             }
-            durationMillis = parseCooldown(input);
+            durationMillis = parseCooldown(PlainTextComponentSerializer.plainText().serialize(input));
 
             if(durationMillis == 0){
                 plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
@@ -132,7 +134,7 @@ public class ChoosePunishTypeGUI implements Listener{
         player.closeInventory();
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the reason for the punishment. Type &c&lcancel &ato return."));
         plugin.waitForPlayerInput(player, input -> {
-            if(input.equalsIgnoreCase("cancel")){
+            if(input.equals(Component.text("cancel"))){
                 plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                 plugin.getAddRemovePunishGUI().showGui(player);
@@ -140,7 +142,7 @@ public class ChoosePunishTypeGUI implements Listener{
             }
 
             state.lastInteraction = System.currentTimeMillis();
-            state.reason = input;
+            state.reason = PlainTextComponentSerializer.plainText().serialize(input);
 
             if(!state.type.isPermanent()) enterDuration(player, state);
             else plugin.getChoosePunishScopeGUI().showGui(player);
