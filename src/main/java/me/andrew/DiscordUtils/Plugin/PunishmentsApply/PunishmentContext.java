@@ -92,46 +92,48 @@ public class PunishmentContext {
         String playerName = staff.getName();
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
-        try(PreparedStatement ps = dbConnection.prepareStatement("""
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try(PreparedStatement ps = dbConnection.prepareStatement("""
                 INSERT INTO punishments (id, uuid, type, scope, reason, staff, created_at, expire_at, active, removed, removed_at, appeal_state)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """)){
-            ps.setString(1, state.ID);
-            ps.setString(2, targetPlayer.getUniqueId().toString());
-            ps.setString(3, state.type.name());
-            ps.setString(4, state.scope.name());
-            ps.setString(5, state.reason);
-            ps.setString(6, playerName);
-            ps.setLong(7, System.currentTimeMillis());
-            ps.setString(12, "x");
+                ps.setString(1, state.ID);
+                ps.setString(2, targetPlayer.getUniqueId().toString());
+                ps.setString(3, state.type.name());
+                ps.setString(4, state.scope.name());
+                ps.setString(5, state.reason);
+                ps.setString(6, playerName);
+                ps.setLong(7, System.currentTimeMillis());
+                ps.setString(12, "x");
 
-            //Handling various cases
-            if(state.type == PunishmentType.KICK){
-                ps.setLong(8, 0);
-                ps.setBoolean(9, false);
-                ps.setBoolean(10, false);
-                ps.setLong(11, 0);
-            }
-            else if(state.type.toString().contains("WARN")){
-                ps.setLong(8, 0);
-                ps.setBoolean(9, true);
-                ps.setBoolean(10, false);
-                ps.setLong(11, 0);
-            }
-            else if(state.type.name().contains("TEMP")){
-                ps.setLong(8, System.currentTimeMillis() + state.duration);
-                ps.setBoolean(9, true);
-                ps.setBoolean(10, false);
-                ps.setLong(11, 0);
-            }
-            else if(state.type.toString().contains("PERM")){
-                ps.setLong(8, 0);
-                ps.setBoolean(9, true);
-                ps.setBoolean(10, false);
-                ps.setLong(11, 0);
-            }
-            ps.executeUpdate();
-        } catch (SQLException e){ throw new RuntimeException(e); }
+                //Handling various cases
+                if(state.type == PunishmentType.KICK){
+                    ps.setLong(8, 0);
+                    ps.setBoolean(9, false);
+                    ps.setBoolean(10, false);
+                    ps.setLong(11, 0);
+                }
+                else if(state.type.toString().contains("WARN")){
+                    ps.setLong(8, 0);
+                    ps.setBoolean(9, true);
+                    ps.setBoolean(10, false);
+                    ps.setLong(11, 0);
+                }
+                else if(state.type.name().contains("TEMP")){
+                    ps.setLong(8, System.currentTimeMillis() + state.duration);
+                    ps.setBoolean(9, true);
+                    ps.setBoolean(10, false);
+                    ps.setLong(11, 0);
+                }
+                else if(state.type.toString().contains("PERM")){
+                    ps.setLong(8, 0);
+                    ps.setBoolean(9, true);
+                    ps.setBoolean(10, false);
+                    ps.setLong(11, 0);
+                }
+                ps.executeUpdate();
+            } catch (SQLException e){ throw new RuntimeException(e); }
+        });
     }
     //Colored scope. For displaying the scope in MC
     private String getColoredStringScope(AddingState state) {

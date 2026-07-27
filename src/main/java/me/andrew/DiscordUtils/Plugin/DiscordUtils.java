@@ -9,6 +9,7 @@ import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.FacingChoiceGUI;
 import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.MainConfigGUI;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.*;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PlayerPunishmentDataCache;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -64,6 +65,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private FinalPunishmentGUI finalPunishmentGUI;
 
     private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
+    private final Map<UUID, PlayerPunishmentDataCache> punishmentPlayerCache = new HashMap<>();
 
     private BukkitTask broadcastTask; //Task for broadcasting
     private BotMain discordBot;

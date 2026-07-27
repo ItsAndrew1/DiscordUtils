@@ -206,7 +206,15 @@ public class AddPunishments extends ListenerAdapter{
                         );
 
                         //Applying the timeout role if the type is perm mute and scope is discord or global
-                        if(state.type == PunishmentType.PERM_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+                        if(state.type == PunishmentType.PERM_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) {
+                            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                                try {
+                                    addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+                                } catch (SQLException e) {
+                                    plugin.getLogger().warning("Couldn't add the timeout role for a punished user! See message: "+e.getMessage());
+                                }
+                            });
+                        }
 
                         state.scope.applyPunishment(ctx, state.type);
 
@@ -302,7 +310,15 @@ public class AddPunishments extends ListenerAdapter{
                     if(plugin.botFile().getConfig().getBoolean("use-logs", false)) new InsertLog(plugin, bot, state);
 
                     //Giving the timeout role if the type is temp mute and scope is discord or global
-                    if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+                    if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)){
+                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                           try{
+                               addTimeoutRole(state.targetUUID, bot.getDiscordServer());
+                           } catch (SQLException e) {
+                               plugin.getLogger().warning("[DC] Couldn't give the timeout role to a user. See message: "+e.getMessage());
+                           }
+                        });
+                    }
 
                     event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
                     addingStateMap.remove(event.getUser().getIdLong());
