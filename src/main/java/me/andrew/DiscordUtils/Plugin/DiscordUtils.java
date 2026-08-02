@@ -327,11 +327,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 //Checking if that player has ongoing verification
                 try {
                     if(!getDatabaseManager().isPlayerVerifying(player.getUniqueId())) return;
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
 
-                try {
                     UUID playerUUID = player.getUniqueId();
                     getDatabaseManager().deleteExpiredCode(playerUUID);
                 } catch (SQLException e) {

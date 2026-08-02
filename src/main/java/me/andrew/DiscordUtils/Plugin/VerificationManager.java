@@ -36,7 +36,7 @@ public class VerificationManager{
                 }
 
                 //Check if the player is already verified
-                if(plugin.getDatabaseManager().isVerified(player.getUniqueId())){
+                if(plugin.getVerifiedPlayers().contains(UUID)){
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-is-already-verified-message", "&cYou are already verified!"));
                         player.sendMessage(message);

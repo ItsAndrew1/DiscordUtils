@@ -6,6 +6,7 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -239,15 +240,31 @@ public class Commands implements CommandExecutor{
 
             FileConfiguration botConfig = plugin.botFile().getConfig();
 
-            String sql = "DELETE FROM playersVerification WHERE uuid = ?";
-            try(PreparedStatement preparedStatement = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
-                //Checking if the player is verified
-                if(!plugin.getDatabaseManager().isVerified(player.getUniqueId())){
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have a MC account linked to the DC server. Run &l/verify &cto link one!"));
-                    player.playSound(player.getLocation(), invalid, 1f, 1f);
-                    return true;
+            //Checking if the player is verified
+            if(!plugin.getVerifiedPlayers().contains(player.getUniqueId())){
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have a MC account linked to the DC server. Run &l/verify &cto link one!"));
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
+                return true;
+            }
+
+            //Removing the 'Verified' role from the target user and giving him Unverified role
+            Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+
+            long unverifiedRoleID = botConfig.getLong("verification.unverified-role-id");
+            Role unverified = dcServer.getRoleById(unverifiedRoleID);
+            long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
+
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                //Removing the player from the playersVerification table
+                String sql = "DELETE FROM playersVerification WHERE uuid = ?";
+                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+                    ps.setString(1, player.getUniqueId().toString());
+                    ps.executeUpdate();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
                 }
-                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+
                 String userDiscordID;
 
                 //Getting the user's discord id
@@ -256,13 +273,9 @@ public class Commands implements CommandExecutor{
                     preparedStatement2.setString(1, player.getUniqueId().toString());
                     ResultSet rs = preparedStatement2.executeQuery();
                     userDiscordID = rs.getString("discordId");
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
                 }
-
-                //Removing the 'Verified' role from the target user and giving him Unverified role
-                long unverifiedRoleID = botConfig.getLong("verification.unverified-role-id");
-                Role unverified = dcServer.getRoleById(unverifiedRoleID);
-                long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
-                Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
 
                 dcServer.retrieveMemberById(userDiscordID).queue(targetMember -> {
                     if(targetMember.getRoles().contains(verifiedRole)) dcServer.removeRoleFromMember(targetMember, verifiedRole).queue();
@@ -271,17 +284,14 @@ public class Commands implements CommandExecutor{
                     //Resetting the user's nickname
                     if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
                 });
+            });
 
-                //Deleting the player from playersVerification table
-                preparedStatement.setString(1, player.getUniqueId().toString());
-                preparedStatement.execute();
+            player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&aUnverified Successfully!"));
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
 
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aUnverified successfully!"));
-                player.playSound(player.getLocation(), good, 1f, 1f);
-                return true;
-            } catch (SQLException e){
-                throw new RuntimeException(e);
-            }
+            //Removing the player from the verifiedPlayers map
+            plugin.getVerifiedPlayers().remove(player.getUniqueId());
+            return true;
         }
 
         if(command.getName().equalsIgnoreCase("history")){
