@@ -64,7 +64,6 @@ public class PlayerHeadsGUIs implements Listener{
             String playerStatus;
 
             if(targetPlayer.isOnline()) playerStatus = ChatColor.translateAlternateColorCodes('&', "&aStatus: &a&lONLINE");
-            else if(targetPlayer.isBanned()) playerStatus = ChatColor.translateAlternateColorCodes('&', "&aStatus: &5&lBANNED");
             else playerStatus = ChatColor.translateAlternateColorCodes('&', "&aStatus: &c&lOFFLINE");
 
             int activePunishments = plugin.getDatabaseManager().getPlayerActivePunishmentsNr(targetPlayer.getUniqueId());

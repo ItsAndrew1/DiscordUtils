@@ -12,6 +12,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 
 //This class handles the database. It also has all the helper methods that I need
 public class DatabaseManager {
@@ -167,6 +168,23 @@ public class DatabaseManager {
 
 
     //Helper methods for punishments
+    public void setupPunishmentCache(UUID uuid){
+        String sql = "SELECT * FROM punishments WHERE uuid = ? AND active = false";
+        try(PreparedStatement ps = connection.prepareStatement(sql)){
+            ps.setString(1, uuid.toString());
+
+            try(ResultSet rs = ps.executeQuery()){
+                while(rs.next()){
+                    PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
+                    PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
+                    plugin.getPlayerPunishmentDataCache().get(uuid).insertPunishment(type, scope);
+                }
+            }
+        } catch (SQLException e){
+            plugin.getLogger().warning("Couldn't setup the punishment cache! See message: "+e.getMessage());
+        }
+    }
+
     public boolean playerHasPunishments(UUID uuid) throws SQLException {
         String sql = "SELECT 1 FROM punishments WHERE uuid = ?";
 

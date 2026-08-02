@@ -231,6 +231,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 for(UUID uuid : playerUUIDs){
                     try{
                         if(getDatabaseManager().isVerified(uuid)) verifiedPlayers.add(uuid);
+
+                        //Also setting up the player punishment cache
+                        getDatabaseManager().setupPunishmentCache(uuid);
                     } catch (Exception e){
                         Bukkit.getScheduler().runTask(this, () -> getLogger().info("Couldn't add the verified players. See message: "+e.getMessage()));
                     }
@@ -552,5 +555,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     public CopyOnWriteArraySet<UUID> getVerifiedPlayers(){
         return verifiedPlayers;
+    }
+
+    public Map<UUID, PlayerPunishmentDataCache> getPlayerPunishmentDataCache(){
+        return punishmentPlayerCache;
     }
 }

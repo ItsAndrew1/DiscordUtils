@@ -64,7 +64,7 @@ public class PunishmentHistory extends ListenerAdapter{
 
         int limit = 6;
         int offset = (state.page-1) * limit;
-        List<Punishment> punishments = getPunishmentsFromDB(state.targetUUID, state.filter, limit, offset);
+        List<Punishment> punishments = plugin.getDatabaseManager().getPlayerPunishments(state.targetUUID, state.filter, limit, offset);
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
@@ -145,29 +145,6 @@ public class PunishmentHistory extends ListenerAdapter{
         LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
         return time.format(formatter);
-    }
-
-    private List<Punishment> getPunishmentsFromDB(UUID targetUUID, PunishmentsFilter filter, int limit, int offset) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-
-        String sql = "SELECT * FROM punishments WHERE uuid = ?";
-        if(filter == PunishmentsFilter.ACTIVE) sql+=" AND active = 1";
-        if(filter == PunishmentsFilter.EXPIRED) sql+=" AND active = 0";
-        sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
-            ps.setString(1, targetUUID.toString());
-            ps.setInt(2, limit);
-            ps.setInt(3, offset);
-
-            try(ResultSet rs = ps.executeQuery()){
-                List<Punishment> punishments = new ArrayList<>();
-                while(rs.next()){
-                    punishments.add(plugin.getDatabaseManager().mapPunishment(rs));
-                }
-                return punishments;
-            }
-        }
     }
 
     private String getPunishmentTypeString(PunishmentType type){
