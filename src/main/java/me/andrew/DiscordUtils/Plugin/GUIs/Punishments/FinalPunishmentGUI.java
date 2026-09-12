@@ -12,6 +12,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -187,68 +188,12 @@ public class FinalPunishmentGUI implements Listener {
                         player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &cPlayer &e" + clickedPlayerName + " &cis not online! You may use &9&lDISCORD &cscope instead."));
                     return;
                 }
-
-                //Applying the punishment
-                scope.applyPunishment(ctx, PunishmentType.KICK);
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.KICK) + " &awith scope, " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
             }
 
-            //If the punishment is a perm ban warn
-            if (punishmentType.equals(PunishmentType.PERM_BAN_WARN)) {
-                scope.applyPunishment(ctx, PunishmentType.PERM_BAN_WARN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " " + getPunishmentString(PunishmentType.PERM_BAN_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
-
-            //If punishment is a perm ban
-            if (punishmentType.equals(PunishmentType.PERM_BAN)) {
-                scope.applyPunishment(ctx, PunishmentType.PERM_BAN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.PERM_BAN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
-
-            //If punishment is a temp ban warn
-            if (punishmentType.equals(PunishmentType.TEMP_BAN_WARN)) {
-                scope.applyPunishment(ctx, PunishmentType.TEMP_BAN_WARN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_BAN_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
-
-            //If punishment is a temp ban
-            if (punishmentType.equals(PunishmentType.TEMP_BAN)) {
-                scope.applyPunishment(ctx, PunishmentType.TEMP_BAN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_BAN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
-
-            //If punishment is a perm mute
-            if (punishmentType == PunishmentType.PERM_MUTE) {
-                scope.applyPunishment(ctx, PunishmentType.PERM_MUTE);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.PERM_MUTE) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
-
-            //If punishment is a perm mute warning
-            if (punishmentType == PunishmentType.PERM_MUTE_WARN) {
-                scope.applyPunishment(ctx, PunishmentType.PERM_MUTE_WARN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.PERM_MUTE_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
-
-            //If punishment is a temp mute
-            if (punishmentType == PunishmentType.TEMP_MUTE) {
-                scope.applyPunishment(ctx, PunishmentType.TEMP_MUTE);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_MUTE) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
-
-            //If punishment is a temp mute warning
-            if (punishmentType == PunishmentType.TEMP_MUTE_WARN) {
-                scope.applyPunishment(ctx, PunishmentType.TEMP_MUTE_WARN);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &aPunishment " + getPunishmentString(PunishmentType.TEMP_MUTE_WARN) + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for player &e" + clickedPlayerName + "&a!"));
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-            }
+            //Applying the punishment
+            scope.applyPunishment(ctx, punishmentType);
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " " + getPunishmentString(punishmentType) + "&awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for " + clickedPlayerName + "&a!"));
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
         }
 
         //Inserting the log (if they are toggled)

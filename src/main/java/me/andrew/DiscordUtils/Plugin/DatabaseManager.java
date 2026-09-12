@@ -116,15 +116,6 @@ public class DatabaseManager {
         }
     }
 
-    public boolean playerAlreadyExits(UUID uuid) throws SQLException {
-        try(PreparedStatement ps =  connection.prepareStatement("SELECT 1 FROM playersVerification WHERE uuid = ?")){
-            ps.setString(1, uuid.toString());
-            try (ResultSet rs = ps.executeQuery()){
-                return rs.next();
-            }
-        }
-    }
-
     public boolean isPlayerVerifying(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT code FROM verificationCodes WHERE uuid = ?")){
             ps.setString(1, uuid.toString());

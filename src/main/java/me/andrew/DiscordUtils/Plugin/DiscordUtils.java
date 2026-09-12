@@ -2,6 +2,7 @@
 package me.andrew.DiscordUtils.Plugin;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+import me.andrew.DiscordUtils.Caching.VerificationCodesCaching;
 import me.andrew.DiscordUtils.DiscordBot.*;
 import me.andrew.DiscordUtils.Plugin.GUIs.*;
 import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.BlockConfigurationGUI;
@@ -9,24 +10,21 @@ import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.FacingChoiceGUI;
 import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.MainConfigGUI;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.*;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PlayerPunishmentDataCache;
+import me.andrew.DiscordUtils.Caching.PlayerPunishmentDataCache;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
-import net.dv8tion.jda.api.components.utils.ComponentDeserializer;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.kyori.adventure.text.Component;
-import org.apache.logging.log4j.spi.CopyOnWrite;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -66,6 +64,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
     private final Map<UUID, PlayerPunishmentDataCache> punishmentPlayerCache = new HashMap<>();
+    private final VerificationCodesCaching verifyCodesCaching = new VerificationCodesCaching();
 
     private BukkitTask broadcastTask; //Task for broadcasting
     private BotMain discordBot;
@@ -179,7 +178,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                                 PunishmentType type = p.getPunishmentType();
                                 PunishmentScopes scope = p.getScope();
 
-                                //Unbans/removed the timeout of a user if the scope is discord/global
+                                //Unbans/removes the timeout of a user if the scope is discord/global
                                 UUID targetUUID = p.getUuid();
                                 String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
                                 PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
@@ -321,22 +320,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         if(discordBot.getJda() != null){
             Bukkit.getLogger().info("Bot shut down successfully!");
             discordBot.getJda().shutdownNow(); //Shuts down the bot if it is turned on
-        }
-
-        //Removing the cooldowns from the verification if the players have any
-        Connection dbConnection = getDatabaseManager().getConnection();
-        if(dbConnection != null){
-            for(Player player : Bukkit.getOnlinePlayers()){
-                //Checking if that player has ongoing verification
-                try {
-                    if(!getDatabaseManager().isPlayerVerifying(player.getUniqueId())) return;
-
-                    UUID playerUUID = player.getUniqueId();
-                    getDatabaseManager().deleteExpiredCode(playerUUID);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }
         }
 
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
@@ -559,5 +542,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     public Map<UUID, PlayerPunishmentDataCache> getPlayerPunishmentDataCache(){
         return punishmentPlayerCache;
+    }
+    public VerificationCodesCaching getVerificationCodesCaching(){
+        return verifyCodesCaching;
     }
 }

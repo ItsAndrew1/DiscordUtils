@@ -1,6 +1,9 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
+import me.andrew.DiscordUtils.Caching.VerificationCodesCaching;
+import me.clip.placeholderapi.PlaceholderAPI;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 
@@ -19,89 +22,66 @@ public class VerificationManager{
 
     public void verificationProcess(Player player) throws SQLException {
         Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.villager.no"));
-        assert invalid != null; //This is for the useless warnings (it will never be null either way)
+        assert invalid != null;
 
         UUID UUID = player.getUniqueId();
-        String name = player.getName();
+        VerificationCodesCaching codes = plugin.getVerificationCodesCaching();
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                //Inserts the player into the playersVerification table if the doesn't exit already
-                if(!plugin.getDatabaseManager().playerAlreadyExits(UUID)){
-                    try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO playersVerification (uuid, ign, discordId, verified) values (?, ?, null, false)")){
-                        ps.setString(1, UUID.toString());
-                        ps.setString(2, name);
-                        ps.executeUpdate();
-                    }
-                }
-
-                //Check if the player is already verified
-                if(plugin.getVerifiedPlayers().contains(UUID)){
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-is-already-verified-message", "&cYou are already verified!"));
-                        player.sendMessage(message);
-                        player.playSound(player.getLocation(), invalid, 1f, 1f);
-                    });
-                    return;
-                }
-
-                //Check if the code expired
-                if(plugin.getDatabaseManager().isCodeExpired(player.getUniqueId())){
-                    plugin.getDatabaseManager().deleteExpiredCode(player.getUniqueId());
-
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("code-expired-message", "&cVerification code expired. Please run &l/verify &cagain."));
-                        player.sendMessage(message);
-                        player.playSound(player.getLocation(), invalid, 1f, 1f);
-                    });
-
-                    return;
-                }
-
-                //Check if the player is already verifying
-                if(plugin.getDatabaseManager().isPlayerVerifying(player.getUniqueId())){
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-already-verifying-message", "&cPlease finish this verification before starting a new one!"));
-                        player.sendMessage(message);
-                        player.playSound(player.getLocation(), invalid, 1f, 1f);
-                    });
-
-                    return;
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-
-            //Creates and stores the verification code in the db
-            String verificationCode = getVerificationCode();
-            long durationSeconds = plugin.getConfig().getLong("verification-code-expire-time");
-            long expireTime = System.currentTimeMillis() + durationSeconds*1000L;
-            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("INSERT INTO verificationCodes(uuid, code, expire_at) values (?, ?, ?)")){
-                ps.setString(1, UUID.toString());
-                ps.setString(2, verificationCode);
-                ps.setLong(3, expireTime);
-                ps.executeUpdate();
-            } catch (Exception e){
-                Bukkit.getScheduler().runTask(plugin, () -> plugin.getLogger().info("Couldn't insert the verification code for player "+player.getName()+". See message: "+e.getMessage()));
-            }
-
-            //Sends the player a message and sound
+        //Check if the player is already verified
+        if(plugin.getVerifiedPlayers().contains(UUID)){
             Bukkit.getScheduler().runTask(plugin, () -> {
-                long durationMinutes = durationSeconds/60;
-                float gvcsVolume = plugin.getConfig().getInt("gvcs-volume");
-                float gvcsPitch = plugin.getConfig().getInt("gvcs-pitch");
-
-                Sound giveVerificationCodeSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("give-verification-code-sound", "block.note_block.pling").toLowerCase()));
-                player.playSound(player.getLocation(), giveVerificationCodeSound, gvcsVolume, gvcsPitch);
-                List<String> chatMessage = plugin.getConfig().getStringList("use-verification-code-message");
-                for(String line : chatMessage){
-                    String parsedLine = line
-                            .replace("%code%", verificationCode)
-                            .replace("%expire_at%", String.valueOf(durationMinutes));
-                    parsedLine = plugin.parsePP(player, parsedLine);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', parsedLine));
-                }
+                String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-is-already-verified-message", "&cYou are already verified!"));
+                player.sendMessage(message);
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
             });
+            return;
+        }
+
+        //Check if the player is already verifying
+        if(codes.isPlayerVerifying(UUID)){
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                String message = plugin.getConfig().getString("player-already-verifying-message", "&cPlease finish this verification before starting a new one!");
+                message = PlaceholderAPI.setPlaceholders(player, message);
+                player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
+            });
+            return;
+        }
+
+        //Checking if the code expired in the meantime
+        if(codes.getCode(UUID) == null) {
+            codes.deleteCode(UUID);
+
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                String message = plugin.getConfig().getString("code-expired-message", "&cLast Verification code expired.");
+                message = PlaceholderAPI.setPlaceholders(player, message);
+                player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+            });
+        }
+
+        String verificationCode = getVerificationCode();
+        long durationSeconds = plugin.getConfig().getLong("verification-code-expire-time");
+        long expireTime = System.currentTimeMillis() + durationSeconds*1000L;
+
+        //Saving the code with the expire time
+        codes.createCode(UUID, verificationCode, expireTime);
+
+        //Sends the player a message and sound
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            long durationMinutes = durationSeconds/60;
+            float gvcsVolume = plugin.getConfig().getInt("gvcs-volume");
+            float gvcsPitch = plugin.getConfig().getInt("gvcs-pitch");
+
+            Sound giveVerificationCodeSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("give-verification-code-sound", "block.note_block.pling").toLowerCase()));
+            player.playSound(player.getLocation(), giveVerificationCodeSound, gvcsVolume, gvcsPitch);
+            List<String> chatMessage = plugin.getConfig().getStringList("use-verification-code-message");
+            for(String line : chatMessage){
+                String parsedLine = line
+                        .replace("%code%", verificationCode)
+                        .replace("%expire_at%", String.valueOf(durationMinutes));
+                parsedLine = plugin.parsePP(player, parsedLine);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', parsedLine));
+            }
         });
     }
 

@@ -1,5 +1,8 @@
 //Developed by _ItsAndrew_
-package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
+package me.andrew.DiscordUtils.Caching;
+
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
+import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 
 import java.util.Collections;
 import java.util.HashMap;
