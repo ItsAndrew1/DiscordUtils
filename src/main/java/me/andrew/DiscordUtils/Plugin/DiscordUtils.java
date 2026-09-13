@@ -325,23 +325,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
     }
 
-    //Quit event to remove the verification cooldown of the player.
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event){
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
-
-        //Checking if that player has ongoing verification
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            try{
-                if(!getDatabaseManager().isPlayerVerifying(playerUUID)) return;
-                getDatabaseManager().deleteExpiredCode(playerUUID);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
     //Handles the chat input for different configurations of the plugin
     @EventHandler
     public void chatAsync(AsyncChatEvent event){

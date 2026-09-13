@@ -1,6 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.DiscordBot;
 
+import me.andrew.DiscordUtils.Caching.VerificationCodesCaching;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
@@ -45,56 +46,63 @@ public class SlashCommands extends ListenerAdapter{
         switch (event.getName()) {
             //The 'verify' command
             case "verify" -> {
+                event.deferReply(true).queue();
+
                 String userId = event.getUser().getId();
-                int verificationCode = event.getOption("code").getAsInt();
-                UUID uuid;
-                try { //Getting the UUID
-                    uuid = plugin.getDatabaseManager().getUuidFromCode(verificationCode);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                String verificationCode = event.getOption("code").getAsString();
+                UUID playerUUID = plugin.getVerificationCodesCaching().getUuidFromCode(verificationCode);
 
                 //Checking if the user is already verified
-                if(plugin.getVerifiedPlayers().contains(uuid)){
-                    event.reply("You are already verified!").setEphemeral(true).queue();
+                if(plugin.getVerifiedPlayers().contains(playerUUID)) {
+                    String message = botConfig.getString("alread-verified-message", "You are already verified!");
+                    event.getHook().sendMessage(message).queue();
+                    return;
+                }
+                String savedCode = plugin.getVerificationCodesCaching().getCode(playerUUID);
+
+                //Checking if the code is expired
+                if(savedCode == null){
+                    String message = botConfig.getString("expired-code-message", "The code you just entered **expired**! Run **/verify** again on our Minecraft Server!");
+                    event.getHook().sendMessage(message).queue();
                     return;
                 }
 
-                //Checking if the code expired or is invalid
-                if (uuid == null) {
-                    boolean ephemeral = botConfig.getBoolean("iecm-set-ephemeral");
-                    String message = botConfig.getString("invalid-expired-code-message", "**Invalid** or **expired** verification code!");
-                    event.reply(message).setEphemeral(ephemeral).queue();
+                //Checking if the code is valid or not
+                if(!verificationCode.equals(savedCode)) {
+                    String message = botConfig.getString("invalid-code-message", "The code you just entered is **invalid**!");
+                    event.getHook().sendMessage(message).queue();
                     return;
                 }
 
-                Player player = Bukkit.getPlayer(uuid);
-                assert player != null;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    Player player = Bukkit.getPlayer(playerUUID);
 
-                try {
-                    plugin.getDatabaseManager().setPlayerVerified(uuid, userId);
-                    plugin.getDatabaseManager().deleteExpiredCode(uuid);
+                    //Checking if the player is on the server
+                    if(!player.isOnline()){
+                        String message = botConfig.getString("player-not-online-message", "You are not online on the server! Please join and try again.");
+                        event.getHook().sendMessage(message).queue();
+                        return;
+                    }
 
-                    //Adding the player to the Verified Players map
-                    plugin.getVerifiedPlayers().add(uuid);
+                    //Assigns the Verified role to the user and removed the Unverified one
+                    Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+                    dcServer.retrieveMemberById(userId).queue(member -> {
+                        long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                        long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
+                        Role unverifiedRole = dcServer.getRoleById(unverifiedRoleID);
+                        Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
+                        dcServer.addRoleToMember(member, verifiedRole).queue();
+                        dcServer.removeRoleFromMember(member, unverifiedRole).queue();
 
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        //Sends a message
+                        //Setting the user's nickname after their MC ign
+                        member.modifyNickname(player.getName()).queue();
+                    });
+
+                    //Sends a message
                         List<String> hasVerifiedMessage = plugin.getConfig().getStringList("player-verified-message");
                         for(String line : hasVerifiedMessage){
                             player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
                         }
-
-                        //Assigns the Verified role to the user and removed the Unverified one
-                        Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-                        dcServer.retrieveMemberById(userId).queue(member -> {
-                            long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
-                            long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
-                            Role unverifiedRole = dcServer.getRoleById(unverifiedRoleID);
-                            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
-                            dcServer.addRoleToMember(member, verifiedRole).queue();
-                            dcServer.removeRoleFromMember(member, unverifiedRole).queue();
-                        });
 
                         //Sound
                         Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound", "entity.player.levelup").toLowerCase()));
@@ -103,73 +111,21 @@ public class SlashCommands extends ListenerAdapter{
                         player.playSound(player.getLocation(), hasVerifiedSound, phvsVolume, phvsPitch);
 
                         //Giving the rewards if there are any (and if rewards are toggled)
-                        boolean toggleRewards = plugin.getConfig().getBoolean("rewards.toggle-giving-rewards", false);
-                        if(toggleRewards) {
-                            //Giving exp if the value is over 0
-                            int expLevels = plugin.getConfig().getInt("rewards.exp");
-                            if (expLevels > 0) player.giveExp(expLevels);
+                    boolean toggleRewards = plugin.getConfig().getBoolean("rewards.toggle-giving-rewards", false);
+                    if(toggleRewards) {
+                        //TO DO: Refactor Reward System.
+                    }
+                });
 
-                            //Giving the items
-                            ConfigurationSection itemsToGive = plugin.getConfig().getConfigurationSection("rewards.items");
-                            if (itemsToGive != null) {
-                                for (String stringItem : itemsToGive.getKeys(false)) {
-                                    String stringMaterial = plugin.getConfig().getString("rewards.items." + stringItem + ".material");
-                                    int itemQuantity = plugin.getConfig().getInt("rewards.items." + stringItem + ".quantity");
-                                    ItemStack item;
-                                    try {
-                                        item = new ItemStack(Material.matchMaterial(stringMaterial.toUpperCase()), itemQuantity);
-                                    } catch (Exception e) {
-                                        String errorMessage = plugin.getConfig().getString("error-giving-rewards-message");
-                                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', errorMessage));
-                                        Bukkit.getLogger().warning("[DISCORDUTILS] One/More reward item(s) are invalid! Giving rewards won't work!");
-                                        Bukkit.getLogger().warning("[DISCORDUTILS] " + e.getMessage());
-                                        return;
-                                    }
+                String message = botConfig.getString("player-verified-message", "✅ You are now verified! Have fun on our server!");
+                event.getHook().sendMessage(message).queue();
 
-                                    //Attaching the enchants to the item
-                                    ConfigurationSection itemEnchants = plugin.getConfig().getConfigurationSection("rewards.items." + stringItem + ".enchantments");
-                                    if (itemEnchants != null) {
-                                        for (String enchantmentString : itemEnchants.getKeys(false)) {
-                                            try {
-                                                Enchantment enchant = Enchantment.getByName(enchantmentString);
-                                                int enchantLevel = plugin.getConfig().getInt("rewards.items." + stringItem + ".enchantments." + enchantmentString);
-                                                item.addEnchantment(enchant, enchantLevel);
-                                            } catch (Exception e) {
-                                                String errorMessage = plugin.getConfig().getString("error-giving-rewards-message");
-                                                player.sendMessage(ChatColor.translateAlternateColorCodes('&', errorMessage));
-                                                Bukkit.getLogger().warning("[DISCORDUTILS] One/More enchantment(s) for item " + stringItem + " are invalid! Giving rewards won't work!");
-                                                Bukkit.getLogger().warning("[DISCORDUTILS] " + e.getMessage());
-                                                return;
-                                            }
-                                        }
-                                    }
+                //Adding the player to the Verified Players map
+                plugin.getVerifiedPlayers().add(playerUUID);
 
-                                    //Drops the rewards if the player doesn't have enough inv space
-                                    if (player.getInventory().firstEmpty() == -1) {
-                                        World playerWorld = player.getWorld();
-                                        double playerX = player.getLocation().getX();
-                                        double playerY = player.getLocation().getY();
-                                        double playerZ = player.getLocation().getZ();
-                                        Location dropLocation = new Location(playerWorld, playerX + 1, playerY, playerZ); //Drop them in front of him
-
-                                        playerWorld.dropItem(dropLocation, item);
-                                    } else player.getInventory().addItem(item);
-                                }
-                            }
-                        }
-                    });
-
-                    //Setting the user's nickname after their MC ign
-                    botMain.getDiscordServer().retrieveMemberById(userId).queue(member -> {
-                        if(!member.isOwner()) member.modifyNickname(player.getName()).queue();
-                    });
-
-                    String message = botConfig.getString("player-verified-message", "✅ You are now verified! Have fun on our server!");
-                    boolean ephemeral = botConfig.getBoolean("pvm-set-ephemeral", true);
-                    event.reply(message).setEphemeral(ephemeral).queue();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                //Removing from the Caches
+                plugin.getVerificationCodesCaching().removeFromDiscord(verificationCode);
+                plugin.getVerificationCodesCaching().deleteCode(playerUUID);
             }
 
             //pshistory command

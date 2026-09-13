@@ -16,10 +16,11 @@ roles-to-be-deleted:
   -
 
 #Messages. They support MARKDOWN! 'Set ephemeral' makes the message appear only to that user
-invalid-expired-code-message: "**Invalid** or **expired** verification code!"
-iecm-set-ephemeral: true
+invalid-code-message: "The code you just entered is **invalid**!"
+expired-code-message: "The code you just entered **expired**! Run **/verify** again on our Minecraft Server!"
+already-verified-message: "You are already verified!"
 player-verified-message: "✅ You are now verified! Have fun on our server!"
-pvm-set-ephemeral: true
+player-not-online-message: "You are not online on the server! Please join and try again."
 
 #Set the minutes for the interactions
 interaction-minutes: 2 #If a user is having an interaction and he doesn't do anything for some minutes, it removes the user from it.

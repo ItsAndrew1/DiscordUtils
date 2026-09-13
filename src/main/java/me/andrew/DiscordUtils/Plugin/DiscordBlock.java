@@ -40,6 +40,7 @@ public class DiscordBlock implements Listener {
             return;
         }
 
+        Bukkit.getLogger().info("x: "+StringBlockX+" y: "+StringBlockY+" z: "+StringBlockZ);
         blockX = Integer.parseInt(StringBlockX);
         blockY = Integer.parseInt(StringBlockY);
         blockZ = Integer.parseInt(StringBlockZ);

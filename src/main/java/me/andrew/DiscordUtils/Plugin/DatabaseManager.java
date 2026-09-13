@@ -98,7 +98,6 @@ public class DatabaseManager {
         }
     }
 
-    //Helper methods for verification
     public boolean isVerified(UUID uuid) throws SQLException {
         try(PreparedStatement ps = connection.prepareStatement("SELECT verified FROM playersVerification WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
@@ -107,54 +106,6 @@ public class DatabaseManager {
             }
         }
     }
-
-    public void setPlayerVerified(UUID uuid, String discordId) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE playersVerification SET verified=true, discordId=? WHERE uuid=?")){
-            ps.setString(1, discordId);
-            ps.setString(2, uuid.toString());
-            ps.executeUpdate();
-        }
-    }
-
-    public boolean isPlayerVerifying(UUID uuid) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT code FROM verificationCodes WHERE uuid = ?")){
-            ps.setString(1, uuid.toString());
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next();
-            }
-        }
-    }
-
-    public boolean isCodeExpired(UUID uuid) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT expire_at FROM verificationCodes WHERE uuid = ?")){
-            ps.setString(1, uuid.toString());
-            try(ResultSet rs = ps.executeQuery()){
-                if(!rs.next()) return false;
-
-                long expireTime = rs.getLong("expire_at");
-                return expireTime < System.currentTimeMillis();
-            }
-        }
-    }
-
-    public void deleteExpiredCode(UUID uuid) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("DELETE FROM verificationCodes WHERE uuid = ?")){
-            ps.setString(1, uuid.toString());
-            ps.executeUpdate();
-        }
-    }
-
-    public UUID getUuidFromCode(int code) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT uuid FROM verificationCodes WHERE code = ?")){
-            ps.setInt(1, code);
-            try(ResultSet rs = ps.executeQuery()){
-                if(!rs.next()) return null;
-
-                return UUID.fromString(rs.getString("uuid"));
-            }
-        }
-    }
-
 
 
 
