@@ -166,13 +166,12 @@ public class AppealSystem extends ListenerAdapter {
         event.deferReply(true).queue();
 
         FileConfiguration botConfig = plugin.botFile().getConfig();
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             if(event.getComponentId().equalsIgnoreCase("getbantype")){
                 try {
                     String userID = event.getUser().getId();
-                    String id = getUserBanID(UUID.fromString(getUserMcUUID(userID, dbConnection)), dbConnection);
+                    String id = getUserBanID(UUID.fromString(getUserMcUUID(userID)));
 
                     //Sending the ID
                     event.reply("Your ban ID is: **"+id+"**. Run /appeal <id> to appeal your ban!").setEphemeral(true).queue();
@@ -195,7 +194,7 @@ public class AppealSystem extends ListenerAdapter {
             if(event.getComponentId().contains("appeal_accept")){
                 String sql = "UPDATE punishments SET active = 0, removed = 1, removed_at = ?, appeal_state = ? WHERE id = ?";
 
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
                     ps.setLong(1, System.currentTimeMillis());
                     ps.setString(2, "accepted");
                     ps.setString(3, punishmentID);
@@ -208,7 +207,7 @@ public class AppealSystem extends ListenerAdapter {
                 String sql2 = "SELECT uuid FROM punishments WHERE id = ?";
                 UUID targetPlayerUUID = null;
 
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
+                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql2)){
                     ps.setString(1, punishmentID);
                     try(ResultSet rs = ps.executeQuery()){
                         if(rs.next()) targetPlayerUUID = UUID.fromString(rs.getString("uuid"));
@@ -219,7 +218,7 @@ public class AppealSystem extends ListenerAdapter {
 
                 String sql3 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
                 String targetUserID = null;
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql3)){
+                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql3)){
                     ps.setString(1, targetPlayerUUID.toString());
                     try(ResultSet rs = ps.executeQuery()){
                         if(rs.next()) targetUserID = rs.getString("discordId");
@@ -239,7 +238,7 @@ public class AppealSystem extends ListenerAdapter {
 
                     //Now, if the user is verified, give him the 'Verified' role back
                     try {
-                        if(isUserVerified(member.getId(), dbConnection)){
+                        if(isUserVerified(member.getId())){
                             long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
                             Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
                             event.getGuild().addRoleToMember(member, verifiedRole).queue();
@@ -257,7 +256,7 @@ public class AppealSystem extends ListenerAdapter {
                 String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
 
                 //Setting the appeal state as 'Declined'
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
                     ps.setString(1, "declined");
                     ps.setString(2, punishmentID);
                     ps.executeUpdate();
@@ -271,10 +270,9 @@ public class AppealSystem extends ListenerAdapter {
     }
 
     private boolean appealWasAcceptedDecline(String ID){
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
@@ -288,10 +286,10 @@ public class AppealSystem extends ListenerAdapter {
         return false;
     }
 
-    private String getUserMcUUID(String discordId, Connection dbConnection) throws SQLException {
+    private String getUserMcUUID(String discordId) throws SQLException {
         String sql = "SELECT uuid FROM playersVerification WHERE discordId = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
             ps.setString(1, discordId);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return null;
@@ -300,12 +298,12 @@ public class AppealSystem extends ListenerAdapter {
         }
     }
 
-    private String getUserBanID(UUID targetUUID, Connection dbConnection) throws SQLException {
+    private String getUserBanID(UUID targetUUID) throws SQLException {
         String sql = "SELECT type FROM punishments WHERE uuid = ? AND active = 1";
         PunishmentType type = null;
 
         //Getting the type
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
             ps.setString(1, targetUUID.toString());
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return null;
@@ -317,7 +315,7 @@ public class AppealSystem extends ListenerAdapter {
         //Getting the ban ID
         try{
             String sql2 = "SELECT id FROM punishments WHERE type = ? AND active = 1";
-            try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
+            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql2)){
                 ps.setString(1, type.name());
                 try(ResultSet rs = ps.executeQuery()){
                     if(rs.next()) return rs.getString("id");
@@ -330,9 +328,9 @@ public class AppealSystem extends ListenerAdapter {
         return null;
     }
 
-    private boolean isUserVerified(String discordID, Connection dbConnection) throws SQLException {
+    private boolean isUserVerified(String discordID) throws SQLException {
         String sql = "SELECT 1 FROM playersVerification WHERE discordId = ?";
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
             ps.setString(1, discordID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();

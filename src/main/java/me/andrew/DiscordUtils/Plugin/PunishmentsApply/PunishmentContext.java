@@ -88,12 +88,11 @@ public class PunishmentContext {
 
     //Method for inserting the punishment into the db
     private void insertPunishment(){
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String playerName = staff.getName();
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try(PreparedStatement ps = dbConnection.prepareStatement("""
+            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("""
                 INSERT INTO punishments (id, uuid, type, scope, reason, staff, created_at, expire_at, active, removed, removed_at, appeal_state)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """)){

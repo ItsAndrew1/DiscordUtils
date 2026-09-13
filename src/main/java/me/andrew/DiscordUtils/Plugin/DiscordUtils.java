@@ -133,16 +133,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             getDiscordBlockManager().startParticleTask();
         }
 
-        //Creates the database
-        try {
-            databaseManager.connectDb();
-            Bukkit.getLogger().info("[DISCORDUTILS] Successfully created database connection.");
-        } catch (SQLException e) {
-            Bukkit.getLogger().warning("[DISCORDUTILS] Failed to create database connection. See message: ");
-            Bukkit.getLogger().warning("[DISCORDUTILS]: "+e.getMessage());
-            getServer().getPluginManager().disablePlugin(this);
-        }
-
         //Starts the discord bot and other stuff (if the bot is toggled)
         boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);
         if(getConfig().getBoolean("open-discord-bot", false) && toggleDiscordBot){
@@ -163,8 +153,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
             //Runs a task to auto expire the punishments
             Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
-                Connection dbConnection = databaseManager.getConnection();
-                try {
+                try{
+                    Connection dbConnection = databaseManager.getConnection();
                     List<Punishment> allPunishments = getAllPunishments();
                     if(!allPunishments.isEmpty()){
                         for(Punishment p : allPunishments){
@@ -218,8 +208,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                             }
                         }
                     }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                } catch (Exception e){
+                    getLogger().severe("Couldn't start an asynchronous task. See message: "+ e.getMessage()+" Disabling DiscordUtils...");
+                    getPluginLoader().disablePlugin(this);
                 }
             }, 0L, 20L*5); //Runs every 5 seconds
 
@@ -321,6 +312,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             Bukkit.getLogger().info("Bot shut down successfully!");
             discordBot.getJda().shutdownNow(); //Shuts down the bot if it is turned on
         }
+
+        //Closing the DataSource of the DB
+        getDatabaseManager().closeDataSource();
 
         Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
     }

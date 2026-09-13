@@ -1,6 +1,8 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
@@ -17,38 +19,56 @@ import java.util.logging.Level;
 //This class handles the database. It also has all the helper methods that I need
 public class DatabaseManager {
     private final DiscordUtils plugin;
-    private Connection connection;
+    private final HikariDataSource dataSource;
 
     public DatabaseManager(DiscordUtils plugin) {
         this.plugin = plugin;
-    }
+        HikariConfig config = new HikariConfig();
 
-    //Creates the database
-    public void connectDb() throws SQLException {
-        //Gets the database type (SQLite or MySQL)
+        //Creates and connects the DB (Using HikariCP)
         String databaseType = plugin.getConfig().getString("database-system.type", "sqlite");
 
-        //If the type is 'sqlite', creates the database file in DiscordUtils folder
-        if(databaseType.equals("sqlite")){
-            String fileName = plugin.getConfig().getString("database-system.file-name");
+        if(databaseType.equalsIgnoreCase("sqlite")){
+            //Setup for SQLite
+            String fileName = plugin.getConfig().getString("database-system.file-name", "database.db");
             File dbFile = new File(plugin.getDataFolder(), fileName);
 
-            String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
-            connection = DriverManager.getConnection(url);
+            config.setDriverClassName("org.sqlite.JDBC");
+            config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+            config.setMaximumPoolSize(1);
         }
-
-        //If the type is 'mysql', sets up the connection with the data from config.yml
-        if(databaseType.equals("mysql")){
+        else if(databaseType.equalsIgnoreCase("mysql")){
+            //Getting the MySQL Database details
             String host = plugin.getConfig().getString("database-system.host");
             String port = plugin.getConfig().getString("database-system.port");
             String database = plugin.getConfig().getString("database-system.database");
             String username = plugin.getConfig().getString("database-system.username");
             String password = plugin.getConfig().getString("database-system.password");
 
-            String url = "jdbc:mysql://" + host + ":" + port + "/" + database +
-                    "?useSSL=false&autoReconnect=true&characterEncoding=utf8";
-            connection = DriverManager.getConnection(url, username, password);
+            //Setup for MySQL
+            config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database +
+                    "?useSSL=false&allowPublicKeyRetrieval=true");
+            config.setUsername(username);
+            config.setPassword(password);
+
+            config.setMaximumPoolSize(10);
+            config.setMinimumIdle(2);
+
+            config.addDataSourceProperty("cachePrepStmts", "true");
+            config.addDataSourceProperty("prepStmtCacheSize", "250");
+            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         }
+        else{
+            plugin.getLogger().severe("Invalid database type. Disabling DiscordUtils...");
+            plugin.getPluginLoader().disablePlugin(plugin);
+        }
+
+        config.setPoolName("DiscordUtils Pool");
+        config.setConnectionTimeout(10000);
+        config.setMaxLifetime(1800000); //30 Minutes Max Lifetime for a connection
+
+        this.dataSource = new HikariDataSource(config);
 
         //Creates the playersVerification table
         String playersTable = """
@@ -59,20 +79,12 @@ public class DatabaseManager {
                 verified TINYINT(1) DEFAULT 0
              );
              """;
-        try(Statement statement = connection.createStatement()){
+        try(PreparedStatement statement = getConnection().prepareStatement(playersTable)){
             statement.executeUpdate(playersTable);
-        }
-
-        //Creates the verificationCodes table
-        String verificationCodesTable = """
-                CREATE TABLE IF NOT EXISTS verificationCodes(
-                    uuid TEXT PRIMARY KEY UNIQUE,
-                    code INT UNIQUE,
-                    expire_at BIGINT
-                );
-                """;
-        try(Statement statement = connection.createStatement()){
-            statement.executeUpdate(verificationCodesTable);
+        } catch (SQLException e){
+            plugin.getLogger().severe("Couldn't create playersVerification table. See message: "+e.getMessage());
+            plugin.getLogger().severe("Disabling DiscordUtils...");
+            plugin.getPluginLoader().disablePlugin(plugin);
         }
 
         //Creates the punishments table
@@ -93,13 +105,24 @@ public class DatabaseManager {
                     appeal_state TEXT DEFAULT NULL
                 );
         """;
-        try(Statement statement = connection.createStatement()){
+        try(Statement statement = getConnection().createStatement()){
             statement.executeUpdate(punishmentsTable);
+        } catch (SQLException e){
+            plugin.getLogger().severe("Couldn't create punishments table. See message: "+e.getMessage());
+            plugin.getLogger().severe("Disabling DiscordUtils...");
+            plugin.getPluginLoader().disablePlugin(plugin);
         }
     }
 
+    public Connection getConnection() throws SQLException{
+        return dataSource.getConnection();
+    }
+    public void closeDataSource(){
+        dataSource.close();
+    }
+
     public boolean isVerified(UUID uuid) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT verified FROM playersVerification WHERE uuid = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT verified FROM playersVerification WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next() && rs.getBoolean("verified");
@@ -112,7 +135,7 @@ public class DatabaseManager {
     //Helper methods for punishments
     public void setupPunishmentCache(UUID uuid){
         String sql = "SELECT * FROM punishments WHERE uuid = ? AND active = false";
-        try(PreparedStatement ps = connection.prepareStatement(sql)){
+        try(PreparedStatement ps = getConnection().prepareStatement(sql)){
             ps.setString(1, uuid.toString());
 
             try(ResultSet rs = ps.executeQuery()){
@@ -130,7 +153,7 @@ public class DatabaseManager {
     public boolean playerHasPunishments(UUID uuid) throws SQLException {
         String sql = "SELECT 1 FROM punishments WHERE uuid = ?";
 
-        try(PreparedStatement ps = connection.prepareStatement(sql)){
+        try(PreparedStatement ps = getConnection().prepareStatement(sql)){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
@@ -140,7 +163,7 @@ public class DatabaseManager {
 
     public int getPlayerActivePunishmentsNr(UUID uuid) throws SQLException {
         int activePunishments = 0;
-        try(PreparedStatement ps = connection.prepareStatement("SELECT active FROM punishments WHERE uuid = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT active FROM punishments WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
                 while(rs.next()){
@@ -154,7 +177,7 @@ public class DatabaseManager {
 
     public int getPlayerExpiredPunishmentsNr(UUID uuid) throws SQLException {
         int inactivePunishments = 0;
-        try(PreparedStatement ps = connection.prepareStatement("SELECT active FROM punishments WHERE uuid = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT active FROM punishments WHERE uuid = ?")){
             ps.setString(1, uuid.toString());
             try(ResultSet rs = ps.executeQuery()){
                 while(rs.next()){
@@ -176,7 +199,7 @@ public class DatabaseManager {
         }
 
         sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-        try(PreparedStatement ps = connection.prepareStatement(sql)){
+        try(PreparedStatement ps = getConnection().prepareStatement(sql)){
             ps.setString(1, uuid.toString());
             ps.setInt(2, limit);
             ps.setInt(3, offset);
@@ -209,7 +232,7 @@ public class DatabaseManager {
     }
 
     public Punishment getPunishment(UUID uuid, PunishmentType type) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT * FROM punishments WHERE uuid = ? AND type = ? AND active = 1 ORDER BY created_at DESC LIMIT 1")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT * FROM punishments WHERE uuid = ? AND type = ? AND active = 1 ORDER BY created_at DESC LIMIT 1")){
             ps.setString(1, uuid.toString());
             ps.setString(2, type.toString());
             try(ResultSet rs = ps.executeQuery()){
@@ -220,7 +243,7 @@ public class DatabaseManager {
     }
 
     public void expirePunishmentById(int crt) throws SQLException{
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE punishments SET active = false WHERE crt = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("UPDATE punishments SET active = false WHERE crt = ?")){
             ps.setInt(1, crt);
             ps.executeUpdate();
         }
@@ -230,7 +253,7 @@ public class DatabaseManager {
         boolean has = false;
 
         String statement = "SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?";
-        try(PreparedStatement ps = connection.prepareStatement(statement)){
+        try(PreparedStatement ps = getConnection().prepareStatement(statement)){
             ps.setString(1, uuid.toString());
             ps.setString(2, type.toString());
             ps.setString(3, scope.name());
@@ -244,7 +267,7 @@ public class DatabaseManager {
 
     public boolean isPlayerBanned(UUID uuid, PunishmentScopes scope) throws SQLException {
         boolean permBanned = false;
-        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
             ps.setString(1, uuid.toString());
             ps.setString(2, PunishmentType.PERM_BAN.toString());
             ps.setString(3, scope.name());
@@ -254,7 +277,7 @@ public class DatabaseManager {
         }
 
         boolean tempBanned = false;
-        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
             ps.setString(1, uuid.toString());
             ps.setString(2, PunishmentType.TEMP_BAN.toString());
             ps.setString(3, scope.name());
@@ -268,7 +291,7 @@ public class DatabaseManager {
 
     public boolean isPlayerMuted(UUID uuid, PunishmentScopes scope) throws SQLException {
         boolean tempMuted = false;
-        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
             ps.setString(1, uuid.toString());
             ps.setString(2, PunishmentType.TEMP_MUTE.name());
             ps.setString(3, scope.name());
@@ -278,7 +301,7 @@ public class DatabaseManager {
         }
 
         boolean permMuted = false;
-        try(PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT 1 FROM punishments WHERE uuid = ? AND active = 1 AND type = ? AND scope = ?")){
             ps.setString(1, uuid.toString());
             ps.setString(2, PunishmentType.PERM_MUTE.name());
             ps.setString(3, scope.name());
@@ -306,7 +329,7 @@ public class DatabaseManager {
         int warnNr = 0;
         int maxWarns = plugin.getConfig().getInt("warns-amount");
 
-        try(PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
             ps.setString(1, targetPlayer.getUniqueId().toString());
             ps.setString(2, warnType.toString());
             ps.setString(3, warnScope.toString());
@@ -320,7 +343,7 @@ public class DatabaseManager {
     }
 
     public int getNrOfWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
+        try(PreparedStatement ps = getConnection().prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
             ps.setString(1, targetPlayer.getUniqueId().toString());
             ps.setString(2, warnType.toString());
             ps.setString(3, warnScope.toString());
@@ -331,15 +354,11 @@ public class DatabaseManager {
     }
 
     public void expireAllWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
-        try(PreparedStatement ps = connection.prepareStatement("UPDATE punishments SET active = 0 WHERE uuid = ? AND type =? AND scope = ?")){
+        try(PreparedStatement ps = getConnection().prepareStatement("UPDATE punishments SET active = 0 WHERE uuid = ? AND type =? AND scope = ?")){
             ps.setString(1, targetPlayer.getUniqueId().toString());
             ps.setString(2, warnType.toString());
             ps.setString(3, warnScope.toString());
             ps.executeUpdate();
         }
-    }
-
-    public Connection getConnection(){
-        return connection;
     }
 }
