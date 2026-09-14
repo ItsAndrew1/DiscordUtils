@@ -99,18 +99,18 @@ public class SlashCommands extends ListenerAdapter{
                     });
 
                     //Sends a message
-                        List<String> hasVerifiedMessage = plugin.getConfig().getStringList("player-verified-message");
-                        for(String line : hasVerifiedMessage){
-                            player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
-                        }
+                    List<String> hasVerifiedMessage = plugin.getConfig().getStringList("player-verified-message");
+                    for(String line : hasVerifiedMessage){
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
+                    }
 
-                        //Sound
-                        Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound", "entity.player.levelup").toLowerCase()));
-                        float phvsVolume = plugin.getConfig().getInt("phvs-volume");
-                        float phvsPitch = plugin.getConfig().getInt("phvs-pitch");
-                        player.playSound(player.getLocation(), hasVerifiedSound, phvsVolume, phvsPitch);
+                    //Sound
+                    Sound hasVerifiedSound =  Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-has-verified-sound", "entity.player.levelup").toLowerCase()));
+                    float phvsVolume = plugin.getConfig().getInt("phvs-volume");
+                    float phvsPitch = plugin.getConfig().getInt("phvs-pitch");
+                    player.playSound(player.getLocation(), hasVerifiedSound, phvsVolume, phvsPitch);
 
-                        //Giving the rewards if there are any (and if rewards are toggled)
+                    //Giving the rewards if there are any (and if rewards are toggled)
                     boolean toggleRewards = plugin.getConfig().getBoolean("rewards.toggle-giving-rewards", false);
                     if(toggleRewards) {
                         //TO DO: Refactor Reward System.

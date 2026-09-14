@@ -54,5 +54,13 @@ public class VerificationCodesCaching {
     }
 
     //Methods for the UUID <-> Discord ID cache
-
+    public void putUuidDiscordID(UUID playerUUID, String discordID){
+        uuidDiscordIdCache.put(playerUUID, discordID);
+    }
+    public void removeUuidDiscordID(UUID playerUUID){
+        uuidDiscordIdCache.remove(playerUUID);
+    }
+    public String getDiscordIdFromUuuid(UUID playerUUID){
+        return uuidDiscordIdCache.get(playerUUID);
+    }
 }
