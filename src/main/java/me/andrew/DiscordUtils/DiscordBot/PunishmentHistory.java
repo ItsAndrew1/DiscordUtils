@@ -64,6 +64,8 @@ public class PunishmentHistory extends ListenerAdapter{
 
         int limit = 6;
         int offset = (state.page-1) * limit;
+
+        //Gotta refactor this V
         List<Punishment> punishments = plugin.getDatabaseManager().getPlayerPunishments(state.targetUUID, state.filter, limit, offset);
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 

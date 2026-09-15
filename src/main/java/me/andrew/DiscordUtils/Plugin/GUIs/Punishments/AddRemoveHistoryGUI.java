@@ -240,10 +240,9 @@ public class AddRemoveHistoryGUI implements Listener{
     }
 
     private boolean punishmentExists(String ID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT 1 FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
@@ -252,10 +251,9 @@ public class AddRemoveHistoryGUI implements Listener{
     }
 
     private Punishment getPunishment(String ID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT * FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(rs.next()) return plugin.getDatabaseManager().mapPunishment(rs);
@@ -265,10 +263,9 @@ public class AddRemoveHistoryGUI implements Listener{
     }
 
     private String getTargetUserID(UUID targetUUID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, targetUUID.toString());
             try(ResultSet rs = ps.executeQuery()){
                 if(rs.next()) return rs.getString("discordId");

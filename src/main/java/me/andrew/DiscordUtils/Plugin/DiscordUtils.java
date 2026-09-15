@@ -97,10 +97,10 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(commands);
-        getCommand("verify").setExecutor(commands);
-        getCommand("unverify").setExecutor(commands);
         getCommand("history").setExecutor(commands);
         getCommand("dcutils").setExecutor(commands);
+        getCommand("verify").setExecutor(commands);
+        getCommand("unverify").setExecutor(commands);
         getCommand("dcutils").setTabCompleter(new CommandTABS(this));
 
         //Setting events
@@ -132,8 +132,9 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         }
 
         //Starts the discord bot and other stuff (if the bot is toggled)
+        boolean openDiscordBot = getConfig().getBoolean("open-discord-bot", false);
         boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);
-        if(getConfig().getBoolean("open-discord-bot", false) && toggleDiscordBot){
+        if(openDiscordBot && toggleDiscordBot){
             try{
                 String botToken = botFile().getConfig().getString("bot-token");
                 String guildId = botFile().getConfig().getString("guild-id");
@@ -152,16 +153,15 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             //Runs a task to auto expire the punishments
             Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
                 try{
-                    Connection dbConnection = databaseManager.getConnection();
                     List<Punishment> allPunishments = getAllPunishments();
                     if(!allPunishments.isEmpty()){
                         for(Punishment p : allPunishments){
                             if(p.getExpiresAt() <= System.currentTimeMillis() && p.isActive() && p.getExpiresAt() != 0){
                                 String sql = "UPDATE punishments SET active = false WHERE id = ?";
-
-                                PreparedStatement ps = dbConnection.prepareStatement(sql);
-                                ps.setString(1, p.getId());
-                                ps.executeUpdate();
+                                try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+                                    ps.setString(1, p.getId());
+                                    ps.executeUpdate();
+                                }
 
                                 PunishmentType type = p.getPunishmentType();
                                 PunishmentScopes scope = p.getScope();
@@ -169,45 +169,48 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                                 //Unbans/removes the timeout of a user if the scope is discord/global
                                 UUID targetUUID = p.getUuid();
                                 String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-                                PreparedStatement ps2 = dbConnection.prepareStatement(sql2);
-                                ps2.setString(1, targetUUID.toString());
-                                ResultSet rs = ps2.executeQuery();
-                                if(!rs.next()) return;
+                                try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql2)){
+                                    ps.setString(1, targetUUID.toString());
 
-                                String userId = rs.getString("discordId");
-                                if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
-                                    discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
-                                        Guild dcServer = discordBot.getDiscordServer();
-                                        if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                                            //Removing the banned role (and giving the 'Verified' role) from the member if he has the role
-                                            long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
-                                            long verifiedRoleID = botConfig.getConfig().getLong("verification.verified-role-id");
-                                            Role bannedRole = dcServer.getRoleById(bannedRoleID);
-                                            dcServer.retrieveMemberById(userId).queue(member -> {
-                                                if(member.getRoles().contains(bannedRole)){
-                                                    dcServer.removeRoleFromMember(member, bannedRole).queue();
-                                                    dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
+                                    try(ResultSet rs = ps.executeQuery()){
+                                        if(!rs.next()) return;
+
+                                        String userId = rs.getString("discordId");
+                                        if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
+                                            discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
+                                                Guild dcServer = discordBot.getDiscordServer();
+                                                if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                                                    //Removing the banned role (and giving the 'Verified' role) from the member if he has the role
+                                                    long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
+                                                    long verifiedRoleID = botConfig.getConfig().getLong("verification.verified-role-id");
+                                                    Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                                                    dcServer.retrieveMemberById(userId).queue(member -> {
+                                                        if(member.getRoles().contains(bannedRole)){
+                                                            dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                                            dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
+                                                        }
+                                                    });
+                                                }
+                                                if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
+                                                    //Removes the timeout role of the member if he has the role
+                                                    dcServer.retrieveMemberById(userId).queue(targetMember -> {
+                                                        long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
+                                                        Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
+
+                                                        if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                                    });
+
+                                                    if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
                                                 }
                                             });
                                         }
-                                        if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-                                            //Removes the timeout role of the member if he has the role
-                                            dcServer.retrieveMemberById(userId).queue(targetMember -> {
-                                                long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
-                                                Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
-
-                                                if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
-                                            });
-
-                                            if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
-                                        }
-                                    });
+                                    }
                                 }
                             }
                         }
                     }
                 } catch (Exception e){
-                    getLogger().severe("Couldn't start an asynchronous task. See message: "+ e.getMessage()+" Disabling DiscordUtils...");
+                    getLogger().severe("Couldn't start the asynchronous task. See message: "+ e.getMessage()+" Disabling DiscordUtils...");
                     getPluginLoader().disablePlugin(this);
                 }
             }, 0L, 20L*5); //Runs every 5 seconds
@@ -354,11 +357,10 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     //Method for getting a list of all Punishments (List<Punishment>)
     private List<Punishment> getAllPunishments() throws SQLException{
-        Connection dbConnection = getDatabaseManager().getConnection();
         List<Punishment> allPunishments = new ArrayList<>();
         String sql = "SELECT * FROM punishments";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             try(ResultSet rs = ps.executeQuery()){
                 while(rs.next()){
                     Punishment p = getDatabaseManager().mapPunishment(rs);

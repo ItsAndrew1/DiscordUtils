@@ -92,7 +92,7 @@ public class PunishmentContext {
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement("""
+            try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement("""
                 INSERT INTO punishments (id, uuid, type, scope, reason, staff, created_at, expire_at, active, removed, removed_at, appeal_state)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """)){

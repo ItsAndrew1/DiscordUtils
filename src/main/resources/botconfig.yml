@@ -1,7 +1,7 @@
 #Developed by _ItsAndrew_
 #This file is for configuring the discord bot.
 
-#Toggle the discord bot. Setting to true will enable it. Setting to false will disable it.
+#Toggle the discord bot. If you have a network of servers, you need to have this on ENABLE on every server.
 #If you change this while the server is running, you NEED to restart it.
 toggle-discord-bot: false
 

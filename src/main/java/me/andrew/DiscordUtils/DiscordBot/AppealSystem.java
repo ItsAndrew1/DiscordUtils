@@ -88,13 +88,12 @@ public class AppealSystem extends ListenerAdapter {
                 long expiresAt = 0;
                 long createdAt;
 
-                Connection dbConnection = plugin.getDatabaseManager().getConnection();
                 String sql = "SELECT uuid, type, scope, created_at";
 
                 if(isTemporary(punishmentID)) sql+=", expire_at";
                 sql+=" FROM punishments WHERE id = ?";
 
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+                try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
                     ps.setString(1, punishmentID);
                     try(ResultSet rs = ps.executeQuery()){
                         if(!rs.next()) return;
@@ -123,7 +122,7 @@ public class AppealSystem extends ListenerAdapter {
 
                 //Updating the status of the appeal_state of the punishment
                 String sql2 = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
-                try(PreparedStatement ps = dbConnection.prepareStatement(sql2)){
+                try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql2)){
                     ps.setString(1, "pending");
                     ps.setString(2, punishmentID);
                     ps.executeUpdate();
@@ -139,10 +138,9 @@ public class AppealSystem extends ListenerAdapter {
     }
 
     private boolean isTemporary(String ID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT type FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
@@ -194,7 +192,7 @@ public class AppealSystem extends ListenerAdapter {
             if(event.getComponentId().contains("appeal_accept")){
                 String sql = "UPDATE punishments SET active = 0, removed = 1, removed_at = ?, appeal_state = ? WHERE id = ?";
 
-                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+                try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
                     ps.setLong(1, System.currentTimeMillis());
                     ps.setString(2, "accepted");
                     ps.setString(3, punishmentID);
@@ -207,7 +205,7 @@ public class AppealSystem extends ListenerAdapter {
                 String sql2 = "SELECT uuid FROM punishments WHERE id = ?";
                 UUID targetPlayerUUID = null;
 
-                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql2)){
+                try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql2)){
                     ps.setString(1, punishmentID);
                     try(ResultSet rs = ps.executeQuery()){
                         if(rs.next()) targetPlayerUUID = UUID.fromString(rs.getString("uuid"));
@@ -218,7 +216,7 @@ public class AppealSystem extends ListenerAdapter {
 
                 String sql3 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
                 String targetUserID = null;
-                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql3)){
+                try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql3)){
                     ps.setString(1, targetPlayerUUID.toString());
                     try(ResultSet rs = ps.executeQuery()){
                         if(rs.next()) targetUserID = rs.getString("discordId");
@@ -256,7 +254,7 @@ public class AppealSystem extends ListenerAdapter {
                 String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
 
                 //Setting the appeal state as 'Declined'
-                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+                try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
                     ps.setString(1, "declined");
                     ps.setString(2, punishmentID);
                     ps.executeUpdate();
@@ -272,7 +270,7 @@ public class AppealSystem extends ListenerAdapter {
     private boolean appealWasAcceptedDecline(String ID){
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
@@ -289,7 +287,7 @@ public class AppealSystem extends ListenerAdapter {
     private String getUserMcUUID(String discordId) throws SQLException {
         String sql = "SELECT uuid FROM playersVerification WHERE discordId = ?";
 
-        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, discordId);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return null;
@@ -303,7 +301,7 @@ public class AppealSystem extends ListenerAdapter {
         PunishmentType type = null;
 
         //Getting the type
-        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, targetUUID.toString());
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return null;
@@ -315,7 +313,7 @@ public class AppealSystem extends ListenerAdapter {
         //Getting the ban ID
         try{
             String sql2 = "SELECT id FROM punishments WHERE type = ? AND active = 1";
-            try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql2)){
+            try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql2)){
                 ps.setString(1, type.name());
                 try(ResultSet rs = ps.executeQuery()){
                     if(rs.next()) return rs.getString("id");
@@ -330,7 +328,7 @@ public class AppealSystem extends ListenerAdapter {
 
     private boolean isUserVerified(String discordID) throws SQLException {
         String sql = "SELECT 1 FROM playersVerification WHERE discordId = ?";
-        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, discordID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
@@ -339,10 +337,9 @@ public class AppealSystem extends ListenerAdapter {
     }
 
     private boolean punishmentExists(String ID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT 1 FROM punishments WHERE id = ? AND active = 1";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
@@ -351,10 +348,9 @@ public class AppealSystem extends ListenerAdapter {
     }
 
     private boolean wasAppealDeclined(String ID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
@@ -364,10 +360,9 @@ public class AppealSystem extends ListenerAdapter {
     }
 
     private boolean isPunishmentInPendingState(String punishmentID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, punishmentID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;

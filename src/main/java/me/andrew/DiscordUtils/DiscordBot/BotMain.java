@@ -28,10 +28,9 @@ public class BotMain extends ListenerAdapter {
     private final Guild discordServer;
     private final PunishmentHistory punishmentHistory;
     private final AddPunishments addPunishments;
-    private final SlashCommands slashCommands;
 
     public BotMain(String token, String guildId, DiscordUtils plugin) throws Exception{
-        slashCommands = new SlashCommands(plugin, this);
+        SlashCommands slashCommands = new SlashCommands(plugin, this);
         punishmentHistory = new PunishmentHistory(plugin);
         addPunishments = new AddPunishments(plugin, this);
 
@@ -92,8 +91,5 @@ public class BotMain extends ListenerAdapter {
     }
     public AddPunishments getAddPunishments() {
         return addPunishments;
-    }
-    public SlashCommands getSlashCommands() {
-        return slashCommands;
     }
 }

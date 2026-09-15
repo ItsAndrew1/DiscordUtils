@@ -90,10 +90,8 @@ public class AddPunishments extends ListenerAdapter{
     }
 
     private String getStaffName(String userId) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-
         String sql = "SELECT uuid FROM playersVerification WHERE discordId = ?";
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, userId);
             try(ResultSet rs = ps.executeQuery()){
                 OfflinePlayer staff = Bukkit.getOfflinePlayer(UUID.fromString(rs.getString("uuid")));
@@ -240,8 +238,7 @@ public class AddPunishments extends ListenerAdapter{
         //Getting the target user ID
         String userID;
         String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
 
             ps.setString(1, targetUUID.toString());
             ResultSet rs =  ps.executeQuery();
@@ -330,11 +327,10 @@ public class AddPunishments extends ListenerAdapter{
     }
 
     private boolean playerHasNrOfWarnsMinus1(OfflinePlayer targetPlayer, PunishmentType type, PunishmentScopes scope) throws SQLException{
-        Connection connection = plugin.getDatabaseManager().getConnection();
         int warnNr = 0;
         int maxWarns = plugin.getConfig().getInt("warns-amount");
 
-        try(PreparedStatement ps = connection.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
             ps.setString(1, targetPlayer.getUniqueId().toString());
             ps.setString(2, type.toString());
             ps.setString(3, scope.toString());
@@ -362,10 +358,9 @@ public class AddPunishments extends ListenerAdapter{
     }
 
     private Player getPlayerStaff(String userId) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT ign FROM playersVerification WHERE discordId = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, userId);
             try(ResultSet rs = ps.executeQuery()){
                 String staffIgn = rs.getString("ign");

@@ -17,6 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.jetbrains.annotations.NotNull;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -215,6 +216,8 @@ public class Commands implements CommandExecutor{
         }
 
         if(command.getName().equalsIgnoreCase("verify")){
+            //TO DO: Check if the bot is toggled or not
+
             if(!player.hasPermission("discordutils.verify")){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
@@ -229,6 +232,8 @@ public class Commands implements CommandExecutor{
         }
 
         if(command.getName().equalsIgnoreCase("unverify")){
+            //TO DO: Same as 'verify'
+
             //Checking if the player has permission to run the command
             if(!player.hasPermission("discordutils.unverify")){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message")));
@@ -256,7 +261,7 @@ public class Commands implements CommandExecutor{
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                 //Removing the player from the playersVerification table
                 String sql = "DELETE FROM playersVerification WHERE uuid = ?";
-                try (PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)) {
+                try (Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setString(1, player.getUniqueId().toString());
                     ps.executeUpdate();
                 } catch (SQLException e) {

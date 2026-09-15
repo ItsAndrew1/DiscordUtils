@@ -56,38 +56,42 @@ public class InsertLog {
     }
 
     private void onlyOneChannel(){
-        String channelId = botConfig.getString("logs.channel-id");
-        if(channelId == null || channelId.isEmpty()) return;
+        try{
+            String channelId = botConfig.getString("logs.channel-id");
+            if(channelId == null || channelId.isEmpty()) return;
 
-        TextChannel channel = bot.getDiscordServer().getTextChannelById(channelId);
-        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(targetUUID);
+            TextChannel channel = bot.getDiscordServer().getTextChannelById(channelId);
+            OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(targetUUID);
 
-        //Building the embed
-        EmbedBuilder eb = new EmbedBuilder();
-        eb.setColor(Color.CYAN.getRGB());
-        if(!isAWarn(type) && type != PunishmentType.KICK) eb.setFooter("Punishment ID: "+ID);
+            //Building the embed
+            EmbedBuilder eb = new EmbedBuilder();
+            eb.setColor(Color.CYAN.getRGB());
+            if(!isAWarn(type) && type != PunishmentType.KICK) eb.setFooter("Punishment ID: "+ID);
 
-        String title = switch(type){
-            case PERM_BAN -> "PERMANENT BAN";
-            case TEMP_BAN -> "TEMPORARY BAN";
-            case PERM_BAN_WARN ->  "PERMANENT BAN WARN";
-            case TEMP_BAN_WARN ->  "TEMPORARY BAN WARN";
-            case KICK ->  "KICK";
-            case PERM_MUTE ->  "PERMANENT MUTE";
-            case TEMP_MUTE ->  "TEMPORARY MUTE";
-            case PERM_MUTE_WARN ->  "PERMANENT MUTE WARN";
-            case TEMP_MUTE_WARN ->  "TEMPORARY MUTE WARN";
-        };
-        eb.setTitle(title +" FOR "+targetPlayer.getName());
+            String title = switch(type){
+                case PERM_BAN -> "PERMANENT BAN";
+                case TEMP_BAN -> "TEMPORARY BAN";
+                case PERM_BAN_WARN ->  "PERMANENT BAN WARN";
+                case TEMP_BAN_WARN ->  "TEMPORARY BAN WARN";
+                case KICK ->  "KICK";
+                case PERM_MUTE ->  "PERMANENT MUTE";
+                case TEMP_MUTE ->  "TEMPORARY MUTE";
+                case PERM_MUTE_WARN ->  "PERMANENT MUTE WARN";
+                case TEMP_MUTE_WARN ->  "TEMPORARY MUTE WARN";
+            };
+            eb.setTitle(title +" FOR "+targetPlayer.getName());
 
-        String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
-                "\n\n**Scope:** "+scope.name()+
-                "\n**Issued By:** "+staffIGN+
-                "\n**Reason:** "+reason;
-        if(!type.isPermanent() && !isAWarn(type)) description += "\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
+            String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
+                    "\n\n**Scope:** "+scope.name()+
+                    "\n**Issued By:** "+staffIGN+
+                    "\n**Reason:** "+reason;
+            if(!type.isPermanent() && !isAWarn(type)) description += "\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
 
-        eb.setDescription(description);
-        channel.sendMessageEmbeds(eb.build()).queue();
+            eb.setDescription(description);
+            channel.sendMessageEmbeds(eb.build()).queue();
+        } catch (Exception e){
+            plugin.getLogger().warning("Couldn't send a punishment log. See message: "+e.getMessage());
+        }
     }
 
     private boolean isBotConfigured(){
@@ -106,105 +110,121 @@ public class InsertLog {
         if(!toggleDcBot || !openDiscordBot || !isBotConfigured()) return;
 
         if(type == PunishmentType.KICK){
-            String kickChannelId = botConfig.getString("logs.multiple-channel-id.kicks-channel-id");
-            if(kickChannelId == null || kickChannelId.isEmpty()) return;
+            try{
+                String kickChannelId = botConfig.getString("logs.multiple-channel-id.kicks-channel-id");
+                if(kickChannelId == null || kickChannelId.isEmpty()) return;
 
-            TextChannel channel = bot.getDiscordServer().getTextChannelById(kickChannelId);
+                TextChannel channel = bot.getDiscordServer().getTextChannelById(kickChannelId);
 
-            //Building the Embed
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setColor(Color.CYAN.getRGB());
-            eb.setTitle("KICK FOR "+targetPlayer.getName());
+                //Building the Embed
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.setColor(Color.CYAN.getRGB());
+                eb.setTitle("KICK FOR "+targetPlayer.getName());
 
-            String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
-                    "\n\n**Scope:** "+scope.name()+
-                    "\n**Issued By:** "+staffIGN+
-                    "\n**Reason:** "+reason;
-            eb.setDescription(description);
-            channel.sendMessageEmbeds(eb.build()).queue();
+                String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
+                        "\n\n**Scope:** "+scope.name()+
+                        "\n**Issued By:** "+staffIGN+
+                        "\n**Reason:** "+reason;
+                eb.setDescription(description);
+                channel.sendMessageEmbeds(eb.build()).queue();
+            } catch (Exception e){
+                plugin.getLogger().warning("Couldn't send a punishment log. See message: "+e.getMessage());
+            }
         }
 
         if(isAWarn(type)){
-            String warnsChannelID = botConfig.getString("logs.multiple-channel-id.warnings-channel-id");
-            if(warnsChannelID == null || warnsChannelID.isEmpty()) return;
+            try{
+                String warnsChannelID = botConfig.getString("logs.multiple-channel-id.warnings-channel-id");
+                if(warnsChannelID == null || warnsChannelID.isEmpty()) return;
 
-            TextChannel channel = bot.getDiscordServer().getTextChannelById(warnsChannelID);
+                TextChannel channel = bot.getDiscordServer().getTextChannelById(warnsChannelID);
 
-            //Building the Embed
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setColor(Color.CYAN.getRGB());
+                //Building the Embed
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.setColor(Color.CYAN.getRGB());
 
-            String title = switch (type){
-                case PERM_BAN_WARN -> "PERMANENT BAN WARNING";
-                case PERM_MUTE_WARN -> "PERMANENT MUTE WARNING";
-                case TEMP_MUTE_WARN -> "TEMPORARY MUTE WARNING";
-                case TEMP_BAN_WARN -> "TEMPORARY BAN WARNING";
-                default -> null;
-            };
-            eb.setTitle(title+" FOR "+targetPlayer.getName());
+                String title = switch (type){
+                    case PERM_BAN_WARN -> "PERMANENT BAN WARNING";
+                    case PERM_MUTE_WARN -> "PERMANENT MUTE WARNING";
+                    case TEMP_MUTE_WARN -> "TEMPORARY MUTE WARNING";
+                    case TEMP_BAN_WARN -> "TEMPORARY BAN WARNING";
+                    default -> null;
+                };
+                eb.setTitle(title+" FOR "+targetPlayer.getName());
 
-            String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
-                    "\n\n**Scope:** "+scope.name()+
-                    "\n**Issued By:** "+staffIGN+
-                    "\n**Reason:** "+reason;
-            eb.setDescription(description);
-            channel.sendMessageEmbeds(eb.build()).queue();
+                String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
+                        "\n\n**Scope:** "+scope.name()+
+                        "\n**Issued By:** "+staffIGN+
+                        "\n**Reason:** "+reason;
+                eb.setDescription(description);
+                channel.sendMessageEmbeds(eb.build()).queue();
+            } catch (Exception e){
+                plugin.getLogger().warning("Couldn't send a punishment log. See message: "+e.getMessage());
+            }
         }
 
         if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-            String bansChannelID = botConfig.getString("logs.multiple-channel-id.bans-channel-id");
-            if(bansChannelID == null || bansChannelID.isEmpty()) return;
+            try{
+                String bansChannelID = botConfig.getString("logs.multiple-channel-id.bans-channel-id");
+                if(bansChannelID == null || bansChannelID.isEmpty()) return;
 
-            TextChannel channel = bot.getDiscordServer().getTextChannelById(bansChannelID);
+                TextChannel channel = bot.getDiscordServer().getTextChannelById(bansChannelID);
 
-            //Building the Embed
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setColor(Color.CYAN.getRGB());
-            eb.setFooter("Ban ID: "+ID);
+                //Building the Embed
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.setColor(Color.CYAN.getRGB());
+                eb.setFooter("Ban ID: "+ID);
 
-            String title = switch(type){
-                case PERM_BAN -> "PERMANENT BAN";
-                case TEMP_BAN -> "TEMPORARY BAN";
-                default -> null;
-            };
-            eb.setTitle(title +" FOR "+targetPlayer.getName());
+                String title = switch(type){
+                    case PERM_BAN -> "PERMANENT BAN";
+                    case TEMP_BAN -> "TEMPORARY BAN";
+                    default -> null;
+                };
+                eb.setTitle(title +" FOR "+targetPlayer.getName());
 
-            String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
-                    "\n\n**Scope:** "+scope.name()+
-                    "\n**Issued By:** "+staffIGN+
-                    "\n**Reason:** "+reason;
-            if(type == PunishmentType.TEMP_BAN) description+="\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
-            eb.setDescription(description);
+                String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
+                        "\n\n**Scope:** "+scope.name()+
+                        "\n**Issued By:** "+staffIGN+
+                        "\n**Reason:** "+reason;
+                if(type == PunishmentType.TEMP_BAN) description+="\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
+                eb.setDescription(description);
 
-            channel.sendMessageEmbeds(eb.build()).queue();
+                channel.sendMessageEmbeds(eb.build()).queue();
+            } catch (Exception e){
+                plugin.getLogger().warning("Couldn't send a punishment log. See message: "+e.getMessage());
+            }
         }
 
         if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-            String mutesChannelID = botConfig.getString("logs.multiple-channel-id.mutes-channel-id");
-            if(mutesChannelID == null || mutesChannelID.isEmpty()) return;
+            try{
+                String mutesChannelID = botConfig.getString("logs.multiple-channel-id.mutes-channel-id");
+                if(mutesChannelID == null || mutesChannelID.isEmpty()) return;
 
-            TextChannel channel = bot.getDiscordServer().getTextChannelById(mutesChannelID);
+                TextChannel channel = bot.getDiscordServer().getTextChannelById(mutesChannelID);
 
-            //Building the Embed
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setColor(Color.CYAN.getRGB());
-            eb.setFooter("Mute ID: "+ID);
+                //Building the Embed
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.setColor(Color.CYAN.getRGB());
+                eb.setFooter("Mute ID: "+ID);
 
-            String title = switch(type){
-                case PERM_MUTE -> "PERMANENT MUTE";
-                case TEMP_MUTE -> "TEMPORARY MUTE";
-                default -> null;
-            };
-            eb.setTitle(title+" FOR "+targetPlayer.getName());
+                String title = switch(type){
+                    case PERM_MUTE -> "PERMANENT MUTE";
+                    case TEMP_MUTE -> "TEMPORARY MUTE";
+                    default -> null;
+                };
+                eb.setTitle(title+" FOR "+targetPlayer.getName());
 
-            String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
-                    "\n\n**Scope:** "+scope.name()+
-                    "\n**Issued By:** "+staffIGN+
-                    "\n**Reason:** "+reason;
-            if(type == PunishmentType.TEMP_MUTE) description+="\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
-            eb.setDescription(description);
+                String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
+                        "\n\n**Scope:** "+scope.name()+
+                        "\n**Issued By:** "+staffIGN+
+                        "\n**Reason:** "+reason;
+                if(type == PunishmentType.TEMP_MUTE) description+="\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
+                eb.setDescription(description);
 
-            channel.sendMessageEmbeds(eb.build()).queue();
+                channel.sendMessageEmbeds(eb.build()).queue();
+            } catch (Exception e){
+                plugin.getLogger().warning("Couldn't send a punishment log. See message: "+e.getMessage());
+            }
         }
     }
 

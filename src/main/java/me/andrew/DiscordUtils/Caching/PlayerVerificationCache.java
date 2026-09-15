@@ -30,17 +30,13 @@ public class PlayerVerificationCache {
     public String getCode(UUID playerUUID){
         VerificationCode codeCache = codesCache.get(playerUUID);
         if(codeCache == null) return null;
-
-        String code = codeCache.code;
-
-        //Checking if the code is null or has expired
-        if(codeCache.isCodeExpired()){
-            discordCodeCache.remove(code);
-            codesCache.remove(playerUUID);
-            return null;
-        }
-
         return codeCache.code;
+    }
+    public boolean isCodeExpired(UUID playerUUID){
+        VerificationCode codeCache = codesCache.get(playerUUID);
+        if(codeCache == null) return false;
+
+        return codeCache.isCodeExpired();
     }
 
     //Methods for the cache needed for Discord Part

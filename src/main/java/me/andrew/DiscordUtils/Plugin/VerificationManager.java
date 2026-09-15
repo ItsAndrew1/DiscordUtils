@@ -35,7 +35,7 @@ public class VerificationManager{
         }
 
         //Checking if the code expired in the meantime
-        if(codes.getCode(UUID) == null) {
+        if(codes.isCodeExpired(UUID)) {
             codes.deleteCode(UUID);
 
             String message = plugin.getConfig().getString("code-expired-message", "&cLast Verification code expired.");

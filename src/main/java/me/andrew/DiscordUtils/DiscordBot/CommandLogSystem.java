@@ -21,7 +21,7 @@ public class CommandLogSystem implements Listener {
     }
 
     @EventHandler
-    public void onCommand(PlayerCommandPreprocessEvent e) {
+    public void onCommand(PlayerCommandPreprocessEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
         //This event should only fire when the discord bot is toggled
@@ -34,39 +34,43 @@ public class CommandLogSystem implements Listener {
 
         //Checking if the feature is toggled
         if(botConfig.getBoolean("command-logging.toggle", false)){
-            Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+            try{
+                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
-            //Checking if the command is one of the ones that don't need to be logged
-            List<String> dontLogCommands = botConfig.getStringList("command-logging.not-tracking-these-commands");
-            String[] command = e.getMessage().substring(1).split(" ");
-            if(dontLogCommands.contains(command[0])) return;
+                //Checking if the command is one of the ones that don't need to be logged
+                List<String> dontLogCommands = botConfig.getStringList("command-logging.not-tracking-these-commands");
+                String[] command = event.getMessage().substring(1).split(" ");
+                if(dontLogCommands.contains(command[0])) return;
 
-            //Getting the text channel for logging
-            long commandLogID = botConfig.getLong("command-logging.channel-id");
-            TextChannel commandLoggingChannel = dcServer.getTextChannelById(commandLogID);
+                //Getting the text channel for logging
+                long commandLogID = botConfig.getLong("command-logging.channel-id");
+                TextChannel commandLoggingChannel = dcServer.getTextChannelById(commandLogID);
 
-            //Building the EMBED
-            EmbedBuilder eb = new EmbedBuilder();
+                //Building the EMBED
+                EmbedBuilder eb = new EmbedBuilder();
 
-            //Color
-            int redValue = botConfig.getInt("command-logging.embed-color.RED");
-            int greenValue = botConfig.getInt("command-logging.embed-color.GREEN");
-            int blueValue = botConfig.getInt("command-logging.embed-color.BLUE");
-            eb.setColor(Color.fromRGB(redValue, greenValue, blueValue).asRGB());
+                //Color
+                int redValue = botConfig.getInt("command-logging.embed-color.RED");
+                int greenValue = botConfig.getInt("command-logging.embed-color.GREEN");
+                int blueValue = botConfig.getInt("command-logging.embed-color.BLUE");
+                eb.setColor(Color.fromRGB(redValue, greenValue, blueValue).asRGB());
 
-            //Title
-            String title = botConfig.getString("command-logging.embed-title")
-                    .replace("%player_name%", e.getPlayer().getName())
-                    ;
-            eb.setTitle(title);
+                //Title
+                String title = botConfig.getString("command-logging.embed-title")
+                        .replace("%player_name%", event.getPlayer().getName())
+                        ;
+                eb.setTitle(title);
 
-            //Description
-            String description = botConfig.getString("command-logging.embed-description")
-                    .replace("%command%", e.getMessage())
-                    ;
-            eb.setDescription(description);
+                //Description
+                String description = botConfig.getString("command-logging.embed-description")
+                        .replace("%command%", event.getMessage())
+                        ;
+                eb.setDescription(description);
 
-            commandLoggingChannel.sendMessageEmbeds(eb.build()).queue();
+                commandLoggingChannel.sendMessageEmbeds(eb.build()).queue();
+            } catch (Exception e){
+                plugin.getLogger().warning("Couldn't send a Command Log. See message: "+e.getMessage());
+            }
         }
     }
 }

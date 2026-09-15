@@ -56,7 +56,7 @@ public class SlashCommands extends ListenerAdapter{
                 String savedCode = plugin.getVerificationCodesCaching().getCode(playerUUID);
 
                 //Checking if the code is expired
-                if(savedCode == null){
+                if(plugin.getVerificationCodesCaching().isCodeExpired(playerUUID)) {
                     String message = botConfig.getString("expired-code-message", "The code you just entered **expired**! Run **/verify** again on our Minecraft Server!");
                     event.getHook().sendMessage(message).queue();
                     return;
@@ -123,10 +123,10 @@ public class SlashCommands extends ListenerAdapter{
                 plugin.getVerificationCodesCaching().deleteCode(playerUUID);
 
                 //Adding to UUID <-> DiscordId Cache
-                plugin.getVerificationCodesCaching().putUuidDiscordID(playerUUID, verificationCode);
+                plugin.getVerificationCodesCaching().putUuidDiscordID(playerUUID, userId);
 
                 //Adding to DiscordId <-> UUID cache
-                plugin.getVerificationCodesCaching().putDiscordIdUUID(playerUUID, verificationCode);
+                plugin.getVerificationCodesCaching().putDiscordIdUUID(playerUUID, userId);
             }
 
             //pshistory command
@@ -275,56 +275,57 @@ public class SlashCommands extends ListenerAdapter{
                        }
 
                        //Expiring the punishment that has the typed ID
-                       Connection dbConnection = plugin.getDatabaseManager().getConnection();
                        String SQL = "UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE id = ?";
-
-                       PreparedStatement ps = dbConnection.prepareStatement(SQL);
-                       ps.setLong(1, System.currentTimeMillis());
-                       ps.setString(2, ID);
-                       ps.executeUpdate();
+                       try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(SQL)){
+                           ps.setLong(1, System.currentTimeMillis());
+                           ps.setString(2, ID);
+                           ps.executeUpdate();
+                       }
 
                        //Getting the punishment scope and type
                        String SQL2 = "SELECT type, scope, uuid FROM punishments WHERE id = ?";
-                       PreparedStatement ps2 = dbConnection.prepareStatement(SQL2);
-                       ps2.setString(1, ID);
-                       ResultSet rs = ps2.executeQuery();
+                       try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(SQL2)){
+                           ps.setString(1, ID);
 
-                       if(rs.next()){
-                           PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
-                           final PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
-                           UUID targetUUID = UUID.fromString(rs.getString("uuid"));
+                           try(ResultSet rs = ps.executeQuery()){
+                               if(rs.next()){
+                                   PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
+                                   final PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
+                                   UUID targetUUID = UUID.fromString(rs.getString("uuid"));
 
-                           //If the scope is Discord or Global, I have to unban/remove the timeout of the user
-                           if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
-                               Guild dcServer = botMain.getDiscordServer();
+                                   //If the scope is Discord or Global, I have to unban/remove the timeout of the user
+                                   if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
+                                       Guild dcServer = botMain.getDiscordServer();
 
-                               botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
-                                   if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                                       //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
-                                       dcServer.retrieveMemberById(targetUser.getId()).queue(member -> {
-                                           long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
-                                           Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                                       botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
+                                           if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
+                                               //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
+                                               dcServer.retrieveMemberById(targetUser.getId()).queue(member -> {
+                                                   long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
+                                                   Role bannedRole = dcServer.getRoleById(bannedRoleID);
 
-                                           long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
-                                           Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
-                                           if(member.getRoles().contains(bannedRole)){
-                                               dcServer.removeRoleFromMember(member, bannedRole).queue();
-                                               dcServer.addRoleToMember(member, verifiedRole).queue();
+                                                   long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                                                   Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
+                                                   if(member.getRoles().contains(bannedRole)){
+                                                       dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                                       dcServer.addRoleToMember(member, verifiedRole).queue();
+                                                   }
+                                               });
+                                           }
+
+                                           if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
+                                               //Removes the timeout role from the member if he has it
+                                               dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
+                                                   long timeoutRoleID = botConfig.getLong("timeout-role-id");
+                                                   Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
+                                                   if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                               });
+
+                                               if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
                                            }
                                        });
                                    }
-
-                                   if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-                                       //Removes the timeout role from the member if he has it
-                                       dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
-                                           long timeoutRoleID = botConfig.getLong("timeout-role-id");
-                                           Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
-                                           if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
-                                       });
-
-                                       if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
-                                   }
-                               });
+                               }
                            }
                        }
 
@@ -379,7 +380,7 @@ public class SlashCommands extends ListenerAdapter{
                         //Removing the user from the playersVerification table
                         String sql = "DELETE FROM playersVerification WHERE discordId = ?";
 
-                        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)) {
+                        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
                             ps.setString(1, userID);
                             ps.executeUpdate();
                         } catch (SQLException e) {
@@ -529,10 +530,9 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private boolean isUserVerified(String ID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String SQL = "SELECT 1 FROM playersVerification WHERE discordId = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection();PreparedStatement ps = conn.prepareStatement(SQL)){
             ps.setString(1, ID);
             ResultSet rs = ps.executeQuery();
             return rs.next();
@@ -540,9 +540,7 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private String getUserPlayerIGN(String userId) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-
-        try(PreparedStatement ps = dbConnection.prepareStatement("SELECT ign FROM playersVerification WHERE discordId = ?")){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT ign FROM playersVerification WHERE discordId = ?")){
             ps.setString(1, userId);
             try(ResultSet rs = ps.executeQuery()){
                 if(rs.next()) return rs.getString("ign");
@@ -553,10 +551,9 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private String getTargetPlayerUserID(UUID targetUUID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String SQL = "SELECT discordId FROM playersVerification WHERE uuid = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(SQL)){
             ps.setString(1, targetUUID.toString());
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return null;
@@ -567,10 +564,9 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private boolean punishmentExists(String ID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT 1 FROM punishments WHERE id = ? AND active = 1";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 return rs.next();
@@ -579,10 +575,9 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private boolean isPunishmentInPendingState(String punishmentID) throws SQLException {
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, punishmentID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
@@ -593,10 +588,9 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private boolean wasAppealAccepted(String ID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
@@ -607,10 +601,9 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private boolean wasAppealDeclined(String ID) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         String sql = "SELECT appeal_state FROM punishments WHERE id = ?";
 
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, ID);
             try(ResultSet rs = ps.executeQuery()){
                 if(!rs.next()) return false;
@@ -620,12 +613,11 @@ public class SlashCommands extends ListenerAdapter{
     }
 
     private boolean isUserBanned(String userID, PunishmentScopes scope) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
         boolean permBanned = false, tempBanned = false;
         String sql = "SELECT 1 FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1";
 
         //Checking if the user is permanently banned
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, userID);
             ps.setString(2, PunishmentType.PERM_BAN.name());
             ps.setString(3, scope.name());
@@ -635,7 +627,7 @@ public class SlashCommands extends ListenerAdapter{
         }
 
         //Checking if the user is temporarily banned
-        try(PreparedStatement ps = dbConnection.prepareStatement(sql)){
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, userID);
             ps.setString(2, PunishmentType.TEMP_BAN.name());
             ps.setString(3, scope.name());

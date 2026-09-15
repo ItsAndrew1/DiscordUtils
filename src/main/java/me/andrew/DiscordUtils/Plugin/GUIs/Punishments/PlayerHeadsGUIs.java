@@ -133,14 +133,12 @@ public class PlayerHeadsGUIs implements Listener{
 
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             plugin.getAddRemovePunishGUI().showGui(player);
-            return;
         }
 
         //If the staff clicks on exit item
         if(clickedMaterial.equals(Material.RED_CONCRETE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             player.closeInventory();
-            return;
         }
 
         //If the staff clicks on player search
@@ -200,14 +198,12 @@ public class PlayerHeadsGUIs implements Listener{
         if(meta.getDisplayName().contains(ChatColor.RED + "Previous")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             showGui(player, getPageFromTitle(event.getView().getTitle())+1);
-            return;
         }
 
         //If the staff clicks on next page button
         if(meta.getDisplayName().contains(ChatColor.GREEN + "Next")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             showGui(player, getPageFromTitle(event.getView().getTitle())-1);
-            return;
         }
     }
 }
