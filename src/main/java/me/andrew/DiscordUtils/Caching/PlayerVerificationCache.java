@@ -4,10 +4,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class VerificationCodesCaching {
+public class PlayerVerificationCache {
     private final Map<UUID, VerificationCode> codesCache = new ConcurrentHashMap<>();
     private final Map<String, UUID> discordCodeCache = new ConcurrentHashMap<>();
     private final Map<UUID, String> uuidDiscordIdCache = new ConcurrentHashMap<>();
+    private final Map<String, UUID> discordIdUuidCache = new ConcurrentHashMap<>();
 
     public record VerificationCode(String code, long expireTime){
         private boolean isCodeExpired(){
@@ -60,7 +61,18 @@ public class VerificationCodesCaching {
     public void removeUuidDiscordID(UUID playerUUID){
         uuidDiscordIdCache.remove(playerUUID);
     }
-    public String getDiscordIdFromUuuid(UUID playerUUID){
+    public String getDiscordIdFromUuid(UUID playerUUID){
         return uuidDiscordIdCache.get(playerUUID);
+    }
+
+    //Methods for the Discord Id <-> UUID cache
+    public void putDiscordIdUUID(UUID playerUUID, String discordID){
+        discordIdUuidCache.put(discordID, playerUUID);
+    }
+    public void removeDiscordIdUUID(String discordID){
+        discordIdUuidCache.remove(discordID);
+    }
+    public UUID getUuidFromDiscordId(String discordID){
+        return discordIdUuidCache.get(discordID);
     }
 }

@@ -256,32 +256,23 @@ public class Commands implements CommandExecutor{
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                 //Removing the player from the playersVerification table
                 String sql = "DELETE FROM playersVerification WHERE uuid = ?";
-                try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)){
+                try (PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)) {
                     ps.setString(1, player.getUniqueId().toString());
                     ps.executeUpdate();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
+            });
 
-                String userDiscordID;
 
-                //Getting the user's discord id
-                String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-                try(PreparedStatement preparedStatement2 = plugin.getDatabaseManager().getConnection().prepareStatement(sql2)){
-                    preparedStatement2.setString(1, player.getUniqueId().toString());
-                    ResultSet rs = preparedStatement2.executeQuery();
-                    userDiscordID = rs.getString("discordId");
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+            String userDiscordID = plugin.getVerificationCodesCaching().getDiscordIdFromUuid(player.getUniqueId());
 
-                dcServer.retrieveMemberById(userDiscordID).queue(targetMember -> {
-                    if(targetMember.getRoles().contains(verifiedRole)) dcServer.removeRoleFromMember(targetMember, verifiedRole).queue();
-                    dcServer.addRoleToMember(targetMember, unverified).queue();
+            dcServer.retrieveMemberById(userDiscordID).queue(targetMember -> {
+                if(targetMember.getRoles().contains(verifiedRole)) dcServer.removeRoleFromMember(targetMember, verifiedRole).queue();
+                dcServer.addRoleToMember(targetMember, unverified).queue();
 
-                    //Resetting the user's nickname
-                    if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
-                });
+                //Resetting the user's nickname
+                if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
             });
 
             player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&aUnverified Successfully!"));
@@ -289,6 +280,11 @@ public class Commands implements CommandExecutor{
 
             //Removing the player from the verifiedPlayers map
             plugin.getVerifiedPlayers().remove(player.getUniqueId());
+
+            //Removing from the uUID <-> DiscordId and vice versa maps
+            String playerDiscordId = plugin.getVerificationCodesCaching().getDiscordIdFromUuid(player.getUniqueId());
+            plugin.getVerificationCodesCaching().removeDiscordIdUUID(playerDiscordId);
+            plugin.getVerificationCodesCaching().removeUuidDiscordID(player.getUniqueId());
             return true;
         }
 

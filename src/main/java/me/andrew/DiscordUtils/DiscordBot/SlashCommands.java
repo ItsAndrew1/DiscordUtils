@@ -1,7 +1,6 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.DiscordBot;
 
-import me.andrew.DiscordUtils.Caching.VerificationCodesCaching;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
@@ -16,13 +15,9 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.modals.Modal;
 import org.bukkit.*;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
-import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -126,6 +121,12 @@ public class SlashCommands extends ListenerAdapter{
                 //Removing from the Caches
                 plugin.getVerificationCodesCaching().removeFromDiscord(verificationCode);
                 plugin.getVerificationCodesCaching().deleteCode(playerUUID);
+
+                //Adding to UUID <-> DiscordId Cache
+                plugin.getVerificationCodesCaching().putUuidDiscordID(playerUUID, verificationCode);
+
+                //Adding to DiscordId <-> UUID cache
+                plugin.getVerificationCodesCaching().putDiscordIdUUID(playerUUID, verificationCode);
             }
 
             //pshistory command
@@ -352,35 +353,40 @@ public class SlashCommands extends ListenerAdapter{
                             return;
                         }
 
-                        Connection dbConnection = plugin.getDatabaseManager().getConnection();
+                        //Removing from the user the 'Verified' role and giving him the Unverified role
+                        long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+                        Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
+
+                        Member targetMember = event.getMember();
+                        assert targetMember != null;
+
+                        if (targetMember.getRoles().contains(verifiedRole)) botMain.getDiscordServer().removeRoleFromMember(targetMember, verifiedRole).queue();
+
+                        String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
+                        Role unverified = botMain.getDiscordServer().getRoleById(unverifiedRoleID);
+                        botMain.getDiscordServer().addRoleToMember(targetMember, unverified).queue();
+
+                        //Resetting the nickname
+                        if (!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
+
+                        //Removing the player from the Verified Players maps
+                        plugin.getVerifiedPlayers().remove(Bukkit.getOfflinePlayer(getUserPlayerIGN(userID)).getUniqueId());
+
+                        //Removing the player from the UUID <-> DiscordId cache
+                        plugin.getVerificationCodesCaching().removeUuidDiscordID(plugin.getVerificationCodesCaching().getUuidFromDiscordId(userID));
+                        plugin.getVerificationCodesCaching().removeDiscordIdUUID(userID);
+
+                        //Removing the user from the playersVerification table
                         String sql = "DELETE FROM playersVerification WHERE discordId = ?";
 
-                        try(PreparedStatement ps = dbConnection.prepareStatement(sql)) {
-                            //Removing the user from the playersVerification table
+                        try(PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)) {
                             ps.setString(1, userID);
                             ps.executeUpdate();
-
-                            //Removing from the user the 'Verified' role and giving him the Unverified role
-                            long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
-                            Role verifiedRole = botMain.getDiscordServer().getRoleById(verifiedRoleID);
-
-                            Member targetMember = event.getMember();
-                            assert targetMember != null;
-
-                            if (targetMember.getRoles().contains(verifiedRole)) botMain.getDiscordServer().removeRoleFromMember(targetMember, verifiedRole).queue();
-
-                            String unverifiedRoleID = botConfig.getString("verification.unverified-role-id");
-                            Role unverified = botMain.getDiscordServer().getRoleById(unverifiedRoleID);
-                            botMain.getDiscordServer().addRoleToMember(targetMember, unverified).queue();
-
-                            //Resetting the nickname
-                            if (!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
-
-                            //Removing the player from the Verified Players maps
-                            plugin.getVerifiedPlayers().remove(Bukkit.getOfflinePlayer(getUserPlayerIGN(userID)).getUniqueId());
-
-                            event.getHook().sendMessage("Unverified successfully!").queue();
+                        } catch (SQLException e) {
+                            plugin.getLogger().warning("Couldn't remove user from the playersVerification table. See message: "+e.getMessage());
                         }
+
+                        event.getHook().sendMessage("Unverified successfully!").queue();
                     } catch (SQLException e){
                         throw new RuntimeException(e);
                     }

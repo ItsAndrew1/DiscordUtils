@@ -1,7 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
-import me.andrew.DiscordUtils.Caching.VerificationCodesCaching;
+import me.andrew.DiscordUtils.Caching.PlayerVerificationCache;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
@@ -24,7 +24,7 @@ public class VerificationManager{
         assert invalid != null;
 
         UUID UUID = player.getUniqueId();
-        VerificationCodesCaching codes = plugin.getVerificationCodesCaching();
+        PlayerVerificationCache codes = plugin.getVerificationCodesCaching();
 
         //Check if the player is already verified
         if(plugin.getVerifiedPlayers().contains(UUID)){
