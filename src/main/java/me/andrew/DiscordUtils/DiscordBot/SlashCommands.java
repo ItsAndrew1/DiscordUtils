@@ -382,9 +382,9 @@ public class SlashCommands extends ListenerAdapter{
                         if (!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
 
                         //Removing the player from the Verified Players maps
-                        plugin.getVerifiedPlayers().remove(Bukkit.getOfflinePlayer(getUserPlayerIGN(userID)).getUniqueId());
+                        plugin.getVerifiedPlayers().remove(plugin.getVerificationCodesCaching().getUuidFromDiscordId(userID));
 
-                        //Removing the player from the UUID <-> DiscordId cache
+                        //Removing the player from the UUID <-> DiscordId caches
                         plugin.getVerificationCodesCaching().removeUuidDiscordID(plugin.getVerificationCodesCaching().getUuidFromDiscordId(userID));
                         plugin.getVerificationCodesCaching().removeDiscordIdUUID(userID);
 
