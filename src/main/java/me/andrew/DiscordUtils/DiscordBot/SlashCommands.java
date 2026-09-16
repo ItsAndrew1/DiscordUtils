@@ -127,6 +127,17 @@ public class SlashCommands extends ListenerAdapter{
 
                 //Adding to DiscordId <-> UUID cache
                 plugin.getVerificationCodesCaching().putDiscordIdUUID(playerUUID, userId);
+
+                //Saving to the Database
+                String sql = "INSERT INTO playersVerification (uuid, discordId, verified) VALUES (?, ?, ?)";
+                try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+                    ps.setString(1, playerUUID.toString());
+                    ps.setString(2, userId);
+                    ps.setBoolean(3, true);
+                    ps.executeUpdate();
+                } catch (SQLException e){
+                    plugin.getLogger().warning("Couldn't insert player into playersVerification table. See message: "+e.getMessage());
+                }
             }
 
             //pshistory command
