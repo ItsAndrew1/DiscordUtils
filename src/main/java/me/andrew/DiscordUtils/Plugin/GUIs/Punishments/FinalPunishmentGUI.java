@@ -168,7 +168,7 @@ public class FinalPunishmentGUI implements Listener {
             PunishmentType punishmentType = state.type;
 
             //Checking if the target player is verified (if the scope is DISCORD or GLOBAL)
-            if ((scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL) && !plugin.getVerifiedPlayers().contains(player.getUniqueId())) {
+            if ((scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL) && !plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(state.targetUUID)) {
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &cPlayer &e" + clickedPlayerName + " &cis not verified on the discord server!"));
                 return;

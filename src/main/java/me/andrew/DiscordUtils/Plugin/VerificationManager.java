@@ -24,10 +24,10 @@ public class VerificationManager{
         assert invalid != null;
 
         UUID UUID = player.getUniqueId();
-        PlayerVerificationCache codes = plugin.getVerificationCodesCaching();
+        PlayerVerificationCache codes = plugin.getPlayerVerificationCache();
 
         //Check if the player is already verified
-        if(plugin.getVerifiedPlayers().contains(UUID)){
+        if(plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(UUID)){
             String message = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-is-already-verified-message", "&cYou are already verified!"));
             player.sendMessage(message);
             player.playSound(player.getLocation(), invalid, 1f, 1f);
@@ -36,10 +36,10 @@ public class VerificationManager{
 
         //Checking if the code expired in the meantime
         if(codes.isCodeExpired(UUID)) {
+            codes.removeFromDiscord(codes.getCode(UUID));
             codes.deleteCode(UUID);
 
-            String message = plugin.getConfig().getString("code-expired-message", "&cLast Verification code expired.");
-            message = PlaceholderAPI.setPlaceholders(player, message);
+            String message = "&cLast verification code expired.";
             player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
         }
 

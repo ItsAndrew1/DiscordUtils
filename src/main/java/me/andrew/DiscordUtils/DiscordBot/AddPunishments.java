@@ -144,7 +144,7 @@ public class AddPunishments extends ListenerAdapter{
 
             try {
                 //Checking if the target user/player is verified or not. (If the scope is DISCORD or GLOBAL)
-                if((state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && !plugin.getVerifiedPlayers().contains(targetPlayer.getUniqueId())){
+                if((state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && !plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(state.targetUUID)){
                     event.reply("Player **"+targetPlayer.getName()+"** is *NOT* verified on the discord server! You may use the **MINECRAFT** scope instead.").setEphemeral(true).queue();
                     addingStateMap.remove(event.getUser().getIdLong());
                     return;

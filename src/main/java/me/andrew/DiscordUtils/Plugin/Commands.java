@@ -3,8 +3,8 @@ package me.andrew.DiscordUtils.Plugin;
 
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
@@ -19,7 +19,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -244,7 +243,7 @@ public class Commands implements CommandExecutor{
             FileConfiguration botConfig = plugin.botFile().getConfig();
 
             //Checking if the player is verified
-            if(!plugin.getVerifiedPlayers().contains(player.getUniqueId())){
+            if(!plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(player.getUniqueId())){
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cYou don't have a MC account linked to the DC server. Run &l/verify &cto link one!"));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
@@ -258,19 +257,7 @@ public class Commands implements CommandExecutor{
             long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
             Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
 
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                //Removing the player from the playersVerification table
-                String sql = "DELETE FROM playersVerification WHERE uuid = ?";
-                try (Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setString(1, player.getUniqueId().toString());
-                    ps.executeUpdate();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-
-
-            String userDiscordID = plugin.getVerificationCodesCaching().getDiscordIdFromUuid(player.getUniqueId());
+            String userDiscordID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(player.getUniqueId());
 
             dcServer.retrieveMemberById(userDiscordID).queue(targetMember -> {
                 if(targetMember.getRoles().contains(verifiedRole)) dcServer.removeRoleFromMember(targetMember, verifiedRole).queue();
@@ -280,16 +267,30 @@ public class Commands implements CommandExecutor{
                 if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
             });
 
-            player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&aUnverified Successfully!"));
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
+            String message = plugin.getConfig().getString("unverified-from-mc-message", "&4[&c&l!&4] &aYou have been unverified! Run &e&l/verify&a in order to verify again.");
+            message = PlaceholderAPI.setPlaceholders(player, message);
+            player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
 
-            //Removing the player from the verifiedPlayers map
-            plugin.getVerifiedPlayers().remove(player.getUniqueId());
+            Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-unverified-sound", "entity.player.levelup").toLowerCase()));
+            float volume = plugin.getConfig().getInt("pus-volume", 1);
+            float pitch = plugin.getConfig().getInt("pus-pitch", 1);
+            player.playSound(player.getLocation(), sound, volume, pitch);
 
-            //Removing from the uUID <-> DiscordId and vice versa maps
-            String playerDiscordId = plugin.getVerificationCodesCaching().getDiscordIdFromUuid(player.getUniqueId());
-            plugin.getVerificationCodesCaching().removeDiscordIdUUID(playerDiscordId);
-            plugin.getVerificationCodesCaching().removeUuidDiscordID(player.getUniqueId());
+            //Removing the player from the playersVerification table
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                String sql = "DELETE FROM verifiedPlayers WHERE uuid = ?";
+                try (Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, player.getUniqueId().toString());
+                    ps.executeUpdate();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            //Removing from the UUID <-> DiscordId and vice versa maps
+            String playerDiscordId = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(player.getUniqueId());
+            plugin.getPlayerVerificationCache().removeDiscordIdUUID(playerDiscordId);
+            plugin.getPlayerVerificationCache().removeUuidDiscordID(player.getUniqueId());
             return true;
         }
 

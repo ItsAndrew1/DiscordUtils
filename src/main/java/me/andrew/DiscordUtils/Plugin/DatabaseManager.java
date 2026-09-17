@@ -11,9 +11,8 @@ import org.bukkit.OfflinePlayer;
 
 import java.io.File;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 //This class handles the database. It also has all the helper methods that I need
@@ -72,9 +71,8 @@ public class DatabaseManager {
 
         //Creates the playersVerification table
         String playersTable = """
-             CREATE TABLE IF NOT EXISTS playersVerification(
+             CREATE TABLE IF NOT EXISTS verifiedPlayers(
                 uuid TEXT UNIQUE PRIMARY KEY,
-                ign TEXT UNIQUE,
                 discordId TEXT UNIQUE,
                 verified TINYINT(1) DEFAULT 0
              );
@@ -121,33 +119,23 @@ public class DatabaseManager {
         dataSource.close();
     }
 
-    public boolean isVerified(UUID uuid) throws SQLException {
-        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT verified FROM playersVerification WHERE uuid = ?")){
-            ps.setString(1, uuid.toString());
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next() && rs.getBoolean("verified");
-            }
-        }
-    }
-
-
-
-    //Helper methods for punishments
-    public void setupPunishmentCache(UUID uuid){
-        String sql = "SELECT * FROM punishments WHERE uuid = ? AND active = false";
-        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-            ps.setString(1, uuid.toString());
-
+    public ConcurrentHashMap<UUID, String> getVerifiedData() {
+        ConcurrentHashMap<UUID, String> verifiedData = new ConcurrentHashMap<>();
+        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT * FROM verifiedPlayers WHERE verified = 1")){
             try(ResultSet rs = ps.executeQuery()){
                 while(rs.next()){
-                    PunishmentType type = PunishmentType.valueOf(rs.getString("type"));
-                    PunishmentScopes scope = PunishmentScopes.valueOf(rs.getString("scope"));
-                    plugin.getPlayerPunishmentDataCache().get(uuid).insertPunishment(type, scope);
+                    String ID = rs.getString("discordId");
+                    UUID uuid = UUID.fromString(rs.getString("uuid"));
+                    verifiedData.put(uuid, ID);
                 }
             }
         } catch (SQLException e){
-            plugin.getLogger().warning("Couldn't setup the punishment cache! See message: "+e.getMessage());
+            plugin.getLogger().severe("Couldn't save verification data to the memory. See message: "+e.getMessage());
+            plugin.getLogger().severe("Disabling DiscordUtils...");
+            plugin.getPluginLoader().disablePlugin(plugin);
         }
+
+        return verifiedData;
     }
 
     public boolean playerHasPunishments(UUID uuid) throws SQLException {

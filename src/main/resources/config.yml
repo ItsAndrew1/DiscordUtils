@@ -131,11 +131,20 @@ verification-code-expire-time: 300 #In seconds!!!
 player-already-verifying-message: "&cPlease finish this verification before starting a new one!"
 player-is-already-verified-message: "&cYou are already verified!"
 error-giving-rewards-message: "&cThere was a problem giving you the rewards. Contact the server administrators about this."
-code-expired-message: "&cVerification code expired. Please run &l/verify &cagain."
-# %code% -> display the code ; %expire_at% -> display the duration of the code (in minutes)
+code-expired-message: "&4[&c&l!&4] &cVerification code expired. Please run &l/verify &cagain."
+unverified-from-mc-message: "&4[&c&l!&4] &aYou have been unverified! Run &e&l/verify&a in order to verify again."
+unverified-from-dc-message: "&4[&c&l!&4] &aYou have been unverified via the &9&lDiscord Command&a! Run &e&l/verify &ain order to verify again."
+
+#Placeholders: %code% -> display the code ; %expire_at% -> display the duration of the code (in minutes)
 use-verification-code-message: #You can have more lines
   - "&aYour code is &e&l%code%&a! Do &e&l/verify <code> &ain our discord server to complete the verification."
   - "&cThe code will expire in &l%expire_at% minutes&c!"
+
+#Send this message when a player leaves and joins again on the server, in order to give the code again.
+#Placeholders: %code% -> Displays the code to the player
+resend-verification-code-message:
+  - "&aYou have an ongoing verification! Run &e&l/verify <code> &ain our discord server to complete this verification."
+  - "&aCode: &e&l%code%"
 
 player-verified-message: #You can have more lines.
   - "&aCongrats! You have officially been verified."
@@ -283,9 +292,17 @@ give-verification-code-sound: "block.note_block.pling"
 gvcs-volume: 1
 gvcs-pitch: 1
 
+code-expired-sound: "block.note_block.bass"
+ces-volume: 1
+ces-pitch: 1
+
 player-has-verified-sound: "entity.player.levelup"
 phvs-volume: 1
 phvs-pitch: 1.4
+
+player-unverified-sound: "entity.player.levelup"
+pus-volume: 1
+pus-pitch: 1.4
 
 boardcast-message-sound: "block.note_block.pling"
 bms-volume: 1

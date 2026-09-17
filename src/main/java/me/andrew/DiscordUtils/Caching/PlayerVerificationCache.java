@@ -71,4 +71,12 @@ public class PlayerVerificationCache {
     public UUID getUuidFromDiscordId(String discordID){
         return discordIdUuidCache.get(discordID);
     }
+
+    //Helper methods for checking verification
+    public boolean isPlayerVerifiedUUID(UUID playerUUID){
+        return uuidDiscordIdCache.containsKey(playerUUID);
+    }
+    public boolean isUserVerifiedDiscordId(String userID){
+        return discordIdUuidCache.containsKey(userID);
+    }
 }

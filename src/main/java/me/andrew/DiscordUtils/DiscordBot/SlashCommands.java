@@ -5,6 +5,7 @@ import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
@@ -14,6 +15,7 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.modals.Modal;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -45,18 +47,18 @@ public class SlashCommands extends ListenerAdapter{
 
                 String userId = event.getUser().getId();
                 String verificationCode = event.getOption("code").getAsString();
-                UUID playerUUID = plugin.getVerificationCodesCaching().getUuidFromCode(verificationCode);
+                UUID playerUUID = plugin.getPlayerVerificationCache().getUuidFromCode(verificationCode);
 
                 //Checking if the user is already verified
-                if(plugin.getVerifiedPlayers().contains(playerUUID)) {
+                if(plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(userId)) {
                     String message = botConfig.getString("alread-verified-message", "You are already verified!");
                     event.getHook().sendMessage(message).queue();
                     return;
                 }
-                String savedCode = plugin.getVerificationCodesCaching().getCode(playerUUID);
+                String savedCode = plugin.getPlayerVerificationCache().getCode(playerUUID);
 
                 //Checking if the code is expired
-                if(plugin.getVerificationCodesCaching().isCodeExpired(playerUUID)) {
+                if(plugin.getPlayerVerificationCache().isCodeExpired(playerUUID)) {
                     String message = botConfig.getString("expired-code-message", "The code you just entered **expired**! Run **/verify** again on our Minecraft Server!");
                     event.getHook().sendMessage(message).queue();
                     return;
@@ -115,21 +117,18 @@ public class SlashCommands extends ListenerAdapter{
                 String message = botConfig.getString("player-verified-message", "✅ You are now verified! Have fun on our server!");
                 event.getHook().sendMessage(message).queue();
 
-                //Adding the player to the Verified Players map
-                plugin.getVerifiedPlayers().add(playerUUID);
-
                 //Removing from the Caches
-                plugin.getVerificationCodesCaching().removeFromDiscord(verificationCode);
-                plugin.getVerificationCodesCaching().deleteCode(playerUUID);
+                plugin.getPlayerVerificationCache().removeFromDiscord(verificationCode);
+                plugin.getPlayerVerificationCache().deleteCode(playerUUID);
 
                 //Adding to UUID <-> DiscordId Cache
-                plugin.getVerificationCodesCaching().putUuidDiscordID(playerUUID, userId);
+                plugin.getPlayerVerificationCache().putUuidDiscordID(playerUUID, userId);
 
                 //Adding to DiscordId <-> UUID cache
-                plugin.getVerificationCodesCaching().putDiscordIdUUID(playerUUID, userId);
+                plugin.getPlayerVerificationCache().putDiscordIdUUID(playerUUID, userId);
 
                 //Saving to the Database
-                String sql = "INSERT INTO playersVerification (uuid, discordId, verified) VALUES (?, ?, ?)";
+                String sql = "INSERT INTO verifiedPlayers (uuid, discordId, verified) VALUES (?, ?, ?)";
                 try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
                     ps.setString(1, playerUUID.toString());
                     ps.setString(2, userId);
@@ -153,14 +152,12 @@ public class SlashCommands extends ListenerAdapter{
                         }
 
                         //Check if the user is verified
-                        String userPlayerIGN = getUserPlayerIGN(event.getUser().getId());
-                        if(userPlayerIGN == null){
+                        if(!plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(event.getUser().getId())) {
                             event.getHook().sendMessage("You **are not** verified! Please run */verify* on our server and try again.").queue();
                             return;
                         }
 
-                        OfflinePlayer userPlayer = Bukkit.getOfflinePlayer(userPlayerIGN);
-                        UUID userPlayerUUID = userPlayer.getUniqueId();
+                        UUID userPlayerUUID = plugin.getPlayerVerificationCache().getUuidFromDiscordId(event.getUser().getId());
 
                         if(event.getOption("ign") == null){
                             boolean playerHasPunishments = plugin.getDatabaseManager().playerHasPunishments(userPlayerUUID);
@@ -233,14 +230,15 @@ public class SlashCommands extends ListenerAdapter{
 
                         //Getting the player from the ign
                         String ign = event.getOption("ign").getAsString();
-                        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(ign);
+                        UUID targetPlayerUUID = Bukkit.getPlayerUniqueId(ign);
 
-                        if (targetPlayer == Bukkit.getOfflinePlayer(getUserPlayerIGN(event.getUser().getId()))) {
+                        if (targetPlayerUUID == plugin.getPlayerVerificationCache().getUuidFromDiscordId(event.getUser().getId())) {
                             event.getHook().sendMessage("You cannot punish yourself!").queue();
                             return;
                         }
 
                         //Check if the target player has played on the server
+                        OfflinePlayer targetPlayer = Bukkit.getPlayer(targetPlayerUUID);
                         if (!targetPlayer.hasPlayedBefore()) {
                             event.getHook().sendMessage("Player **\\" + targetPlayer.getName() + "** does not exist on the server. Please enter a valid name!").queue();
                             return;
@@ -308,7 +306,7 @@ public class SlashCommands extends ListenerAdapter{
                                    if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
                                        Guild dcServer = botMain.getDiscordServer();
 
-                                       botMain.getJda().retrieveUserById(getTargetPlayerUserID(targetUUID)).queue(targetUser -> {
+                                       botMain.getJda().retrieveUserById(plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetUUID)).queue(targetUser -> {
                                            if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
                                                //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
                                                dcServer.retrieveMemberById(targetUser.getId()).queue(member -> {
@@ -360,7 +358,7 @@ public class SlashCommands extends ListenerAdapter{
                         }
 
                         //Checking if the user is verified
-                        if(!isUserVerified(userID)){
+                        if(!plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(userID)){
                             event.getHook().sendMessage("You *don't have* any MC account linked to your DC account! Use **/verify** to link one!").queue();
                             return;
                         }
@@ -381,15 +379,27 @@ public class SlashCommands extends ListenerAdapter{
                         //Resetting the nickname
                         if (!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
 
-                        //Removing the player from the Verified Players maps
-                        plugin.getVerifiedPlayers().remove(plugin.getVerificationCodesCaching().getUuidFromDiscordId(userID));
+                        //Sending the player a message in game if he is online
+                        Player targetPlayer = Bukkit.getPlayer(plugin.getPlayerVerificationCache().getUuidFromDiscordId(userID));
+                        if(targetPlayer != null && targetPlayer.isOnline()){
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                String message = plugin.getConfig().getString("unverified-from-dc-message", "&4[&c&l!&4] &aYou have been unverified via the &9&lDiscord Command&a! Run &l&e/verify &ain order to verify again.");
+                                message = PlaceholderAPI.setPlaceholders(targetPlayer, message);
+                                targetPlayer.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+
+                                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-unverified-sound", "entity.player.levelup").toLowerCase()));
+                                float volume = plugin.getConfig().getInt("pus-volume", 1);
+                                float pitch = plugin.getConfig().getInt("pus-pitch", 1);
+                                targetPlayer.playSound(targetPlayer.getLocation(), sound, volume, pitch);
+                            });
+                        }
 
                         //Removing the player from the UUID <-> DiscordId caches
-                        plugin.getVerificationCodesCaching().removeUuidDiscordID(plugin.getVerificationCodesCaching().getUuidFromDiscordId(userID));
-                        plugin.getVerificationCodesCaching().removeDiscordIdUUID(userID);
+                        plugin.getPlayerVerificationCache().removeUuidDiscordID(plugin.getPlayerVerificationCache().getUuidFromDiscordId(userID));
+                        plugin.getPlayerVerificationCache().removeDiscordIdUUID(userID);
 
                         //Removing the user from the playersVerification table
-                        String sql = "DELETE FROM playersVerification WHERE discordId = ?";
+                        String sql = "DELETE FROM verifiedPlayers WHERE discordId = ?";
 
                         try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
                             ps.setString(1, userID);
@@ -536,40 +546,6 @@ public class SlashCommands extends ListenerAdapter{
                         throw new RuntimeException(e);
                     }
                 });
-            }
-        }
-    }
-
-    private boolean isUserVerified(String ID) throws SQLException{
-        String SQL = "SELECT 1 FROM playersVerification WHERE discordId = ?";
-
-        try(Connection conn = plugin.getDatabaseManager().getConnection();PreparedStatement ps = conn.prepareStatement(SQL)){
-            ps.setString(1, ID);
-            ResultSet rs = ps.executeQuery();
-            return rs.next();
-        }
-    }
-
-    private String getUserPlayerIGN(String userId) throws SQLException {
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT ign FROM playersVerification WHERE discordId = ?")){
-            ps.setString(1, userId);
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) return rs.getString("ign");
-            }
-        }
-
-        return null;
-    }
-
-    private String getTargetPlayerUserID(UUID targetUUID) throws SQLException {
-        String SQL = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(SQL)){
-            ps.setString(1, targetUUID.toString());
-            try(ResultSet rs = ps.executeQuery()){
-                if(!rs.next()) return null;
-
-                return rs.getString("discordId");
             }
         }
     }

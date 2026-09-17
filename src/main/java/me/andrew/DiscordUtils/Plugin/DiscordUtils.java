@@ -21,6 +21,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -34,7 +35,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -51,7 +52,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private VerificationManager verificationManager;
     private DatabaseManager databaseManager;
     private final Map<UUID, Consumer<Component>> chatInput = new HashMap<>();
-    private final CopyOnWriteArraySet<UUID> verifiedPlayers = new CopyOnWriteArraySet<>();
 
     //Punishments GUIs
     private PlayerHeadsGUIs playerHeadsGUIs;
@@ -63,7 +63,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
     private final Map<UUID, PlayerPunishmentDataCache> punishmentPlayerCache = new HashMap<>();
-    private final PlayerVerificationCache verifyCodesCaching = new PlayerVerificationCache();
+    private final PlayerVerificationCache playerVerificationCache = new PlayerVerificationCache();
 
     private BukkitTask broadcastTask; //Task for broadcasting
     private BotMain discordBot;
@@ -71,7 +71,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     @Override
     public void onEnable(){
         saveDefaultConfig();
-        startBroadcasting(); //Broadcasts the message over an interval of seconds
 
         guiTitle = ChatColor.translateAlternateColorCodes('&', getConfig().getString("discord-gui.title"));
         discordTaskManager = new DiscordTask(this);
@@ -95,31 +94,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
         reloadConfig();
         botConfig.reloadConfig();
-
-        //Setting the commands and the tabs
-        getCommand("discord").setExecutor(commands);
-        getCommand("history").setExecutor(commands);
-        getCommand("dcutils").setExecutor(commands);
-        getCommand("verify").setExecutor(commands);
-        getCommand("unverify").setExecutor(commands);
-        getCommand("dcutils").setTabCompleter(new CommandTABS(this));
-
-        //Setting events
-        getServer().getPluginManager().registerEvents(discordGUI, this);
-        getServer().getPluginManager().registerEvents(mainConfigGUI, this);
-        getServer().getPluginManager().registerEvents(blockConfigurationGUI, this);
-        getServer().getPluginManager().registerEvents(discordBlockManager, this);
-        getServer().getPluginManager().registerEvents(appearanceChoiceGUI, this);
-        getServer().getPluginManager().registerEvents(playerHeadsGUIs, this);
-        getServer().getPluginManager().registerEvents(addRemovePunishmentsGUI, this);
-        getServer().getPluginManager().registerEvents(PunishmentsGUI, this);
-        getServer().getPluginManager().registerEvents(choosePunishTypeGUI, this);
-        getServer().getPluginManager().registerEvents(choosePunishScopeGUI, this);
-        getServer().getPluginManager().registerEvents(new CommandLogSystem(this), this);
-        getServer().getPluginManager().registerEvents(finalPunishmentGUI, this);
-        getServer().getPluginManager().registerEvents(checkPlayerBanMute, this);
-        getServer().getPluginManager().registerEvents(facingChoiceGUI, this);
-        getServer().getPluginManager().registerEvents(this, this);
 
         //Runs a 'first-run' message if the plugin is run for the first time
         if(!getConfig().getBoolean("initialized", false)){
@@ -216,22 +190,43 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 }
             }, 0L, 20L*5); //Runs every 5 seconds
 
-            //Adds the verified players to the map.
-            Set<UUID> playerUUIDs = new HashSet<>();
-            for(OfflinePlayer player : Bukkit.getOfflinePlayers())playerUUIDs.add(player.getUniqueId());
-            Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-                for(UUID uuid : playerUUIDs){
-                    try{
-                        if(getDatabaseManager().isVerified(uuid)) verifiedPlayers.add(uuid);
+            //Adds the verified players to the maps.
+            ConcurrentHashMap<UUID, String> verifiedData = getDatabaseManager().getVerifiedData();
+            for(Map.Entry<UUID, String> entry : verifiedData.entrySet()){
+                UUID uuid = entry.getKey();
+                String discordId = entry.getValue();
 
-                        //Also setting up the player punishment cache
-                        getDatabaseManager().setupPunishmentCache(uuid);
-                    } catch (Exception e){
-                        Bukkit.getScheduler().runTask(this, () -> getLogger().info("Couldn't add the verified players. See message: "+e.getMessage()));
-                    }
-                }
-            });
+                getPlayerVerificationCache().putDiscordIdUUID(uuid, discordId);
+                getPlayerVerificationCache().putUuidDiscordID(uuid, discordId);
+            }
         }
+
+        //Setting the commands and the tabs
+        getCommand("discord").setExecutor(commands);
+        getCommand("history").setExecutor(commands);
+        getCommand("dcutils").setExecutor(commands);
+        getCommand("verify").setExecutor(commands);
+        getCommand("unverify").setExecutor(commands);
+        getCommand("dcutils").setTabCompleter(new CommandTABS(this));
+
+        //Setting events
+        getServer().getPluginManager().registerEvents(discordGUI, this);
+        getServer().getPluginManager().registerEvents(mainConfigGUI, this);
+        getServer().getPluginManager().registerEvents(blockConfigurationGUI, this);
+        getServer().getPluginManager().registerEvents(discordBlockManager, this);
+        getServer().getPluginManager().registerEvents(appearanceChoiceGUI, this);
+        getServer().getPluginManager().registerEvents(playerHeadsGUIs, this);
+        getServer().getPluginManager().registerEvents(addRemovePunishmentsGUI, this);
+        getServer().getPluginManager().registerEvents(PunishmentsGUI, this);
+        getServer().getPluginManager().registerEvents(choosePunishTypeGUI, this);
+        getServer().getPluginManager().registerEvents(choosePunishScopeGUI, this);
+        getServer().getPluginManager().registerEvents(new CommandLogSystem(this), this);
+        getServer().getPluginManager().registerEvents(finalPunishmentGUI, this);
+        getServer().getPluginManager().registerEvents(checkPlayerBanMute, this);
+        getServer().getPluginManager().registerEvents(facingChoiceGUI, this);
+        getServer().getPluginManager().registerEvents(this, this);
+
+        startBroadcasting(); //Broadcasts the message over an interval of seconds
     }
 
     private void sendEmbedInBannedChannel(){
@@ -339,9 +334,40 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     public void onPlayerJoin(PlayerJoinEvent event){
         Player player = event.getPlayer();
 
-        //Checking if the player is still verifying, in order to give him the code again.
-        if(verifyCodesCaching.isPlayerVerifying(player.getUniqueId())){
+        //If the code expired, sends him a message to inform him
+        if(getPlayerVerificationCache().isCodeExpired(player.getUniqueId())){
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(getConfig().getString("code-expired-sound", "block.note_block.bass").toLowerCase()));
+                float volume = getConfig().getInt("ces-volume");
+                float pitch = getConfig().getInt("ces-pitch");
 
+                String message = getConfig().getString("code-expired-message", "&cVerification code expired. Please run &l/verify &cagain.");
+                message = PlaceholderAPI.setPlaceholders(player, message);
+
+                getPlayerVerificationCache().removeFromDiscord(getPlayerVerificationCache().getCode(player.getUniqueId()));
+                getPlayerVerificationCache().deleteCode(player.getUniqueId());
+
+                player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+                player.playSound(player.getLocation(), sound, volume, pitch);
+            }, 40L);
+        }
+
+        //Checking if the player is still verifying, in order to give him the code again.
+        if(getPlayerVerificationCache().isPlayerVerifying(player.getUniqueId())){
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(getConfig().getString("give-verification-code-sound", "block.note_block.pling").toLowerCase()));
+                float volume = getConfig().getInt("gvcs-volume", 1);
+                float pitch = getConfig().getInt("gvcs-pitch", 1);
+                List<String> rawMessage = getConfig().getStringList("resend-verification-code-message");
+
+                for(String line : rawMessage){
+                    line = line.replace("%code%", getPlayerVerificationCache().getCode(player.getUniqueId()));
+                    line = PlaceholderAPI.setPlaceholders(player, line);
+                    Component finalLine = LegacyComponentSerializer.legacyAmpersand().deserialize(line);
+                    player.sendMessage(finalLine);
+                }
+                player.playSound(player.getLocation(), sound, volume, pitch);
+            }, 40L);
         }
     }
 
@@ -524,14 +550,10 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         return discordBot;
     }
 
-    public CopyOnWriteArraySet<UUID> getVerifiedPlayers(){
-        return verifiedPlayers;
-    }
-
     public Map<UUID, PlayerPunishmentDataCache> getPlayerPunishmentDataCache(){
         return punishmentPlayerCache;
     }
-    public PlayerVerificationCache getVerificationCodesCaching(){
-        return verifyCodesCaching;
+    public PlayerVerificationCache getPlayerVerificationCache(){
+        return playerVerificationCache;
     }
 }
