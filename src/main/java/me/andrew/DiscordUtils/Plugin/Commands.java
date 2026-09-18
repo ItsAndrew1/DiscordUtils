@@ -258,13 +258,21 @@ public class Commands implements CommandExecutor{
             Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
 
             String userDiscordID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(player.getUniqueId());
-
             dcServer.retrieveMemberById(userDiscordID).queue(targetMember -> {
+                //Removing the 'verified' role and giving himt he 'unverified' role
                 if(targetMember.getRoles().contains(verifiedRole)) dcServer.removeRoleFromMember(targetMember, verifiedRole).queue();
                 dcServer.addRoleToMember(targetMember, unverified).queue();
 
                 //Resetting the user's nickname
                 if(!targetMember.isOwner()) targetMember.modifyNickname(null).queue();
+            });
+
+            //Attempts to send the user a message about this.
+            plugin.getDiscordBot().getJda().retrieveUserById(userDiscordID).queue(targetUser -> {
+                targetUser.openPrivateChannel().queue(privateChannel -> {
+                    String message = plugin.botFile().getConfig().getString("unverified-from-mc-DM", "You have unverified from **%server_name%**. To verify again, run **/verify** on their Minecraft Server!");
+                    privateChannel.sendMessage(message).queue();
+                });
             });
 
             String message = plugin.getConfig().getString("unverified-from-mc-message", "&4[&c&l!&4] &aYou have been unverified! Run &e&l/verify&a in order to verify again.");

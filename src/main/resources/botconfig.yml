@@ -21,6 +21,11 @@ expired-code-message: "The code you just entered **expired**! Run **/verify** ag
 already-verified-message: "You are already verified!"
 player-verified-message: "✅ You are now verified! Have fun on our server!"
 player-not-online-message: "You are not online on the server! Please join and try again."
+unverified-successfully-message: "You have been unverified! If you want to verify again, run **/verify** on our Minecraft Server."
+
+#This message will be sent as a DM to the users when they unverify via Minecraft command
+#Placeholders: %server_name% -> Display the DISCORD SERVER's name
+unverified-from-mc-DM: "You have unverified from **%server_name%**. To verify again, run **/verify** on their Minecraft Server!"
 
 #Set the minutes for the interactions
 interaction-minutes: 2 #If a user is having an interaction and he doesn't do anything for some minutes, it removes the user from it.

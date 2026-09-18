@@ -1,5 +1,7 @@
 package me.andrew.DiscordUtils.Caching;
 
+import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,6 +11,12 @@ public class PlayerVerificationCache {
     private final Map<String, UUID> discordCodeCache = new ConcurrentHashMap<>();
     private final Map<UUID, String> uuidDiscordIdCache = new ConcurrentHashMap<>();
     private final Map<String, UUID> discordIdUuidCache = new ConcurrentHashMap<>();
+
+    private final DiscordUtils plugin;
+
+    public PlayerVerificationCache(DiscordUtils plugin) {
+        this.plugin = plugin;
+    }
 
     public record VerificationCode(String code, long expireTime){
         private boolean isCodeExpired(){
@@ -42,9 +50,11 @@ public class PlayerVerificationCache {
     //Methods for the cache needed for Discord Part
     public void saveForDiscord(String code, UUID playerUUID){
         discordCodeCache.put(code, playerUUID);
+        plugin.getLogger().info("Saved code <-> uuid");
     }
     public void removeFromDiscord(String code){
         discordCodeCache.remove(code);
+        plugin.getLogger().info("Removed code <-> uuid");
     }
     public UUID getUuidFromCode(String code){
         return discordCodeCache.get(code);

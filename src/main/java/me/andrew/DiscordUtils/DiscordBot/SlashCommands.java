@@ -408,7 +408,8 @@ public class SlashCommands extends ListenerAdapter{
                             plugin.getLogger().warning("Couldn't remove user from the playersVerification table. See message: "+e.getMessage());
                         }
 
-                        event.getHook().sendMessage("Unverified successfully!").queue();
+                        String message = plugin.botFile().getConfig().getString("unverified-successfully-message", "You have been unverified! If you want to verify again, run **/verify** on our Minecraft Server.");
+                        event.getHook().sendMessage(message).queue();
                     } catch (SQLException e){
                         throw new RuntimeException(e);
                     }

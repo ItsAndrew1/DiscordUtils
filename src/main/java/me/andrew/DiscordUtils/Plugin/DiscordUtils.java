@@ -63,7 +63,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
     private final Map<UUID, PlayerPunishmentDataCache> punishmentPlayerCache = new HashMap<>();
-    private final PlayerVerificationCache playerVerificationCache = new PlayerVerificationCache();
+    private final PlayerVerificationCache playerVerificationCache = new PlayerVerificationCache(this);
 
     private BukkitTask broadcastTask; //Task for broadcasting
     private BotMain discordBot;
