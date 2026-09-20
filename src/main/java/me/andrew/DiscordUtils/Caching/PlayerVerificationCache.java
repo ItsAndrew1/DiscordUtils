@@ -50,11 +50,9 @@ public class PlayerVerificationCache {
     //Methods for the cache needed for Discord Part
     public void saveForDiscord(String code, UUID playerUUID){
         discordCodeCache.put(code, playerUUID);
-        plugin.getLogger().info("Saved code <-> uuid");
     }
     public void removeFromDiscord(String code){
         discordCodeCache.remove(code);
-        plugin.getLogger().info("Removed code <-> uuid");
     }
     public UUID getUuidFromCode(String code){
         return discordCodeCache.get(code);

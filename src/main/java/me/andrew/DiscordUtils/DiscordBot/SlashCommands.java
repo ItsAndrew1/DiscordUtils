@@ -45,28 +45,27 @@ public class SlashCommands extends ListenerAdapter{
             case "verify" -> {
                 event.deferReply(true).queue();
 
-                String userId = event.getUser().getId();
-                String verificationCode = event.getOption("code").getAsString();
-                UUID playerUUID = plugin.getPlayerVerificationCache().getUuidFromCode(verificationCode);
-
                 //Checking if the user is already verified
+                String userId = event.getUser().getId();
                 if(plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(userId)) {
                     String message = botConfig.getString("alread-verified-message", "You are already verified!");
                     event.getHook().sendMessage(message).queue();
                     return;
                 }
-                String savedCode = plugin.getPlayerVerificationCache().getCode(playerUUID);
 
-                //Checking if the code is expired
-                if(plugin.getPlayerVerificationCache().isCodeExpired(playerUUID)) {
-                    String message = botConfig.getString("expired-code-message", "The code you just entered **expired**! Run **/verify** again on our Minecraft Server!");
+                String verificationCode = event.getOption("code").getAsString();
+                UUID playerUUID = plugin.getPlayerVerificationCache().getUuidFromCode(verificationCode);
+
+                //Checking if the code is the right one
+                if(playerUUID == null){
+                    String message = botConfig.getString("invalid-code-message", "The code you just entered is **invalid**!");
                     event.getHook().sendMessage(message).queue();
                     return;
                 }
 
-                //Checking if the code is valid or not
-                if(!verificationCode.equals(savedCode)) {
-                    String message = botConfig.getString("invalid-code-message", "The code you just entered is **invalid**!");
+                //Checking if the code is expired
+                if(plugin.getPlayerVerificationCache().isCodeExpired(playerUUID)) {
+                    String message = botConfig.getString("expired-code-message", "The code you just entered **expired**! Run **/verify** again on our Minecraft Server!");
                     event.getHook().sendMessage(message).queue();
                     return;
                 }
