@@ -7,30 +7,19 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 //Class for caching the punishment count
 public class PlayerPunishmentDataCache {
-    private final Map<PunishmentType, Map<PunishmentScopes, Integer>> mainCache;
+    private final ConcurrentHashMap<UUID, CopyOnWriteArrayList<PlayerPunishments>> mainCache;
 
     public PlayerPunishmentDataCache() {
-        this.mainCache = new HashMap<>();
+        this.mainCache = new ConcurrentHashMap<>();
     }
 
-    public int getNrOfPunishments(PunishmentType type, PunishmentScopes scope){
-        return mainCache.getOrDefault(type, Collections.emptyMap()).getOrDefault(scope, 0);
-    }
+    public record PlayerPunishments(){
 
-    public void insertPunishment(PunishmentType type, PunishmentScopes scope){
-        mainCache.computeIfAbsent(type, m -> new HashMap<>()).merge(scope, 1, Integer::sum);
-    }
-
-    public void removePunishment(PunishmentType type, PunishmentScopes scope){
-        mainCache.computeIfPresent(type, (key, submap) -> {
-            submap.computeIfPresent(scope, (s, count) -> {
-                int newCount = count - 1;
-                return newCount > 0 ? newCount : null;
-            });
-            return submap.isEmpty() ? null : submap;
-        });
     }
 }

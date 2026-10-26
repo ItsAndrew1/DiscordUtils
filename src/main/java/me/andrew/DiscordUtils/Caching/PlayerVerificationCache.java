@@ -12,8 +12,8 @@ public class PlayerVerificationCache {
     private final Map<UUID, String> uuidDiscordIdCache = new ConcurrentHashMap<>();
     private final Map<String, UUID> discordIdUuidCache = new ConcurrentHashMap<>();
 
-    public record VerificationCode(String code, long expireTime){
-        private boolean isCodeExpired(){
+    public record VerificationCode(String code, long expireTime) {
+        private boolean isCodeExpired() {
             return System.currentTimeMillis() > expireTime;
         }
     }
