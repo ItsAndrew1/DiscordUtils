@@ -66,8 +66,8 @@ public class PlayerHeadsGUIs implements Listener{
             if(targetPlayer.isOnline()) playerStatus = ChatColor.translateAlternateColorCodes('&', "&aStatus: &a&lONLINE");
             else playerStatus = ChatColor.translateAlternateColorCodes('&', "&aStatus: &c&lOFFLINE");
 
-            int activePunishments = plugin.getDatabaseManager().getPlayerActivePunishmentsNr(targetPlayer.getUniqueId());
-            int inactivePunishments = plugin.getDatabaseManager().getPlayerExpiredPunishmentsNr(targetPlayer.getUniqueId());
+            int activePunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(targetPlayer.getUniqueId(), true);
+            int inactivePunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(targetPlayer.getUniqueId(), false);
 
             lore.add(" ");
             lore.add(ChatColor.translateAlternateColorCodes('&', "&aActive Punishments: &c&l"+activePunishments));

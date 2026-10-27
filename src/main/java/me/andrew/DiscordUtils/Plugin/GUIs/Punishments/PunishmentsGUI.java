@@ -2,9 +2,7 @@
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import me.andrew.DiscordUtils.Plugin.Punishment;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import me.andrew.DiscordUtils.Caching.Punishment;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -14,20 +12,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class PunishmentsGUI implements Listener{
     private final DiscordUtils plugin;
@@ -88,7 +85,7 @@ public class PunishmentsGUI implements Listener{
         gui.setItem(49, returnButton);
 
         //Setting the punishments
-        if(!plugin.getDatabaseManager().playerHasPunishments(playerUUID)){
+        if(!plugin.getPlayerPunishmentDataCache().playerHasPunishments(playerUUID)){
             //No punishments item
             ItemStack noPunish = new ItemStack(Material.BARRIER);
             ItemMeta noPunishMeta = noPunish.getItemMeta();
@@ -98,8 +95,8 @@ public class PunishmentsGUI implements Listener{
         }
         else{
             //Filtering buttons
-            int nrPlayerActivePunishments = plugin.getDatabaseManager().getPlayerActivePunishmentsNr(playerUUID);
-            int nrPlayerExpiredPunishments = plugin.getDatabaseManager().getPlayerExpiredPunishmentsNr(playerUUID);
+            int nrPlayerActivePunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(playerUUID, true);
+            int nrPlayerExpiredPunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(playerUUID, false);
             if(nrPlayerActivePunishments >= 1 && nrPlayerExpiredPunishments >= 1){
                 if(filter.equals(PunishmentsFilter.ALL)){
                     ItemStack filterAllButton =  new ItemStack(Material.YELLOW_DYE);
@@ -154,10 +151,10 @@ public class PunishmentsGUI implements Listener{
                 }
             }
 
-            int punishmentsPerPage = 27;
-            int offset = (page - 1) *  punishmentsPerPage;
-            List<Punishment> playerPunishments = plugin.getDatabaseManager().getPlayerPunishments(playerUUID, filter, punishmentsPerPage, offset);
-            int endIndex = Math.min(offset + punishmentsPerPage, playerPunishments.size());
+            int limit = 27;
+            int offset = (page - 1) *  limit;
+            CopyOnWriteArrayList<Punishment> playerPunishments = plugin.getPlayerPunishmentDataCache().getPlayerPunishments(playerUUID, filter, limit, offset);
+            int endIndex = Math.min(offset + limit, playerPunishments.size());
 
             //Displaying the punishments
             int startSlot = 18;
@@ -189,7 +186,7 @@ public class PunishmentsGUI implements Listener{
 
     private ItemStack createPunishmentItem(Punishment p){
         //Setting the material based on the punishment type
-        Material pmMat = switch(p.getPunishmentType()){
+        Material pmMat = switch(p.punishmentType()){
             case PERM_BAN, PERM_BAN_WARN -> Material.NETHERITE_AXE;
             case TEMP_BAN, TEMP_BAN_WARN -> Material.IRON_AXE;
             case KICK -> Material.LEATHER_BOOTS;
@@ -201,7 +198,7 @@ public class PunishmentsGUI implements Listener{
         ItemMeta punishmentItemMeta = punishmentItem.getItemMeta();
 
         //Setting the display name based on the punishment type
-        String displayName = switch(p.getPunishmentType()){
+        String displayName = switch(p.punishmentType()){
             case PERM_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN");
             case PERM_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN WARN");
             case TEMP_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN");
@@ -215,35 +212,35 @@ public class PunishmentsGUI implements Listener{
         punishmentItemMeta.setDisplayName(displayName);
 
         //Formatting the time when the punishment was created
-        long createdAt = p.getIssuedAt();
+        long createdAt = p.createdAt();
         Instant createdInstant = Instant.ofEpochMilli(createdAt);
         LocalDateTime time = LocalDateTime.ofInstant(createdInstant, ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
         String formatedTime = time.format(formatter);
 
         //Formatting the time when the punishment is set to expired
-        long expiresAt = p.getExpiresAt();
+        long expiresAt = p.expiresAt();
         Instant expireInstant = Instant.ofEpochMilli(expiresAt);
         LocalDateTime time2 = LocalDateTime.ofInstant(expireInstant, ZoneId.systemDefault());
         DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
         String expireFormatedTime = time2.format(formatter2);
 
         //Formatting the time when the punishment was removed
-        long removedAt = p.getRemovedAt();
+        long removedAt = p.removedAt();
         Instant removedInstant = Instant.ofEpochMilli(removedAt);
         LocalDateTime time3 = LocalDateTime.ofInstant(removedInstant, ZoneId.systemDefault());
         DateTimeFormatter formatter3 = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
         String removedFormatedTime = time3.format(formatter3);
 
         //Formats the scope of the punishment
-        String punishmentScope = switch(p.getScope()){
+        String punishmentScope = switch(p.scope()){
             case MINECRAFT -> ChatColor.translateAlternateColorCodes('&', "&a&lMINECRAFT");
             case DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
             case GLOBAL -> ChatColor.translateAlternateColorCodes('&', "&e&lGLOBAL");
         };
 
         //Adds enchant glint if the punishment is a warning
-        if(p.getPunishmentType().toString().contains("WARN")){
+        if(p.punishmentType().toString().contains("WARN")){
             punishmentItemMeta.addEnchant(Enchantment.LURE, 1, true);
             punishmentItemMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
@@ -253,23 +250,23 @@ public class PunishmentsGUI implements Listener{
         itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Issued at: &l"+formatedTime));
         itemLore.add(" ");
         itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aScope: "+punishmentScope));
-        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aStaff: &e&l"+p.getStaff()));
+        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aStaff: &e&l"+p.staff()));
 
-        String reason = p.getReason();
-        reason = plugin.parsePP(Bukkit.getPlayer(p.getUuid()), reason);
+        String reason = p.reason();
+        reason = plugin.parsePP(Bukkit.getPlayer(p.uuid()), reason);
         itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aReason: &e"+reason));
         itemLore.add(" ");
 
         //Setting the status
         String status;
-        if(p.isRemoved()) status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &4&lREMOVED");
-        else if(p.isActive()) status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &lACTIVE");
+        if(p.removed()) status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &4&lREMOVED");
+        else if(p.active()) status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &lACTIVE");
         else status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &c&lEXPIRED");
         itemLore.add(status);
 
-        if(p.isRemoved()) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Removed at &l"+removedFormatedTime));
-        if(p.isActive() && !p.getPunishmentType().toString().contains("WARN")){
-            itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aID: &8"+p.getId()));
+        if(p.removed()) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Removed at &l"+removedFormatedTime));
+        if(p.active() && !p.punishmentType().toString().contains("WARN")){
+            itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aID: &8"+p.id()));
             if(!isPermanent(p)) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Expires at &l"+expireFormatedTime));
         }
 
@@ -279,7 +276,7 @@ public class PunishmentsGUI implements Listener{
     }
 
     private boolean isPermanent(Punishment p){
-        return p.getExpiresAt() == 0;
+        return p.expiresAt() == 0;
     }
 
     @EventHandler

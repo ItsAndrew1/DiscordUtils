@@ -1,6 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
+import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -40,21 +41,24 @@ public class Commands implements CommandExecutor{
 
         try {
             //Check if the player is muted temporarily
-            Punishment tempMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
-            if(tempMute != null && (tempMute.getScope() == PunishmentScopes.MINECRAFT || tempMute.getScope() == PunishmentScopes.GLOBAL)){
-                if(isPunishmentExpired(tempMute)) plugin.getDatabaseManager().expirePunishmentById(tempMute.getCrt());
+            Punishment tempMute = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
+            if(tempMute != null && (tempMute.scope() == PunishmentScopes.MINECRAFT || tempMute.scope() == PunishmentScopes.GLOBAL)){
+                if(isPunishmentExpired(tempMute)){
+                    plugin.getDatabaseManager().expirePunishmentById(tempMute.id());
+                    plugin.getPlayerPunishmentDataCache().expirePunishmentById(player.getUniqueId(), tempMute.id());
+                }
                 else{
                     //Sends the player a message (if the messages are toggled)
                     boolean toggleMessage = plugin.getConfig().getBoolean("player-punishments-messages.toggle");
                     if(toggleMessage){
                         //Getting the reason
-                        String reason = tempMute.getReason();
+                        String reason = tempMute.reason();
 
                         //Getting the scope
-                        String scope =  getColoredScope(tempMute.getScope());
+                        String scope =  getColoredScope(tempMute.scope());
 
                         //Getting the durations
-                        long expiresAt = tempMute.getExpiresAt();
+                        long expiresAt = tempMute.expiresAt();
                         Instant expiresAtInstant = Instant.ofEpochMilli(expiresAt);
                         LocalDateTime time = LocalDateTime.ofInstant(expiresAtInstant, ZoneId.systemDefault());
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss"); //Make configurable!!!
@@ -70,7 +74,7 @@ public class Commands implements CommandExecutor{
                                 .replace("%reason%", reason)
                                 .replace("%time_left%", timeLeftString)
                                 .replace("%expiration_time%", expiresAtString)
-                                .replace("%id%", tempMute.getId())
+                                .replace("%id%", tempMute.id())
                         ));
                     }
                     return true;
@@ -78,20 +82,20 @@ public class Commands implements CommandExecutor{
             }
 
             //Check if the player is muted permanently
-            Punishment permMute = plugin.getDatabaseManager().getPunishment(player.getUniqueId(), PunishmentType.PERM_MUTE);
-            if(permMute != null && (permMute.getScope() == PunishmentScopes.MINECRAFT || permMute.getScope() == PunishmentScopes.GLOBAL)){
-                if(permMute.isActive()){
+            Punishment permMute = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.PERM_MUTE);
+            if(permMute != null && (permMute.scope() == PunishmentScopes.MINECRAFT || permMute.scope() == PunishmentScopes.GLOBAL)){
+                if(permMute.active()){
                     //Sends the target player a message (if the messages are toggled)
                     //Getting the reason and scope
-                    String reason = permMute.getReason();
-                    String scope = getColoredScope(permMute.getScope());
+                    String reason = permMute.reason();
+                    String scope = getColoredScope(permMute.scope());
 
                     //Sending the message
                     List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
                     for(String messageLine: message) player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
                             .replace("%scope%", scope)
                             .replace("%reason%", reason)
-                            .replace("%id%", permMute.getId())
+                            .replace("%id%", permMute.id())
                     ));
                     return true;
                 }
@@ -106,7 +110,7 @@ public class Commands implements CommandExecutor{
             return true;
         }
 
-        String commandNoPermissionMessage = plugin.getConfig().getString("command-no-permission-message");
+        String commandNoPermissionMessage = plugin.getConfig().getString("command-no-permission-message", "&cYou don't have permission to run this command.");
 
         //Get the sounds
         Sound good = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
@@ -321,7 +325,7 @@ public class Commands implements CommandExecutor{
     }
 
     private boolean isPunishmentExpired(Punishment p){
-        return p.getExpiresAt() <= System.currentTimeMillis();
+        return p.expiresAt() <= System.currentTimeMillis();
     }
     private String getColoredScope(PunishmentScopes scope){
         return switch(scope){

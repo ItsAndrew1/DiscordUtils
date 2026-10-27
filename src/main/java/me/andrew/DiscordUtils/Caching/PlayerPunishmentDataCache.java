@@ -1,25 +1,136 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Caching;
 
+import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.sql.SQLException;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 //Class for caching the punishment count
 public class PlayerPunishmentDataCache {
-    private final ConcurrentHashMap<UUID, CopyOnWriteArrayList<PlayerPunishments>> mainCache;
+    private final ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache;
 
     public PlayerPunishmentDataCache() {
         this.mainCache = new ConcurrentHashMap<>();
     }
 
-    public record PlayerPunishments(){
+    //Helper Methods
+    public void addPlayerPunishments(UUID playerUUID, CopyOnWriteArrayList<Punishment> punishments){
+        //This will run only once, when the server opens up, so no need for other checks.
+        mainCache.put(playerUUID, punishments);
+    }
 
+    public ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> getMainCache() {
+        return mainCache;
+    }
+
+    public void addPunishment (UUID playerUUID, Punishment punishment) {
+        mainCache.computeIfAbsent(playerUUID, k -> new CopyOnWriteArrayList<>()).add(punishment);
+    }
+
+    public void removePunishment(UUID playerUUID, PunishmentType type) {
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return;
+
+        Punishment punishment = punishments.stream().filter(p -> p.punishmentType().equals(type) && p.active()).findFirst().orElse(null);
+        if(punishment == null) return;
+
+        Punishment newPunishment = new Punishment(punishment.id(), punishment.uuid(), punishment.punishmentType(), punishment.scope(), punishment.reason(),
+                punishment.staff(), punishment.createdAt(), punishment.expiresAt(), false, true, System.currentTimeMillis(), punishment.appeal_state()
+        );
+        modifyPunishment(playerUUID, newPunishment);
+    }
+
+    public boolean playerHasPunishments(UUID playerUUID){
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        return punishments != null && punishments.stream().anyMatch(Punishment::active);
+    }
+
+    public int getNrOfPunishments(UUID playerUUID, boolean active){
+        int count = 0;
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return 0;
+
+        for(Punishment punishment : punishments){
+            if(punishment.active() == active) count++;
+        }
+
+        return count;
+    }
+
+    public CopyOnWriteArrayList<Punishment> getPlayerPunishments(UUID playerUUID, PunishmentsFilter filter, int limit, int offset) {
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return new CopyOnWriteArrayList<>();
+
+        List<Punishment> sortedPunishments = punishments.stream().filter(p -> {
+            switch (filter){
+                case EXPIRED -> {
+                    return !p.active();
+                }
+                case ACTIVE -> {
+                    return p.active();
+                }
+            }
+            return true;
+        }).sorted(Comparator.comparingLong(Punishment::createdAt)).skip(offset).limit(limit).toList();
+
+        return new CopyOnWriteArrayList<>(sortedPunishments);
+    }
+
+    public Punishment getPunishment (UUID playerUUID, PunishmentType type){
+        List<Punishment> playerPunishments = mainCache.get(playerUUID);
+        if(playerPunishments == null) return null;
+
+        return playerPunishments.stream().filter(p -> p.punishmentType().equals(type) && p.active()).findFirst().orElse(null);
+    }
+
+    public void expirePunishmentById (UUID playerUUID, String ID){
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return;
+
+        Punishment punishment = punishments.stream().filter(p -> p.id().equals(ID)).findFirst().orElse(null);
+        if(punishment == null) return;
+
+        Punishment newPunishment = new Punishment(ID, punishment.uuid(), punishment.punishmentType(), punishment.scope(),
+                punishment.reason(), punishment.staff(), punishment.createdAt(), punishment.expiresAt(), false, punishment.removed(), punishment.removedAt(),
+                punishment.appeal_state());
+
+        modifyPunishment(playerUUID, newPunishment);
+    }
+
+    public boolean playerHasPunishment(UUID playerUUID, PunishmentType type, PunishmentScopes scope){
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return false;
+
+        return punishments.stream().anyMatch(p -> p.punishmentType().equals(type) && p.scope().equals(scope) && p.active());
+    }
+
+    public boolean isPlayerBanned(UUID playerUUID, PunishmentScopes scope){
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return false;
+
+        return punishments.stream().anyMatch(p -> p.scope().equals(scope) && (p.punishmentType().equals(PunishmentType.TEMP_BAN) || p.punishmentType().equals(PunishmentType.PERM_BAN)) && p.active());
+    }
+
+    public boolean isPlayerMuted(UUID playerUUID, PunishmentScopes scope){
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return false;
+
+        return punishments.stream().anyMatch(p -> p.scope().equals(scope) && (p.punishmentType().equals(PunishmentType.TEMP_MUTE) || p.punishmentType().equals(PunishmentType.PERM_MUTE)) && p.active());
+    }
+
+    private void modifyPunishment (UUID playerUUID, Punishment punishment) {
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments != null){
+            punishments.removeIf(p -> p.id().equals(punishment.id()));
+            punishments.add(punishment);
+        }
     }
 }

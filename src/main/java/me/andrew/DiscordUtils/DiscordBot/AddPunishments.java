@@ -142,36 +142,32 @@ public class AddPunishments extends ListenerAdapter{
             //Setting the punishment scope
             state.scope = PunishmentScopes.valueOf(event.getValues().getFirst());
 
-            try {
-                //Checking if the target user/player is verified or not. (If the scope is DISCORD or GLOBAL)
-                if((state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && !plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(state.targetUUID)){
-                    event.reply("Player **"+targetPlayer.getName()+"** is *NOT* verified on the discord server! You may use the **MINECRAFT** scope instead.").setEphemeral(true).queue();
-                    addingStateMap.remove(event.getUser().getIdLong());
-                    return;
-                }
+            //Checking if the target user/player is verified or not. (If the scope is DISCORD or GLOBAL)
+            if((state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && !plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(state.targetUUID)){
+                event.reply("Player **"+targetPlayer.getName()+"** is *NOT* verified on the discord server! You may use the **MINECRAFT** scope instead.").setEphemeral(true).queue();
+                addingStateMap.remove(event.getUser().getIdLong());
+                return;
+            }
 
-                //Checking if the target player is on the game if the scope is GLOBAL or MINECRAFT and if the type is a KICK
-                if((state.scope == PunishmentScopes.MINECRAFT ||  state.scope == PunishmentScopes.GLOBAL) && state.type == PunishmentType.KICK && !targetPlayer.isOnline()){
-                    event.reply("Player **"+targetPlayer.getName()+"** is *NOT* online on the MC server.").setEphemeral(true).queue();
-                    addingStateMap.remove(event.getUser().getIdLong());
-                    return;
-                }
+            //Checking if the target player is on the game if the scope is GLOBAL or MINECRAFT and if the type is a KICK
+            if((state.scope == PunishmentScopes.MINECRAFT ||  state.scope == PunishmentScopes.GLOBAL) && state.type == PunishmentType.KICK && !targetPlayer.isOnline()){
+                event.reply("Player **"+targetPlayer.getName()+"** is *NOT* online on the MC server.").setEphemeral(true).queue();
+                addingStateMap.remove(event.getUser().getIdLong());
+                return;
+            }
 
-                //Checking if the target player is already banned in the selected scope
-                if(plugin.getDatabaseManager().isPlayerBanned(state.targetUUID, state.scope)){
-                    event.reply("Player **"+targetPlayer.getName()+"** is already banned in scope *"+state.scope.name()+"*!").setEphemeral(true).queue();
-                    addingStateMap.remove(event.getUser().getIdLong());
-                    return;
-                }
+            //Checking if the target player is already banned in the selected scope
+            if(plugin.getPlayerPunishmentDataCache().isPlayerBanned(state.targetUUID, state.scope)){
+                event.reply("Player **"+targetPlayer.getName()+"** is already banned in scope *"+state.scope.name()+"*!").setEphemeral(true).queue();
+                addingStateMap.remove(event.getUser().getIdLong());
+                return;
+            }
 
-                //Checking if the target player is already muted/timeout in the selected scope
-                if(plugin.getDatabaseManager().isPlayerMuted(state.targetUUID, state.scope)){
-                    event.reply("Player **"+targetPlayer.getName()+"** is already muted in scope *"+state.scope.name()+"*!").setEphemeral(true).queue();
-                    addingStateMap.remove(event.getUser().getIdLong());
-                    return;
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+            //Checking if the target player is already muted/timeout in the selected scope
+            if(plugin.getPlayerPunishmentDataCache().isPlayerMuted(state.targetUUID, state.scope)){
+                event.reply("Player **"+targetPlayer.getName()+"** is already muted in scope *"+state.scope.name()+"*!").setEphemeral(true).queue();
+                addingStateMap.remove(event.getUser().getIdLong());
+                return;
             }
 
             //Updating the last interaction

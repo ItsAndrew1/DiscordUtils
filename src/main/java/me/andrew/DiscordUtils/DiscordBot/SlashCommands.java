@@ -159,9 +159,7 @@ public class SlashCommands extends ListenerAdapter{
                         UUID userPlayerUUID = plugin.getPlayerVerificationCache().getUuidFromDiscordId(event.getUser().getId());
 
                         if(event.getOption("ign") == null){
-                            boolean playerHasPunishments = plugin.getDatabaseManager().playerHasPunishments(userPlayerUUID);
-
-                            if(!playerHasPunishments){
+                            if(!plugin.getPlayerPunishmentDataCache().playerHasPunishments(userPlayerUUID)){
                                 event.getHook().sendMessage("You **do not have** any punishments yet!").queue();
                                 return;
                             }
@@ -191,8 +189,7 @@ public class SlashCommands extends ListenerAdapter{
                         String targetPlayerName = targetPlayer.getName();
 
                         //Check if the target player has any punishments
-                        boolean playerHasPunishments = plugin.getDatabaseManager().playerHasPunishments(targetPlayerUUID);
-                        if(!playerHasPunishments){
+                        if(!plugin.getPlayerPunishmentDataCache().playerHasPunishments(targetPlayerUUID)){
                             event.getHook().sendMessage("Player **"+targetPlayerName+"** does not have any punishments yet!").queue();
                             return;
                         }

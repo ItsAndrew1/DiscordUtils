@@ -3,6 +3,7 @@ package me.andrew.DiscordUtils.Plugin;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import me.andrew.DiscordUtils.Caching.PlayerVerificationCache;
+import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.DiscordBot.*;
 import me.andrew.DiscordUtils.Plugin.GUIs.*;
 import me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock.BlockConfigurationGUI;
@@ -36,6 +37,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -62,7 +64,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private FinalPunishmentGUI finalPunishmentGUI;
 
     private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
-    private final Map<UUID, PlayerPunishmentDataCache> punishmentPlayerCache = new HashMap<>();
+    private final PlayerPunishmentDataCache playerPunishmentsCache = new PlayerPunishmentDataCache();
     private final PlayerVerificationCache playerVerificationCache = new PlayerVerificationCache();
 
     private BukkitTask broadcastTask; //Task for broadcasting
@@ -125,24 +127,46 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             sendEmbedInVerificationChannel();
             sendEmbedInBannedChannel();
 
+            try{
+                //Adding the punishments from the DB to the Punishment Cache
+                for(OfflinePlayer player : Bukkit.getOfflinePlayers()){
+                    CopyOnWriteArrayList<Punishment> playerPunishments = getAllPunishments(player.getUniqueId());
+                    getPlayerPunishmentDataCache().addPlayerPunishments(player.getUniqueId(), playerPunishments);
+                }
+
+                //Adding the verified players to the maps.
+                ConcurrentHashMap<UUID, String> verifiedData = getDatabaseManager().getVerifiedData();
+                for(Map.Entry<UUID, String> entry : verifiedData.entrySet()){
+                    UUID uuid = entry.getKey();
+                    String discordId = entry.getValue();
+
+                    getPlayerVerificationCache().putDiscordIdUUID(uuid, discordId);
+                    getPlayerVerificationCache().putUuidDiscordID(uuid, discordId);
+                }
+            } catch (Exception e){
+                getLogger().warning("[!] Failed to cache vital database information. See message: "+e.getMessage());
+                getLogger().warning("[!] Disabling DiscordUtils...");
+                getServer().getPluginManager().disablePlugin(this);
+            }
+
             //Runs a task to auto expire the punishments
             Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
                 try{
-                    List<Punishment> allPunishments = getAllPunishments();
+                    List<Punishment> allPunishments = getAllPunishments(null);
                     if(!allPunishments.isEmpty()){
                         for(Punishment p : allPunishments){
-                            if(p.getExpiresAt() <= System.currentTimeMillis() && p.isActive() && p.getExpiresAt() != 0){
+                            if(p.expiresAt() <= System.currentTimeMillis() && p.active() && p.expiresAt() != 0){
                                 String sql = "UPDATE punishments SET active = false WHERE id = ?";
                                 try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-                                    ps.setString(1, p.getId());
+                                    ps.setString(1, p.id());
                                     ps.executeUpdate();
                                 }
 
-                                PunishmentType type = p.getPunishmentType();
-                                PunishmentScopes scope = p.getScope();
+                                PunishmentType type = p.punishmentType();
+                                PunishmentScopes scope = p.scope();
 
                                 //Unbans/removes the timeout of a user if the scope is discord/global
-                                UUID targetUUID = p.getUuid();
+                                UUID targetUUID = p.uuid();
                                 String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
                                 try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql2)){
                                     ps.setString(1, targetUUID.toString());
@@ -189,16 +213,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                     getPluginLoader().disablePlugin(this);
                 }
             }, 0L, 20L*5); //Runs every 5 seconds
-
-            //Adds the verified players to the maps.
-            ConcurrentHashMap<UUID, String> verifiedData = getDatabaseManager().getVerifiedData();
-            for(Map.Entry<UUID, String> entry : verifiedData.entrySet()){
-                UUID uuid = entry.getKey();
-                String discordId = entry.getValue();
-
-                getPlayerVerificationCache().putDiscordIdUUID(uuid, discordId);
-                getPlayerVerificationCache().putUuidDiscordID(uuid, discordId);
-            }
         }
 
         //Setting the commands and the tabs
@@ -392,12 +406,15 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         return embed;
     }
 
-    //Method for getting a list of all Punishments (List<Punishment>)
-    private List<Punishment> getAllPunishments() throws SQLException{
-        List<Punishment> allPunishments = new ArrayList<>();
+    //Method for getting a list of all Punishments
+    private CopyOnWriteArrayList<Punishment> getAllPunishments(UUID playerUUID) throws SQLException{
+        CopyOnWriteArrayList<Punishment> allPunishments = new CopyOnWriteArrayList<>();
         String sql = "SELECT * FROM punishments";
+        if(playerUUID != null) sql += " WHERE uuid = ?";
 
         try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            if(playerUUID != null) ps.setString(1, playerUUID.toString());
+
             try(ResultSet rs = ps.executeQuery()){
                 while(rs.next()){
                     Punishment p = getDatabaseManager().mapPunishment(rs);
@@ -550,8 +567,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         return discordBot;
     }
 
-    public Map<UUID, PlayerPunishmentDataCache> getPlayerPunishmentDataCache(){
-        return punishmentPlayerCache;
+    public PlayerPunishmentDataCache getPlayerPunishmentDataCache(){
+        return playerPunishmentsCache;
     }
     public PlayerVerificationCache getPlayerVerificationCache(){
         return playerVerificationCache;

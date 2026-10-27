@@ -3,7 +3,7 @@ package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
-import me.andrew.DiscordUtils.Plugin.Punishment;
+import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -17,15 +17,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.OfflinePlayer;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 public class PunishmentHistory extends ListenerAdapter{
@@ -65,8 +63,7 @@ public class PunishmentHistory extends ListenerAdapter{
         int limit = 6;
         int offset = (state.page-1) * limit;
 
-        //Gotta refactor this V
-        List<Punishment> punishments = plugin.getDatabaseManager().getPlayerPunishments(state.targetUUID, state.filter, limit, offset);
+        CopyOnWriteArrayList<Punishment> punishments = plugin.getPlayerPunishmentDataCache().getPlayerPunishments(state.targetUUID, state.filter, limit, offset);
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
@@ -79,20 +76,20 @@ public class PunishmentHistory extends ListenerAdapter{
 
         for(Punishment p : punishments){
             //Setting the title of the field
-            String fieldTitle = getPunishmentTypeString(p.getPunishmentType()) +" ● "+ getPunishmentScopeString(p.getScope());
+            String fieldTitle = getPunishmentTypeString(p.punishmentType()) +" ● "+ getPunishmentScopeString(p.scope());
             if(state.filter == PunishmentsFilter.ALL){
-                if(p.isRemoved()) fieldTitle += " ● *REMOVED* at **"+formatTime(p.getRemovedAt())+"**";
-                else if(p.isActive()) fieldTitle += " ● *ACTIVE*";
+                if(p.removed()) fieldTitle += " ● *REMOVED* at **"+formatTime(p.removedAt())+"**";
+                else if(p.active()) fieldTitle += " ● *ACTIVE*";
                 else fieldTitle += " ● *EXPIRED*";
             }
 
             //Setting the value of the field
             String fieldValue =
-                    "**Issued at**: "+formatTime(p.getIssuedAt())+"\n"
-                    + "\n" + "**Reason**: "+p.getReason()+"\n"
-                    + "**Staff**: \\"+p.getStaff()+"\n";
+                    "**Issued at**: "+formatTime(p.createdAt())+"\n"
+                    + "\n" + "**Reason**: "+p.reason()+"\n"
+                    + "**Staff**: \\"+p.staff()+"\n";
 
-            if(isPsTemporary(p) && p.isActive()) fieldValue += "**Expires At**: "+formatTime(p.getExpiresAt())+"\n";
+            if(isPsTemporary(p) && p.active()) fieldValue += "**Expires At**: "+formatTime(p.expiresAt())+"\n";
 
             embedBuilder.addField(fieldTitle,fieldValue,true);
         }
@@ -170,7 +167,7 @@ public class PunishmentHistory extends ListenerAdapter{
         };
     }
     private boolean isPsTemporary(Punishment p){
-        return p.getPunishmentType() == PunishmentType.TEMP_BAN || p.getPunishmentType() == PunishmentType.TEMP_MUTE;
+        return p.punishmentType() == PunishmentType.TEMP_BAN || p.punishmentType() == PunishmentType.TEMP_MUTE;
     }
 }
 

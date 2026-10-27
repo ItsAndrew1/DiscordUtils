@@ -1,6 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
+import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
@@ -48,18 +49,8 @@ public class PunishmentContext {
     }
 
     //Helper method to get the discordId of the target player. Useful for DISCORD/GLOBAL scope
-    private String getTargetUserID(String ign) throws SQLException{
-        Connection dbConnection = plugin.getDatabaseManager().getConnection();
-        String SQL = "SELECT discordId FROM playersVerification WHERE ign = ?";
-
-        try(PreparedStatement ps = dbConnection.prepareStatement(SQL)){
-            ps.setString(1, ign);
-            try(ResultSet rs = ps.executeQuery()){
-                if(!rs.next()) return null;
-
-                return rs.getString("discordId");
-            }
-        }
+    private String getTargetUserID() {
+        return plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetPlayer.getUniqueId());
     }
 
     private boolean isBotConfigured(){
@@ -86,10 +77,20 @@ public class PunishmentContext {
         return embed;
     }
 
-    //Method for inserting the punishment into the db
+    //Method for inserting the punishment into the db and into the cache
     private void insertPunishment(){
         String playerName = staff.getName();
         OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
+
+        boolean active;
+        long expiresAt = 0;
+
+        active = state.type != PunishmentType.KICK;
+        if(state.type.name().contains("TEMP")) expiresAt = System.currentTimeMillis() + state.duration;
+
+        Punishment punishment = new Punishment(state.ID, state.targetUUID, state.type, state.scope, state.reason, state.staffIgn,
+                System.currentTimeMillis(), expiresAt, active, false, 0L, "x");
+        plugin.getPlayerPunishmentDataCache().addPunishment(state.targetUUID, punishment);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement("""
@@ -103,32 +104,26 @@ public class PunishmentContext {
                 ps.setString(5, state.reason);
                 ps.setString(6, playerName);
                 ps.setLong(7, System.currentTimeMillis());
+                ps.setBoolean(10, false);
+                ps.setLong(11, 0);
                 ps.setString(12, "x");
 
                 //Handling various cases
                 if(state.type == PunishmentType.KICK){
                     ps.setLong(8, 0);
                     ps.setBoolean(9, false);
-                    ps.setBoolean(10, false);
-                    ps.setLong(11, 0);
                 }
                 else if(state.type.toString().contains("WARN")){
                     ps.setLong(8, 0);
                     ps.setBoolean(9, true);
-                    ps.setBoolean(10, false);
-                    ps.setLong(11, 0);
                 }
                 else if(state.type.name().contains("TEMP")){
                     ps.setLong(8, System.currentTimeMillis() + state.duration);
                     ps.setBoolean(9, true);
-                    ps.setBoolean(10, false);
-                    ps.setLong(11, 0);
                 }
                 else if(state.type.toString().contains("PERM")){
                     ps.setLong(8, 0);
                     ps.setBoolean(9, true);
-                    ps.setBoolean(10, false);
-                    ps.setLong(11, 0);
                 }
                 ps.executeUpdate();
             } catch (SQLException e){ throw new RuntimeException(e); }
@@ -181,11 +176,11 @@ public class PunishmentContext {
            );
        });
     }
-    private void kickDiscord() throws SQLException {
+    private void kickDiscord(){
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
         //Attempts to send a DM to the target user about the kick
-        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetPlayer.getUniqueId())).queue(user -> {
             user.openPrivateChannel().queue(channel -> {
                 String message = botConfig.getString("user-punishments-messages.kick-message");
                 EmbedBuilder embed = getEmbedBuilder(user, message, dcServer, "KICK");
@@ -212,14 +207,14 @@ public class PunishmentContext {
                 insertPunishment();
 
                 //Removing all the other roles from the user
-                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID()).queue(member -> {
                     if(!member.isOwner()){
                         for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
                 //Giving the Banned Role to the user
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(user -> {
                     long bannedRoleID = botConfig.getLong("ban-role-id");
                     Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
                     plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
@@ -231,14 +226,14 @@ public class PunishmentContext {
                 insertPunishment();
 
                 //Removing all the other roles from the user
-                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID()).queue(member -> {
                     if(!member.isOwner()){
                         for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
                 //Giving the Banned Role to the user
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(user -> {
                     long bannedRoleID = botConfig.getLong("ban-role-id");
                     Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
                     plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
@@ -263,7 +258,7 @@ public class PunishmentContext {
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
         //Attempts to send a DM to the target user about the perm ban
-        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.permanent-ban-message");
 
@@ -305,7 +300,7 @@ public class PunishmentContext {
             //Attempts to send the target user a DM about the warning (if the bot is configured)
             if(isBotConfigured()){
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
                         String message = botConfig.getString("user-punishments-messages.permanent-ban-warn-message");
                         EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT BAN WARNING");
@@ -331,14 +326,14 @@ public class PunishmentContext {
                 insertPunishment();
 
                 //Removing all the other roles from the user
-                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID()).queue(member -> {
                     if(!member.isOwner()){
                         for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
                 //Giving the Banned Role to the user
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(user -> {
                     long bannedRoleID = botConfig.getLong("ban-role-id");
                     Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
                     plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
@@ -350,14 +345,14 @@ public class PunishmentContext {
                 insertPunishment();
 
                 //Removing all the other roles from the user
-                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID(targetPlayer.getName())).queue(member -> {
+                plugin.getDiscordBot().getDiscordServer().retrieveMemberById(getTargetUserID()).queue(member -> {
                     if(!member.isOwner()){
                         for(Role role : member.getRoles()) plugin.getDiscordBot().getDiscordServer().removeRoleFromMember(member, role).queue();
                     }
                 });
 
                 //Giving the Banned Role to the user
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(user -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(user -> {
                     long bannedRoleID = botConfig.getLong("ban-role-id");
                     Role bannedRole = plugin.getDiscordBot().getDiscordServer().getRoleById(bannedRoleID);
                     plugin.getDiscordBot().getDiscordServer().addRoleToMember(user, bannedRole).queue();
@@ -384,7 +379,7 @@ public class PunishmentContext {
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
         //Attempts to send the target user a DM
-        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
             targetUser.openPrivateChannel().queue(privateChannel -> {
                 String message = botConfig.getString("user-punishments-messages.temporary-ban-message");
                 EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY BAN");
@@ -427,7 +422,7 @@ public class PunishmentContext {
 
             //Attempts to send the target user a DM (if the bot is configured)
             if(isBotConfigured()){
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     Guild dcServer = plugin.getDiscordBot().getDiscordServer();
                     targetUser.openPrivateChannel().queue(privateChannel -> {
                         String message = botConfig.getString("user-punishments-messages.temporary-ban-warn-message");
@@ -468,7 +463,7 @@ public class PunishmentContext {
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
         //Attempts to send the target user a DM
-        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
             dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
                 //Gives the targetMember the timeout role
                 long timeoutRoleId = botConfig.getLong("timeout-role-id");
@@ -518,7 +513,7 @@ public class PunishmentContext {
             //Attempts to send the target user a DM (if the bot is configured)
             if(isBotConfigured()){
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
                         String message = botConfig.getString("user-punishments-messages.permanent-timeout-warn-message");
                         EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "PERMANENT TIMEOUT/MUTE WARNING");
@@ -559,7 +554,7 @@ public class PunishmentContext {
     private void tempTimeoutDC() throws SQLException {
         //Attempts to send a DM to the target user
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+        plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
             dcServer.retrieveMemberById(targetUser.getId()).queue(targetMember -> {
                 //Gives the targetMember the timeout role
                 long timeoutRoleId = botConfig.getLong("timeout-role-id");
@@ -612,7 +607,7 @@ public class PunishmentContext {
             //Attempts to send the target user a DM (if the bot is configured)
             if(isBotConfigured()){
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID(targetPlayer.getName())).queue(targetUser -> {
+                plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
                         String message = botConfig.getString("user-punishments-messages.temporary-timeout-warn-message");
                         EmbedBuilder embed = getEmbedBuilder(targetUser, message, dcServer, "TEMPORARY TIMEOUT WARNING");
