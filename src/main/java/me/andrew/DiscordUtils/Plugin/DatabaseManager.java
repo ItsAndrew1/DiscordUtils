@@ -174,35 +174,6 @@ public class DatabaseManager {
         }
     }
 
-    //Gotta rework from here
-    public boolean playerHasTheNrOfWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
-        int warnNr = 0;
-        int maxWarns = plugin.getConfig().getInt("warns-amount");
-
-        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
-            ps.setString(1, targetPlayer.getUniqueId().toString());
-            ps.setString(2, warnType.toString());
-            ps.setString(3, warnScope.toString());
-
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) warnNr = rs.getInt("warn_count");
-            }
-        }
-
-        return warnNr == maxWarns;
-    }
-
-    public int getNrOfWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
-        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) AS warn_count FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1")){
-            ps.setString(1, targetPlayer.getUniqueId().toString());
-            ps.setString(2, warnType.toString());
-            ps.setString(3, warnScope.toString());
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.getInt("warn_count");
-            }
-        }
-    }
-
     public void expireAllWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
         try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE punishments SET active = 0 WHERE uuid = ? AND type =? AND scope = ?")){
             ps.setString(1, targetPlayer.getUniqueId().toString());

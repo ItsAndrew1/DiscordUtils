@@ -89,7 +89,7 @@ public class PunishmentContext {
         if(state.type.name().contains("TEMP")) expiresAt = System.currentTimeMillis() + state.duration;
 
         Punishment punishment = new Punishment(state.ID, state.targetUUID, state.type, state.scope, state.reason, state.staffIgn,
-                System.currentTimeMillis(), expiresAt, active, false, 0L, "x");
+                System.currentTimeMillis(), expiresAt, active, false, 0L, null);
         plugin.getPlayerPunishmentDataCache().addPunishment(state.targetUUID, punishment);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -106,7 +106,7 @@ public class PunishmentContext {
                 ps.setLong(7, System.currentTimeMillis());
                 ps.setBoolean(10, false);
                 ps.setLong(11, 0);
-                ps.setString(12, "x");
+                ps.setString(12, null);
 
                 //Handling various cases
                 if(state.type == PunishmentType.KICK){
@@ -275,7 +275,7 @@ public class PunishmentContext {
 
         //Inserts the warning, then checks if the target player reached the number of warns.
         insertPunishment();
-        if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, state.scope)){
+        if(plugin.getPlayerPunishmentDataCache().hasNrOfWarns(targetPlayer.getUniqueId(), PunishmentType.PERM_BAN_WARN, state.scope)){
             //Expires the warns
             plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, state.scope);
 
@@ -396,7 +396,7 @@ public class PunishmentContext {
         insertPunishment();
 
         //Checks if the target player/user has reached the nr of warns
-        if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.TEMP_BAN_WARN, state.scope)){
+        if(plugin.getPlayerPunishmentDataCache().hasNrOfWarns(targetPlayer.getUniqueId(), PunishmentType.TEMP_BAN_WARN, state.scope)){
             //Expires the warns
             plugin.getDatabaseManager().expireAllWarns(targetPlayer,  PunishmentType.TEMP_BAN_WARN, state.scope);
 
@@ -487,7 +487,7 @@ public class PunishmentContext {
         insertPunishment();
 
         //Checks if the target user/player has reached the nr of warns
-        if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.PERM_MUTE_WARN, state.scope)){
+        if(plugin.getPlayerPunishmentDataCache().hasNrOfWarns(targetPlayer.getUniqueId(), PunishmentType.PERM_MUTE_WARN, state.scope)){
             //Expires the warnings
             plugin.getDatabaseManager().expireAllWarns(targetPlayer,   PunishmentType.PERM_MUTE_WARN, state.scope);
 
@@ -551,7 +551,7 @@ public class PunishmentContext {
             });
         }
     }
-    private void tempTimeoutDC() throws SQLException {
+    private void tempTimeoutDC() {
         //Attempts to send a DM to the target user
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
         plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
@@ -581,7 +581,7 @@ public class PunishmentContext {
         insertPunishment();
 
         //Checks if the target player/user has reached the number of warns
-        if(plugin.getDatabaseManager().playerHasTheNrOfWarns(targetPlayer, PunishmentType.TEMP_MUTE_WARN, state.scope)){
+        if(plugin.getPlayerPunishmentDataCache().hasNrOfWarns(targetPlayer.getUniqueId(), PunishmentType.TEMP_MUTE_WARN, state.scope)){
             //Expire the warnings
             plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.TEMP_MUTE_WARN, state.scope);
 

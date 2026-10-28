@@ -16,6 +16,11 @@ public enum PunishmentType{
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.permban");
         }
+
+        @Override
+        public String getName(){
+            return "Permanent Ban";
+        }
     },
 
     TEMP_BAN(false){
@@ -27,6 +32,11 @@ public enum PunishmentType{
         @Override
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.tempban");
+        }
+
+        @Override
+        public String getName(){
+            return "Temporary Ban";
         }
     },
 
@@ -40,6 +50,11 @@ public enum PunishmentType{
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.permbanwarn");
         }
+
+        @Override
+        public String getName(){
+            return "Permanent Ban Warning";
+        }
     },
 
     TEMP_BAN_WARN(true){
@@ -52,6 +67,11 @@ public enum PunishmentType{
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.tempbanwarn");
         }
+
+        @Override
+        public String getName(){
+            return "Temporary Ban Warning";
+        }
     },
 
     KICK(true){
@@ -62,6 +82,11 @@ public enum PunishmentType{
         @Override
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.kick");
+        }
+
+        @Override
+        public String getName(){
+            return "Kick";
         }
     },
 
@@ -75,6 +100,11 @@ public enum PunishmentType{
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.permmute");
         }
+
+        @Override
+        public String getName(){
+            return "Permanent Mute/Timeout";
+        }
     },
 
     TEMP_MUTE(false){
@@ -87,6 +117,11 @@ public enum PunishmentType{
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.tempmute");
         }
+
+        @Override
+        public String getName(){
+            return "Temporary Mute/Timeout";
+        }
     },
     PERM_MUTE_WARN(true){
         @Override
@@ -97,6 +132,11 @@ public enum PunishmentType{
         @Override
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.permmutewarn");
+        }
+
+        @Override
+        public String getName(){
+            return "Permanent Mute/Timeout Warning";
         }
     },
 
@@ -109,6 +149,11 @@ public enum PunishmentType{
         @Override
         public boolean hasPermission(Player player){
             return player.hasPermission("discordutils.punishments.add.tempmutewarn");
+        }
+
+        @Override
+        public String getName(){
+            return "Temporary Mute/Timeout Warning";
         }
     };
 
@@ -124,4 +169,5 @@ public enum PunishmentType{
 
     public abstract void apply(PunishmentContext ctx) throws SQLException;
     public abstract boolean hasPermission(Player player);
+    public abstract String getName();
 }

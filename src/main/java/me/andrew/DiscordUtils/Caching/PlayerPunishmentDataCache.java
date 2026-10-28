@@ -1,6 +1,7 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Caching;
 
+import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
@@ -16,9 +17,11 @@ import java.util.stream.Collectors;
 //Class for caching the punishment count
 public class PlayerPunishmentDataCache {
     private final ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache;
+    private final DiscordUtils plugin;
 
-    public PlayerPunishmentDataCache() {
+    public PlayerPunishmentDataCache(DiscordUtils plugin) {
         this.mainCache = new ConcurrentHashMap<>();
+        this.plugin = plugin;
     }
 
     //Helper Methods
@@ -124,6 +127,29 @@ public class PlayerPunishmentDataCache {
         if(punishments == null) return false;
 
         return punishments.stream().anyMatch(p -> p.scope().equals(scope) && (p.punishmentType().equals(PunishmentType.TEMP_MUTE) || p.punishmentType().equals(PunishmentType.PERM_MUTE)) && p.active());
+    }
+
+    public boolean hasNrOfWarns(UUID playerUUID, PunishmentType warnType, PunishmentScopes warnScope){
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        if(punishments == null) return false;
+
+        long maxWarns = plugin.getConfig().getLong("warns-amount");
+        long activeWarns = punishments.stream().filter(p -> p.punishmentType().equals(warnType) && p.scope().equals(warnScope) && p.active()).count();
+
+        return activeWarns == maxWarns;
+    }
+
+    public Punishment getPunishmentByID(String ID){
+        ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache = plugin.getPlayerPunishmentDataCache().getMainCache();
+
+        for(List<Punishment> list : mainCache.values()){
+            if(list == null) continue;
+
+            Punishment found = list.stream().filter(p -> p.id().equals(ID)).findFirst().orElse(null);
+            if(found != null) return found;
+        }
+
+        return null;
     }
 
     private void modifyPunishment (UUID playerUUID, Punishment punishment) {

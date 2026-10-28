@@ -36,7 +36,7 @@ public class PunishmentHistory extends ListenerAdapter{
         //Task for auto removing users from the states map
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, ()->{
             long now = System.currentTimeMillis();
-            states.entrySet().removeIf(entry -> now - entry.getValue().lastInteraction > TimeUnit.MINUTES.toMillis(1));
+            states.entrySet().removeIf(entry -> now - entry.getValue().lastInteraction() > TimeUnit.MINUTES.toMillis(1));
         },0L, 20L*60); //Runs each minute
     }
 
@@ -61,23 +61,23 @@ public class PunishmentHistory extends ListenerAdapter{
         }
 
         int limit = 6;
-        int offset = (state.page-1) * limit;
+        int offset = (state.page()-1) * limit;
 
-        CopyOnWriteArrayList<Punishment> punishments = plugin.getPlayerPunishmentDataCache().getPlayerPunishments(state.targetUUID, state.filter, limit, offset);
-        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
+        CopyOnWriteArrayList<Punishment> punishments = plugin.getPlayerPunishmentDataCache().getPlayerPunishments(state.targetUUID(), state.filter(), limit, offset);
+        OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID());
 
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         //If the player does /pshistory, displays their punishments
-        if(state.self) embedBuilder.setTitle("Your Punishments ("+state.filter.name()+")");
-        else embedBuilder.setTitle("\\"+targetPlayer.getName()+"'s Punishments ("+state.filter.name()+")");
+        if(state.self()) embedBuilder.setTitle("Your Punishments ("+state.filter().name()+")");
+        else embedBuilder.setTitle("\\"+targetPlayer.getName()+"'s Punishments ("+state.filter().name()+")");
         embedBuilder.setColor(Color.RED.asRGB());
-        embedBuilder.setFooter("Page "+state.page);
+        embedBuilder.setFooter("Page "+state.page());
 
         for(Punishment p : punishments){
             //Setting the title of the field
             String fieldTitle = getPunishmentTypeString(p.punishmentType()) +" ● "+ getPunishmentScopeString(p.scope());
-            if(state.filter == PunishmentsFilter.ALL){
+            if(state.filter() == PunishmentsFilter.ALL){
                 if(p.removed()) fieldTitle += " ● *REMOVED* at **"+formatTime(p.removedAt())+"**";
                 else if(p.active()) fieldTitle += " ● *ACTIVE*";
                 else fieldTitle += " ● *EXPIRED*";
@@ -95,11 +95,11 @@ public class PunishmentHistory extends ListenerAdapter{
         }
 
         //Creating the buttons needed
-        Button prevPage = Button.primary("page_prev", "◀").withDisabled(state.page == 1);
+        Button prevPage = Button.primary("page_prev", "◀").withDisabled(state.page() == 1);
         Button nextPage = Button.primary("page_next", "▶").withDisabled(punishments.size() <= limit);
-        Button filterAll = Button.secondary("filter_all", "ALL").withDisabled(state.filter == PunishmentsFilter.ALL);
-        Button filterActive = Button.secondary("filter_active", "ACTIVE").withDisabled(state.filter == PunishmentsFilter.ACTIVE);
-        Button filterExpired = Button.secondary("filter_expired", "EXPIRED").withDisabled(state.filter == PunishmentsFilter.EXPIRED);
+        Button filterAll = Button.secondary("filter_all", "ALL").withDisabled(state.filter() == PunishmentsFilter.ALL);
+        Button filterActive = Button.secondary("filter_active", "ACTIVE").withDisabled(state.filter() == PunishmentsFilter.ACTIVE);
+        Button filterExpired = Button.secondary("filter_expired", "EXPIRED").withDisabled(state.filter() == PunishmentsFilter.EXPIRED);
 
         hook.editOriginalEmbeds(embedBuilder.build())
                 .setComponents(ActionRow.of(prevPage, filterAll, filterActive, filterExpired, nextPage))
@@ -112,26 +112,29 @@ public class PunishmentHistory extends ListenerAdapter{
         if(!states.containsKey(userId)) return;
 
         PaginationState state = states.get(userId);
+        int newPageNr = state.page();
+        PunishmentsFilter newFilter = state.filter();
+        long newLastInteraction = state.lastInteraction();
         try{
             switch(event.getComponentId()){
-                case "page_prev" -> state.page--;
-                case "page_next" -> state.page++;
+                case "page_prev" -> newPageNr--;
+                case "page_next" -> newPageNr++;
                 case "filter_all" -> {
-                    state.page = 1;
-                    state.filter = PunishmentsFilter.ALL;
+                    newPageNr = 1;
+                    newFilter = PunishmentsFilter.ALL;
                 }
                 case "filter_active" ->{
-                    state.page = 1;
-                    state.filter = PunishmentsFilter.ACTIVE;
+                    newPageNr = 1;
+                    newFilter = PunishmentsFilter.ACTIVE;
                 }
                 case "filter_expired" ->{
-                    state.page = 1;
-                    state.filter = PunishmentsFilter.EXPIRED;
+                    newPageNr = 1;
+                    newFilter = PunishmentsFilter.EXPIRED;
                 }
             }
 
-            state.lastInteraction = System.currentTimeMillis();
-            sendPage(event.getHook(), state);
+            newLastInteraction = System.currentTimeMillis();
+            sendPage(event.getHook(), new PaginationState(state.targetUUID(), newFilter, newPageNr, state.self(), newLastInteraction));
         } catch (Exception e){
             throw new RuntimeException();
         }
@@ -171,18 +174,6 @@ public class PunishmentHistory extends ListenerAdapter{
     }
 }
 
-class PaginationState{
-    UUID targetUUID;
-    PunishmentsFilter filter;
-    int page;
-    boolean self;
-    long lastInteraction;
+record PaginationState (UUID targetUUID, PunishmentsFilter filter, int page, boolean self, long lastInteraction){
 
-    public PaginationState(UUID targetUUID, PunishmentsFilter filter, int page, boolean self, long lastInteraction) {
-        this.targetUUID = targetUUID;
-        this.filter = filter;
-        this.page = page;
-        this.self = self;
-        this.lastInteraction = lastInteraction;
-    }
 }

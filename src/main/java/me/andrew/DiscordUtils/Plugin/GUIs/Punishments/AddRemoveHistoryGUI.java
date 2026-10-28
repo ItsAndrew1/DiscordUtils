@@ -11,6 +11,7 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.apache.logging.log4j.spi.CopyOnWrite;
 import org.bukkit.*;
@@ -179,7 +180,7 @@ public class AddRemoveHistoryGUI implements Listener{
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
         try{
             //Getting the punishment with that ID
-            Punishment targetP = getPunishment(PlainTextComponentSerializer.plainText().serialize(ID));
+            Punishment targetP = plugin.getPlayerPunishmentDataCache().getPunishmentByID(PlainTextComponentSerializer.plainText().serialize(ID));
 
             //Checking if there is a punishment with that ID
             if(targetP == null){
@@ -242,18 +243,5 @@ public class AddRemoveHistoryGUI implements Listener{
             staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThere was a problem when attempted to remove the punishment. See the server's CMD for more info"));
             Bukkit.getLogger().warning("[DISCORDUTILS] "+e.getMessage());
         }
-    }
-
-    private Punishment getPunishment(String ID) {
-        ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache = plugin.getPlayerPunishmentDataCache().getMainCache();
-
-        for(List<Punishment> list : mainCache.values()){
-            if(list == null) continue;
-
-            Punishment found = list.stream().filter(p -> p.id().equals(ID)).findFirst().orElse(null);
-            if(found != null) return found;
-        }
-
-        return null;
     }
 }

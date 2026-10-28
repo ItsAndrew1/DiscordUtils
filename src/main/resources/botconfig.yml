@@ -76,12 +76,10 @@ verification:
     GREEN: 43
     BLUE: 226
 
-#Configure the Timeout Role for the punishments. You will also have to create one for this.
-timeout-role-id: ""
-
-#Configure the Ban Channel and Banned Role ID. This is needed for users that are banned.
+#Configure the Ban Channel, Banned Role and Timeout Role. This is needed for users that are punished.
 ban-role-id: ""
-banned-users-channel:
+timeout-role-id: ""
+punished-users-channel:
   id: ""
 
   #Configure the embed that will be sent to the channel. For description, use '\n' for line breaks.
@@ -90,12 +88,12 @@ banned-users-channel:
     RED: 255
     GREEN: 0
     BLUE: 0
-  embed-description: "If you see this. You might have been banned on **discord** or **globally**.
-  \nIf you think you didn't deserve the ban, here is how you can appeal your punishment.
-  \n\n1️⃣You should have received a message in the DM with information of the ban. Go in the bot DM.
-  \n\n2️⃣Run **/appeal** with the ID of your ban.
-  \n\n3️⃣Complete the form that you were prompted. *Be careful! You only have **1** appeal.*
-  \n\n4️⃣Wait for a response. We wish you luck 🙏!
+  embed-description: "If you see this, You might have been punished on **Discord**, **Minecraft** or **Globally**.
+  \nIf you think you didn't deserve this, here is how you can appeal your punishment.
+  \n\n1️⃣ You should have received a message in the DM with information of the punished. Go in the bot DM.
+  \n\n2️⃣ Come back here and run **/appeal** with the ID of your ban.
+  \n\n3️⃣ Complete the form that you were prompted with. *Be careful! You only have **1** appeal.*
+  \n\n4️⃣ Wait for a response. We wish you luck 🙏!
   \n\n**P.S.**: If you didn't get a DM, click the button below to get your ban ID. Then, run **/appeal <id>** here!
   "
 

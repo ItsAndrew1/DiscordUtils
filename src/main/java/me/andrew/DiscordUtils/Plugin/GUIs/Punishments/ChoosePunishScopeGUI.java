@@ -3,6 +3,7 @@ package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
@@ -29,7 +30,6 @@ import java.util.regex.Pattern;
 
 public class ChoosePunishScopeGUI implements Listener {
     private final DiscordUtils plugin;
-    private long durationFromWarnings;
 
     public ChoosePunishScopeGUI(DiscordUtils plugin) {
         this.plugin = plugin;
@@ -104,8 +104,8 @@ public class ChoosePunishScopeGUI implements Listener {
 
     private void checkForWarns(Player staff, OfflinePlayer targetPlayer, AddingState state) throws SQLException {
         PunishmentType type = state.type;
-        int currentNrOfWarns = plugin.getDatabaseManager().getNrOfWarns(targetPlayer, type, state.scope);
-        int designatedNrWarns = plugin.getConfig().getInt("warns-amount");
+        long currentNrOfWarns = getNrOfWarns(targetPlayer.getUniqueId(), type, state.scope);
+        long designatedNrWarns = plugin.getConfig().getLong("warns-amount");
 
         if(currentNrOfWarns == designatedNrWarns - 1 && (type == PunishmentType.TEMP_BAN_WARN || type == PunishmentType.TEMP_MUTE_WARN)){
             staff.closeInventory();
@@ -120,7 +120,7 @@ public class ChoosePunishScopeGUI implements Listener {
                     showGui(staff);
                     return;
                 }
-                durationFromWarnings = parseCooldown(PlainTextComponentSerializer.plainText().serialize(input));
+                long durationFromWarnings = parseCooldown(PlainTextComponentSerializer.plainText().serialize(input));
 
                 if(durationFromWarnings == 0){
                     staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
@@ -223,5 +223,12 @@ public class ChoosePunishScopeGUI implements Listener {
         if(state.scope.playerAlreadyHasPunishment(state.type, targetPlayer, player, plugin)) return;
 
         checkForWarns(player, targetPlayer, state);
+    }
+
+    private long getNrOfWarns(UUID uuid, PunishmentType warnType, PunishmentScopes warnScope){
+        List<Punishment> punishments = plugin.getPlayerPunishmentDataCache().getMainCache().get(uuid);
+        if(punishments == null) return 0;
+
+        return punishments.stream().filter(p -> p.punishmentType().equals(warnType) && p.scope().equals(warnScope) && p.active()).count();
     }
 }

@@ -64,7 +64,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private FinalPunishmentGUI finalPunishmentGUI;
 
     private final Map<UUID, AddingState> punishmentsAddingStates = new HashMap<>();
-    private final PlayerPunishmentDataCache playerPunishmentsCache = new PlayerPunishmentDataCache();
+    private final PlayerPunishmentDataCache playerPunishmentsCache = new PlayerPunishmentDataCache(this);
     private final PlayerVerificationCache playerVerificationCache = new PlayerVerificationCache();
 
     private BukkitTask broadcastTask; //Task for broadcasting
@@ -245,7 +245,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
     private void sendEmbedInBannedChannel(){
         //Sending the embed in the banUsersChannel.
-        String banUsersChannelIDs = botConfig.getConfig().getString("banned-users-channel.id");
+        String banUsersChannelIDs = botConfig.getConfig().getString("punished-users-channel.id");
         try{
             long banUsersChannelID = Long.parseLong(banUsersChannelIDs);
             TextChannel bannedUsersChannel = discordBot.getJda().getTextChannelById(banUsersChannelID);
@@ -253,19 +253,19 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             bannedUsersChannel.getHistory().retrievePast(1).queue(messages -> {
                 if(messages.isEmpty()){
                     //Getting the color
-                    int redValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.RED");
-                    int greenValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.GREEN");
-                    int blueValue = botConfig.getConfig().getInt("banned-users-channel.embed-color.BLUE");
+                    int redValue = botConfig.getConfig().getInt("punished-users-channel.embed-color.RED");
+                    int greenValue = botConfig.getConfig().getInt("punished-users-channel.embed-color.GREEN");
+                    int blueValue = botConfig.getConfig().getInt("punished-users-channel.embed-color.BLUE");
                     Color embedColor = Color.fromRGB(redValue, greenValue, blueValue);
 
                     //Getting the title and description
-                    String embedTitle = botConfig.getConfig().getString("banned-users-channel.embed-title");
-                    String description = botConfig.getConfig().getString("banned-users-channel.embed-description");
-                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).addComponents(ActionRow.of(Button.primary("getbantype", "Get Your Ban ID"))).queue();
+                    String embedTitle = botConfig.getConfig().getString("punished-users-channel.embed-title");
+                    String description = botConfig.getConfig().getString("punished-users-channel.embed-description");
+                    bannedUsersChannel.sendMessageEmbeds(getEmbedBuilder(embedColor, embedTitle, description).build()).addComponents(ActionRow.of(Button.primary("getid", "Get Your Punishment ID"))).queue();
                 }
             });
         } catch(Exception e){
-            Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'banned-users-channel (botconfig.yml)'. See message:");
+            Bukkit.getLogger().warning("[DISCORDUTILS] There was a problem sending the embeds in the 'punished-users-channel (botconfig.yml)'. See message:");
             Bukkit.getLogger().warning(e.getMessage());
         }
     }
