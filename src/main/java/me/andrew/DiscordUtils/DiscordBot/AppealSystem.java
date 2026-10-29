@@ -3,8 +3,6 @@ package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
@@ -19,7 +17,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -27,7 +24,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -71,6 +67,11 @@ public class AppealSystem extends ListenerAdapter {
         //Sends an embed with the data of the punishment tied to the ID
         long appealsChannelId = botConfig.getLong("appeal-channel-id");
         TextChannel appealsChannel = plugin.getDiscordBot().getJda().getTextChannelById(appealsChannelId);
+        if(appealsChannel == null){
+            plugin.getLogger().warning("[!] The Appeals Channel is null. Make sure you entered the right ID in 'botconfig.yml'!");
+            event.getHook().sendMessage("There was a problem sending the Appeal Form. Try again or report this problem to the staff!").queue();
+            return;
+        }
 
         EmbedBuilder embedFormBuilder = new EmbedBuilder();
         embedFormBuilder.setTitle("Appeal for Punishment "+punishmentID);
@@ -96,8 +97,8 @@ public class AppealSystem extends ListenerAdapter {
         )).queue();
 
         //Updating the status of the appeal_state of the punishment
-        String sql2 = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql2)){
+        String sql = "UPDATE punishments SET appeal_state = ? WHERE id = ?";
+        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
             ps.setString(1, "PENDING");
             ps.setString(2, punishmentID);
             ps.executeUpdate();
@@ -147,28 +148,32 @@ public class AppealSystem extends ListenerAdapter {
             return;
         }
 
+        Punishment p = plugin.getPlayerPunishmentDataCache().getPunishmentByID(punishmentID);
+
         //If the staff clicks on the Accept Button
         if(event.getComponentId().contains("appeal_accept")){
             UUID targetPlayerUUID = getPlayerUuidFromID(punishmentID);
 
             String targetUserID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetPlayerUUID);
-            event.getGuild().retrieveMemberById(targetUserID).queue(member -> {
-                //Removing the role(s) from the targetUser
-                long timeoutRoleID = botConfig.getLong("timeout-role-id");
-                Role timeoutRole = event.getGuild().getRoleById(timeoutRoleID);
-                long bannedRoleID = botConfig.getLong("ban-role-id");
-                Role bannedRole = event.getGuild().getRoleById(bannedRoleID);
+            if(targetUserID != null) {
+                event.getGuild().retrieveMemberById(targetUserID).queue(member -> {
+                    //Removing the role(s) from the targetUser
+                    long timeoutRoleID = botConfig.getLong("timeout-role-id", 0);
+                    Role timeoutRole = event.getGuild().getRoleById(timeoutRoleID);
+                    long bannedRoleID = botConfig.getLong("ban-role-id");
+                    Role bannedRole = event.getGuild().getRoleById(bannedRoleID);
 
-                if(member.getRoles().contains(bannedRole)) event.getGuild().removeRoleFromMember(member, bannedRole).queue();
-                if(member.getRoles().contains(timeoutRole)) event.getGuild().removeRoleFromMember(member, timeoutRole).queue();
+                    if(member.getRoles().contains(bannedRole)) event.getGuild().removeRoleFromMember(member, bannedRole).queue();
+                    if(member.getRoles().contains(timeoutRole)) event.getGuild().removeRoleFromMember(member, timeoutRole).queue();
 
-                //Now, if the user is verified, give him the 'Verified' role back
-                if(plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(member.getId())){
-                    long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
-                    Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
-                    event.getGuild().addRoleToMember(member, verifiedRole).queue();
-                }
-            });
+                    //Now, if the user is verified, give him the 'Verified' role back
+                    if(plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(member.getId())){
+                        long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
+                        Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
+                        event.getGuild().addRoleToMember(member, verifiedRole).queue();
+                    }
+                });
+            }
 
             //Setting the appeal state as 'ACCEPTED' in db and cache
             String sql = "UPDATE punishments SET active = 0, removed = 1, removed_at = ?, appeal_state = ? WHERE id = ?";
@@ -183,7 +188,7 @@ public class AppealSystem extends ListenerAdapter {
                 return;
             }
 
-            //Trb sa adaug in cache
+            plugin.getPlayerPunishmentDataCache().setPunishmentAppealState(p, AppealState.ACCEPTED);
 
             event.getHook().sendMessage("Appeal for **Punishment "+punishmentID+"** has been **ACCEPTED**\n**Staff**: "+event.getUser().getName()).queue();
         }
@@ -198,8 +203,12 @@ public class AppealSystem extends ListenerAdapter {
                 ps.setString(2, punishmentID);
                 ps.executeUpdate();
             } catch (SQLException e){
-                e.printStackTrace();
+                plugin.getLogger().warning("[!] Failed to update the appeal state. See message: "+e.getMessage());
+                event.getHook().sendMessage("[!] Failed to update the appeal state. See message: "+e.getMessage()).queue();
+                return;
             }
+
+            plugin.getPlayerPunishmentDataCache().setPunishmentAppealState(p, AppealState.DECLINED);
 
             event.getHook().sendMessage("Appeal for **Punishment "+punishmentID+"** has been **DECLINED**\n**Staff**: "+event.getUser().getName()).queue();
         }

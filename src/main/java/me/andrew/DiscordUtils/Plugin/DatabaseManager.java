@@ -4,6 +4,7 @@ package me.andrew.DiscordUtils.Plugin;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import me.andrew.DiscordUtils.Caching.Punishment;
+import me.andrew.DiscordUtils.DiscordBot.AppealState;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
@@ -143,8 +144,8 @@ public class DatabaseManager {
         return new Punishment(
                 rs.getString("id"),
                 UUID.fromString(rs.getString("uuid")),
-                PunishmentType.valueOf(rs.getString("type")),
-                PunishmentScopes.valueOf(rs.getString("scope")),
+                PunishmentType.valueOf(rs.getString("type").toUpperCase()),
+                PunishmentScopes.valueOf(rs.getString("scope").toUpperCase()),
                 rs.getString("reason"),
                 rs.getString("staff"),
                 rs.getLong("created_at"),
@@ -152,7 +153,7 @@ public class DatabaseManager {
                 rs.getBoolean("active"),
                 rs.getBoolean("removed"),
                 rs.getLong("removed_at"),
-                rs.getString("appeal_state")
+                AppealState.valueOf(rs.getString("appeal_state").toUpperCase())
         );
     }
 
@@ -163,13 +164,12 @@ public class DatabaseManager {
         }
     }
 
-    public void removePunishment(PunishmentType type, UUID targetPlayerUUID) throws SQLException {
+    public void removePunishment(String ID) throws SQLException {
         long removed_at = System.currentTimeMillis();
 
-        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE uuid = ? AND type = ? AND active = true")){
+        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE punishments SET active = false, removed = true, removed_at = ? WHERE id = ? AND active = true")){
             ps.setLong(1, removed_at);
-            ps.setString(2, targetPlayerUUID.toString());
-            ps.setString(3, type.toString());
+            ps.setString(2, ID);
             ps.executeUpdate();
         }
     }

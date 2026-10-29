@@ -46,7 +46,7 @@ public enum PunishmentScopes{
     },
     GLOBAL{
         @Override
-        public void applyPunishment(PunishmentContext ctx, PunishmentType type) throws SQLException {
+        public void applyPunishment(PunishmentContext ctx, PunishmentType type) throws SQLException{
             type.apply(ctx);
         }
 

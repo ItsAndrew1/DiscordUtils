@@ -43,8 +43,17 @@ public class CommandLogSystem implements Listener {
                 if(dontLogCommands.contains(command[0])) return;
 
                 //Getting the text channel for logging
-                long commandLogID = botConfig.getLong("command-logging.channel-id");
+                long commandLogID = botConfig.getLong("command-logging.channel-id", 0);
+                if(commandLogID == 0){
+                    plugin.getLogger().warning("[!] You have command logging turned on, but the channel id is null!");
+                    return;
+                }
+
                 TextChannel commandLoggingChannel = dcServer.getTextChannelById(commandLogID);
+                if(commandLoggingChannel == null) {
+                    plugin.getLogger().warning("[!] The command logging channel couldn't be found!");
+                    return;
+                }
 
                 //Building the EMBED
                 EmbedBuilder eb = new EmbedBuilder();
@@ -56,13 +65,13 @@ public class CommandLogSystem implements Listener {
                 eb.setColor(Color.fromRGB(redValue, greenValue, blueValue).asRGB());
 
                 //Title
-                String title = botConfig.getString("command-logging.embed-title")
+                String title = botConfig.getString("command-logging.embed-title", "COMMAND RAN BY **%player_name%**")
                         .replace("%player_name%", event.getPlayer().getName())
                         ;
                 eb.setTitle(title);
 
                 //Description
-                String description = botConfig.getString("command-logging.embed-description")
+                String description = botConfig.getString("command-logging.embed-description", "**Command Executed**: %command%")
                         .replace("%command%", event.getMessage())
                         ;
                 eb.setDescription(description);

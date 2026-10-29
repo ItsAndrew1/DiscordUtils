@@ -23,8 +23,8 @@ public class MessageDeleteSystem extends ListenerAdapter {
         FileConfiguration botConfig = plugin.botFile().getConfig();
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
-        long bannedUsersChannelID = botConfig.getLong("punished-users-channel.id");
-        long verifyChannelID = botConfig.getLong("verification.verify-channel-id");
+        long bannedUsersChannelID = botConfig.getLong("punished-users-channel.id", -1);
+        long verifyChannelID = botConfig.getLong("verification.verify-channel-id", -1);
         if(bannedUsersChannelID != -1 && verifyChannelID != -1){
             TextChannel bannedUsersChannel = dcServer.getTextChannelById(bannedUsersChannelID);
             TextChannel verifyChannel = dcServer.getTextChannelById(verifyChannelID);

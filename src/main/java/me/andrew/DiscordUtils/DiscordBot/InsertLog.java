@@ -57,8 +57,11 @@ public class InsertLog {
 
     private void onlyOneChannel(){
         try{
-            String channelId = botConfig.getString("logs.channel-id");
-            if(channelId == null || channelId.isEmpty()) return;
+            String channelId = botConfig.getString("logs.channel-id", null);
+            if(channelId == null) {
+                plugin.getLogger().warning("[!] Could not send a log because the channel-id in 'botconfig.yml' is null!");
+                return;
+            }
 
             TextChannel channel = bot.getDiscordServer().getTextChannelById(channelId);
             OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(targetUUID);
@@ -66,26 +69,16 @@ public class InsertLog {
             //Building the embed
             EmbedBuilder eb = new EmbedBuilder();
             eb.setColor(Color.CYAN.getRGB());
-            if(!isAWarn(type) && type != PunishmentType.KICK) eb.setFooter("Punishment ID: "+ID);
+            if(!type.isWarning() && type != PunishmentType.KICK) eb.setFooter("Punishment ID: "+ID);
 
-            String title = switch(type){
-                case PERM_BAN -> "PERMANENT BAN";
-                case TEMP_BAN -> "TEMPORARY BAN";
-                case PERM_BAN_WARN ->  "PERMANENT BAN WARN";
-                case TEMP_BAN_WARN ->  "TEMPORARY BAN WARN";
-                case KICK ->  "KICK";
-                case PERM_MUTE ->  "PERMANENT MUTE";
-                case TEMP_MUTE ->  "TEMPORARY MUTE";
-                case PERM_MUTE_WARN ->  "PERMANENT MUTE WARN";
-                case TEMP_MUTE_WARN ->  "TEMPORARY MUTE WARN";
-            };
+            String title = type.getName();
             eb.setTitle(title +" FOR "+targetPlayer.getName());
 
             String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
                     "\n\n**Scope:** "+scope.name()+
                     "\n**Issued By:** "+staffIGN+
                     "\n**Reason:** "+reason;
-            if(!type.isPermanent() && !isAWarn(type)) description += "\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
+            if(!type.isPermanent() && !type.isWarning()) description += "\n\n**Expires At:** "+getFormattedTime(duration+System.currentTimeMillis());
 
             eb.setDescription(description);
             channel.sendMessageEmbeds(eb.build()).queue();
@@ -111,8 +104,11 @@ public class InsertLog {
 
         if(type == PunishmentType.KICK){
             try{
-                String kickChannelId = botConfig.getString("logs.multiple-channel-id.kicks-channel-id");
-                if(kickChannelId == null || kickChannelId.isEmpty()) return;
+                String kickChannelId = botConfig.getString("logs.multiple-channel-id.kicks-channel-id", null);
+                if(kickChannelId == null) {
+                    plugin.getLogger().warning("[!] Could not send a kick log because the kicks-channel-id in 'botconfig.yml' is null!");
+                    return;
+                }
 
                 TextChannel channel = bot.getDiscordServer().getTextChannelById(kickChannelId);
 
@@ -132,10 +128,13 @@ public class InsertLog {
             }
         }
 
-        if(isAWarn(type)){
+        if(type.isWarning()){
             try{
-                String warnsChannelID = botConfig.getString("logs.multiple-channel-id.warnings-channel-id");
-                if(warnsChannelID == null || warnsChannelID.isEmpty()) return;
+                String warnsChannelID = botConfig.getString("logs.multiple-channel-id.warnings-channel-id", null);
+                if(warnsChannelID == null) {
+                    plugin.getLogger().warning("[!] Could not send a warning log because the warnings-channel-id in 'botconfig.yml' is null!");
+                    return;
+                }
 
                 TextChannel channel = bot.getDiscordServer().getTextChannelById(warnsChannelID);
 
@@ -143,13 +142,7 @@ public class InsertLog {
                 EmbedBuilder eb = new EmbedBuilder();
                 eb.setColor(Color.CYAN.getRGB());
 
-                String title = switch (type){
-                    case PERM_BAN_WARN -> "PERMANENT BAN WARNING";
-                    case PERM_MUTE_WARN -> "PERMANENT MUTE WARNING";
-                    case TEMP_MUTE_WARN -> "TEMPORARY MUTE WARNING";
-                    case TEMP_BAN_WARN -> "TEMPORARY BAN WARNING";
-                    default -> null;
-                };
+                String title = type.getName();
                 eb.setTitle(title+" FOR "+targetPlayer.getName());
 
                 String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
@@ -165,8 +158,11 @@ public class InsertLog {
 
         if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
             try{
-                String bansChannelID = botConfig.getString("logs.multiple-channel-id.bans-channel-id");
-                if(bansChannelID == null || bansChannelID.isEmpty()) return;
+                String bansChannelID = botConfig.getString("logs.multiple-channel-id.bans-channel-id", null);
+                if(bansChannelID == null) {
+                    plugin.getLogger().warning("[!] Could not send a ban log because the bans-channel-id in 'botconfig.yml' is null!");
+                    return;
+                }
 
                 TextChannel channel = bot.getDiscordServer().getTextChannelById(bansChannelID);
 
@@ -175,11 +171,7 @@ public class InsertLog {
                 eb.setColor(Color.CYAN.getRGB());
                 eb.setFooter("Ban ID: "+ID);
 
-                String title = switch(type){
-                    case PERM_BAN -> "PERMANENT BAN";
-                    case TEMP_BAN -> "TEMPORARY BAN";
-                    default -> null;
-                };
+                String title = type.getName();
                 eb.setTitle(title +" FOR "+targetPlayer.getName());
 
                 String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
@@ -197,8 +189,11 @@ public class InsertLog {
 
         if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
             try{
-                String mutesChannelID = botConfig.getString("logs.multiple-channel-id.mutes-channel-id");
-                if(mutesChannelID == null || mutesChannelID.isEmpty()) return;
+                String mutesChannelID = botConfig.getString("logs.multiple-channel-id.mutes-channel-id", null);
+                if(mutesChannelID == null) {
+                    plugin.getLogger().warning("[!] Could not send a mute log because the mute-channel-id in 'botconfig.yml' is null!");
+                    return;
+                }
 
                 TextChannel channel = bot.getDiscordServer().getTextChannelById(mutesChannelID);
 
@@ -207,11 +202,7 @@ public class InsertLog {
                 eb.setColor(Color.CYAN.getRGB());
                 eb.setFooter("Mute ID: "+ID);
 
-                String title = switch(type){
-                    case PERM_MUTE -> "PERMANENT MUTE";
-                    case TEMP_MUTE -> "TEMPORARY MUTE";
-                    default -> null;
-                };
+                String title = type.getName();
                 eb.setTitle(title+" FOR "+targetPlayer.getName());
 
                 String description = "**Issued At:** "+getFormattedTime(lastInteraction)+
@@ -233,9 +224,5 @@ public class InsertLog {
         LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss");
         return time.format(formatter);
-    }
-
-    private boolean isAWarn(PunishmentType type){
-        return type.name().contains("WARN");
     }
 }

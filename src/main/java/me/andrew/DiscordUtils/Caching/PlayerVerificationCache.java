@@ -1,7 +1,5 @@
 package me.andrew.DiscordUtils.Caching;
 
-import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;

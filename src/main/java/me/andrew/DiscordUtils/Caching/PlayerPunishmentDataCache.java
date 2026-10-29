@@ -1,18 +1,17 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Caching;
 
+import me.andrew.DiscordUtils.DiscordBot.AppealState;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 
-import java.sql.SQLException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 //Class for caching the punishment count
 public class PlayerPunishmentDataCache {
@@ -38,17 +37,22 @@ public class PlayerPunishmentDataCache {
         mainCache.computeIfAbsent(playerUUID, k -> new CopyOnWriteArrayList<>()).add(punishment);
     }
 
-    public void removePunishment(UUID playerUUID, PunishmentType type) {
-        List<Punishment> punishments = mainCache.get(playerUUID);
-        if(punishments == null) return;
-
-        Punishment punishment = punishments.stream().filter(p -> p.punishmentType().equals(type) && p.active()).findFirst().orElse(null);
+    public void removePunishment(UUID playerUUID, Punishment punishment) {
         if(punishment == null) return;
 
         Punishment newPunishment = new Punishment(punishment.id(), punishment.uuid(), punishment.punishmentType(), punishment.scope(), punishment.reason(),
                 punishment.staff(), punishment.createdAt(), punishment.expiresAt(), false, true, System.currentTimeMillis(), punishment.appeal_state()
         );
         modifyPunishment(playerUUID, newPunishment);
+    }
+
+    public void setPunishmentAppealState(Punishment punishment, AppealState state){
+        Punishment newPunishment = new Punishment(punishment.id(), punishment.uuid(), punishment.punishmentType(), punishment.scope(),
+                punishment.reason(), punishment.staff(), punishment.createdAt(), punishment.expiresAt(), punishment.active(), punishment.removed(),
+                punishment.removedAt(), state
+        );
+
+        modifyPunishment(punishment.uuid(), newPunishment);
     }
 
     public boolean playerHasPunishments(UUID playerUUID){
@@ -150,6 +154,26 @@ public class PlayerPunishmentDataCache {
         }
 
         return null;
+    }
+
+    public boolean isUserBanned(String userID, PunishmentScopes scope){
+        boolean permBanned, tempBanned;
+        UUID userUUID = plugin.getPlayerVerificationCache().getUuidFromDiscordId(userID);
+
+        permBanned = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.PERM_BAN) &&  p.scope().equals(scope) && p.active());
+        tempBanned = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.TEMP_BAN) &&  p.scope().equals(scope) && p.active());
+
+        return permBanned || tempBanned;
+    }
+
+    public boolean isUserOnTimeout(String userID, PunishmentScopes scope){
+        boolean permTimeout, tempTimeout;
+        UUID userUUID = plugin.getPlayerVerificationCache().getUuidFromDiscordId(userID);
+
+        permTimeout = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.PERM_MUTE) &&  p.scope().equals(scope) && p.active());
+        tempTimeout = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.TEMP_MUTE) &&  p.scope().equals(scope) && p.active());
+
+        return permTimeout || tempTimeout;
     }
 
     private void modifyPunishment (UUID playerUUID, Punishment punishment) {

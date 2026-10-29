@@ -8,13 +8,10 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentContext;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -25,11 +22,7 @@ import net.dv8tion.jda.api.modals.Modal;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -190,22 +183,13 @@ public class AddPunishments extends ListenerAdapter{
                     );
 
                     //Applying the timeout role if the type is perm mute and scope is discord or global
-                    if(state.type == PunishmentType.PERM_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) {
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                            try {
-                                addTimeoutRole(state.targetUUID, bot.getDiscordServer());
-                            } catch (SQLException e) {
-                                plugin.getLogger().warning("Couldn't add the timeout role for a punished user! See message: "+e.getMessage());
-                            }
-                        });
-                    }
-
+                    if(state.type == PunishmentType.PERM_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state);
                     state.scope.applyPunishment(ctx, state.type);
 
                     //Inserting the logs (if they are toggled)
                     if(botConfig.getBoolean("use-logs", false)) new InsertLog(plugin, bot, state);
 
-                    event.reply("Punishment **"+getPunishmentTypeString(state.type)+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
+                    event.reply("Punishment **"+state.type.getName()+"** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
 
                     addingStateMap.remove(event.getUser().getIdLong());
                 } catch (SQLException e) {
@@ -215,26 +199,15 @@ public class AddPunishments extends ListenerAdapter{
         }
     }
 
-    private void addTimeoutRole(UUID targetUUID, Guild server) throws SQLException{
-        FileConfiguration botConfig = plugin.botFile().getConfig();
+    private void addTimeoutRole(AddingState state) throws SQLException{
+        String userID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(state.targetUUID);
+        bot.getDiscordServer().retrieveMemberById(userID).queue(targetMember -> {
+            long timeoutRoleID = plugin.botFile().getConfig().getLong("timeout-role-id");
+            Role timeoutRole = bot.getDiscordServer().getRoleById(timeoutRoleID);
 
-        //Getting the target user ID
-        String userID;
-        String sql = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+            if(timeoutRole == null) return;
 
-            ps.setString(1, targetUUID.toString());
-            ResultSet rs =  ps.executeQuery();
-            if(!rs.next()) return;
-
-            userID = rs.getString("discordId");
-        }
-
-        server.retrieveMemberById(userID).queue(targetMember -> {
-            long timeoutRoleID = botConfig.getLong("timeout-role-id");
-            Role timeoutRole = server.getRoleById(timeoutRoleID);
-
-            server.addRoleToMember(targetMember, timeoutRole).queue();
+            bot.getDiscordServer().addRoleToMember(targetMember, timeoutRole).queue();
         });
     }
 
@@ -276,36 +249,27 @@ public class AddPunishments extends ListenerAdapter{
             state.duration = parseDuration(durationString);
 
             //Applies the punishment
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
-                try{
-                    PunishmentContext ctx = new PunishmentContext(
-                            plugin,
-                            getPlayerStaff(event.getUser().getId()),
-                            state
-                    );
-                    state.scope.applyPunishment(ctx, state.type);
+            OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(state.targetUUID);
 
-                    //Inserting the logs (if they are toggled)
-                    if(plugin.botFile().getConfig().getBoolean("use-logs", false)) new InsertLog(plugin, bot, state);
+            try{
+                PunishmentContext ctx = new PunishmentContext(
+                        plugin,
+                        getPlayerStaff(event.getUser().getId()),
+                        state
+                );
+                state.scope.applyPunishment(ctx, state.type);
 
-                    //Giving the timeout role if the type is temp mute and scope is discord or global
-                    if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)){
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                           try{
-                               addTimeoutRole(state.targetUUID, bot.getDiscordServer());
-                           } catch (SQLException e) {
-                               plugin.getLogger().warning("[DC] Couldn't give the timeout role to a user. See message: "+e.getMessage());
-                           }
-                        });
-                    }
+                //Inserting the log (if they are toggled)
+                if(plugin.botFile().getConfig().getBoolean("use-logs", false)) new InsertLog(plugin, bot, state);
 
-                    event.reply("Punishment **"+getPunishmentTypeString(state.type) + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
-                    addingStateMap.remove(event.getUser().getIdLong());
-                } catch (Exception e){
-                    throw new RuntimeException(e);
-                }
-            });
+                //Giving the timeout role if the type is temp mute and scope is discord or global
+                if(state.type == PunishmentType.TEMP_MUTE && (state.scope == PunishmentScopes.GLOBAL || state.scope == PunishmentScopes.DISCORD)) addTimeoutRole(state);
+
+                event.reply("Punishment **"+ state.type.getName() + "** with scope **"+state.scope.name()+"** applied for player *"+targetPlayer.getName()+"*!").setEphemeral(true).queue();
+                addingStateMap.remove(event.getUser().getIdLong());
+            } catch (Exception e){
+                event.reply("There was a problem adding the punishment. See message: "+e.getMessage()).queue();
+            }
         }
     }
 
@@ -317,20 +281,6 @@ public class AddPunishments extends ListenerAdapter{
         long warnNr = playerPunishments.stream().filter(p -> p.punishmentType().equals(type) && p.scope().equals(scope) && p.active()).count();
 
         return warnNr == maxWarns - 1;
-    }
-
-    private String getPunishmentTypeString(PunishmentType type){
-        return switch(type){
-            case PERM_BAN -> "PERMANENT BAN";
-            case TEMP_BAN -> "TEMPORARY BAN";
-            case PERM_MUTE -> "PERMANENT MUTE";
-            case TEMP_MUTE -> "TEMP MUTE";
-            case KICK -> "KICK";
-            case PERM_BAN_WARN -> "PERMANENT BAN WARN";
-            case TEMP_BAN_WARN -> "TEMPORARY BAN WARN";
-            case PERM_MUTE_WARN -> "PERMANENT MUTE WARN";
-            case TEMP_MUTE_WARN -> "TEMPORARY MUTE WARN";
-        };
     }
 
     private OfflinePlayer getPlayerStaff(String userId) {

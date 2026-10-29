@@ -38,7 +38,7 @@ public class PunishmentContext {
 
     private final FileConfiguration botConfig;
 
-    public PunishmentContext(DiscordUtils plugin, OfflinePlayer staff, AddingState state) throws SQLException {
+    public PunishmentContext(DiscordUtils plugin, OfflinePlayer staff, AddingState state) {
         this.plugin = plugin;
         this.state = state;
         this.staff = staff;

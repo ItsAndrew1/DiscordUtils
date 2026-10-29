@@ -4,8 +4,6 @@ package me.andrew.DiscordUtils.DiscordBot;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Caching.Punishment;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
@@ -17,7 +15,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.OfflinePlayer;
 
-import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -40,7 +37,7 @@ public class PunishmentHistory extends ListenerAdapter{
         },0L, 20L*60); //Runs each minute
     }
 
-    public void displayPunishments(SlashCommandInteractionEvent event , UUID targetUUID, PunishmentsFilter filter, boolean self) throws SQLException{
+    public void displayPunishments(SlashCommandInteractionEvent event , UUID targetUUID, PunishmentsFilter filter, boolean self) {
         PaginationState initialState = new PaginationState(
                 targetUUID,
                 filter,
@@ -53,7 +50,7 @@ public class PunishmentHistory extends ListenerAdapter{
         sendPage(event.getHook(), initialState);
     }
 
-    private void sendPage(InteractionHook hook, PaginationState state) throws SQLException{
+    private void sendPage(InteractionHook hook, PaginationState state) {
         //Check if user still has the interaction going
         if(!states.containsKey(hook.getInteraction().getUser().getIdLong())){
             hook.setEphemeral(true).editOriginal("The connection *timed out*! Please run **/pshistory** again.").queue();
@@ -76,7 +73,7 @@ public class PunishmentHistory extends ListenerAdapter{
 
         for(Punishment p : punishments){
             //Setting the title of the field
-            String fieldTitle = getPunishmentTypeString(p.punishmentType()) +" ● "+ getPunishmentScopeString(p.scope());
+            String fieldTitle = "**"+ p.punishmentType().getName()+"**" +" ● "+ "*"+p.scope().name()+"*";
             if(state.filter() == PunishmentsFilter.ALL){
                 if(p.removed()) fieldTitle += " ● *REMOVED* at **"+formatTime(p.removedAt())+"**";
                 else if(p.active()) fieldTitle += " ● *ACTIVE*";
@@ -89,7 +86,7 @@ public class PunishmentHistory extends ListenerAdapter{
                     + "\n" + "**Reason**: "+p.reason()+"\n"
                     + "**Staff**: \\"+p.staff()+"\n";
 
-            if(isPsTemporary(p) && p.active()) fieldValue += "**Expires At**: "+formatTime(p.expiresAt())+"\n";
+            if(!p.punishmentType().isPermanent() && p.active()) fieldValue += "**Expires At**: "+formatTime(p.expiresAt())+"\n";
 
             embedBuilder.addField(fieldTitle,fieldValue,true);
         }
@@ -114,31 +111,25 @@ public class PunishmentHistory extends ListenerAdapter{
         PaginationState state = states.get(userId);
         int newPageNr = state.page();
         PunishmentsFilter newFilter = state.filter();
-        long newLastInteraction = state.lastInteraction();
-        try{
-            switch(event.getComponentId()){
-                case "page_prev" -> newPageNr--;
-                case "page_next" -> newPageNr++;
-                case "filter_all" -> {
-                    newPageNr = 1;
-                    newFilter = PunishmentsFilter.ALL;
-                }
-                case "filter_active" ->{
-                    newPageNr = 1;
-                    newFilter = PunishmentsFilter.ACTIVE;
-                }
-                case "filter_expired" ->{
-                    newPageNr = 1;
-                    newFilter = PunishmentsFilter.EXPIRED;
-                }
-            }
 
-            newLastInteraction = System.currentTimeMillis();
-            sendPage(event.getHook(), new PaginationState(state.targetUUID(), newFilter, newPageNr, state.self(), newLastInteraction));
-        } catch (Exception e){
-            throw new RuntimeException();
+        switch(event.getComponentId()){
+            case "page_prev" -> newPageNr--;
+            case "page_next" -> newPageNr++;
+            case "filter_all" -> {
+                newPageNr = 1;
+                newFilter = PunishmentsFilter.ALL;
+            }
+            case "filter_active" ->{
+                newPageNr = 1;
+                newFilter = PunishmentsFilter.ACTIVE;
+            }
+            case "filter_expired" ->{
+                newPageNr = 1;
+                newFilter = PunishmentsFilter.EXPIRED;
+            }
         }
 
+        sendPage(event.getHook(), new PaginationState(state.targetUUID(), newFilter, newPageNr, state.self(), System.currentTimeMillis()));
         event.deferEdit().queue();
     }
 
@@ -147,30 +138,6 @@ public class PunishmentHistory extends ListenerAdapter{
         LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
         return time.format(formatter);
-    }
-
-    private String getPunishmentTypeString(PunishmentType type){
-        return switch(type){
-            case PERM_BAN -> "**PERMANENT BAN**";
-            case TEMP_BAN -> "**TEMPORARY BAN**";
-            case PERM_MUTE -> "**PERMANENT MUTE**";
-            case TEMP_MUTE -> "**TEMP MUTE**";
-            case KICK -> "**KICK**";
-            case PERM_BAN_WARN -> "**PERMANENT BAN WARN**";
-            case TEMP_BAN_WARN -> "**TEMPORARY BAN WARN**";
-            case PERM_MUTE_WARN -> "**PERMANENT MUTE WARN**";
-            case TEMP_MUTE_WARN -> "**TEMPORARY MUTE WARN**";
-        };
-    }
-    private String getPunishmentScopeString(PunishmentScopes scope){
-        return switch(scope){
-            case MINECRAFT -> "*MINECRAFT*";
-            case DISCORD -> "*DISCORD*";
-            case GLOBAL -> "*GLOBAL*";
-        };
-    }
-    private boolean isPsTemporary(Punishment p){
-        return p.punishmentType() == PunishmentType.TEMP_BAN || p.punishmentType() == PunishmentType.TEMP_MUTE;
     }
 }
 

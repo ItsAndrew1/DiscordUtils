@@ -202,8 +202,8 @@ public class AddRemoveHistoryGUI implements Listener{
                 return;
             }
 
-            plugin.getDatabaseManager().removePunishment(targetP.punishmentType(), targetP.uuid());
-            plugin.getPlayerPunishmentDataCache().removePunishment(targetP.uuid(), targetP.punishmentType());
+            plugin.getDatabaseManager().removePunishment(targetP.id());
+            plugin.getPlayerPunishmentDataCache().removePunishment(targetP.uuid(), targetP);
 
             //If the scope is discord/global, I have to unban/remove the target user's timeout
             if(targetP.scope() == PunishmentScopes.DISCORD || targetP.scope() == PunishmentScopes.GLOBAL){

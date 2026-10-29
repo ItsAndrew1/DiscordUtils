@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
 import java.sql.SQLException;
 
 public enum PunishmentType{
-    PERM_BAN(true){
+    PERM_BAN(true, false){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermBan();
@@ -23,7 +23,7 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_BAN(false){
+    TEMP_BAN(false, false){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyTempBan();
@@ -40,7 +40,7 @@ public enum PunishmentType{
         }
     },
 
-    PERM_BAN_WARN(true){
+    PERM_BAN_WARN(true, true){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermBanWarn();
@@ -57,7 +57,7 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_BAN_WARN(true){
+    TEMP_BAN_WARN(true, true){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyTempBanWarn();
@@ -74,7 +74,7 @@ public enum PunishmentType{
         }
     },
 
-    KICK(true){
+    KICK(true, false){
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyKick();
         }
@@ -90,7 +90,7 @@ public enum PunishmentType{
         }
     },
 
-    PERM_MUTE(true){
+    PERM_MUTE(true, false){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermMuteTimeout();
@@ -107,7 +107,7 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_MUTE(false){
+    TEMP_MUTE(false, false){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyTempMuteTimeout();
@@ -123,7 +123,7 @@ public enum PunishmentType{
             return "Temporary Mute/Timeout";
         }
     },
-    PERM_MUTE_WARN(true){
+    PERM_MUTE_WARN(true, true){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermMuteTimeoutWarn();
@@ -140,7 +140,7 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_MUTE_WARN(true){
+    TEMP_MUTE_WARN(true, true){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyTempMuteTimeoutWarn();
@@ -158,13 +158,18 @@ public enum PunishmentType{
     };
 
     private final boolean permanent;
-    PunishmentType(boolean permanent){
+    private final boolean isWarning;
+    PunishmentType(boolean permanent, boolean isWarning){
         this.permanent = permanent;
+        this.isWarning = isWarning;
     }
 
-    //Helper check
+    //Helper checks
     public boolean isPermanent(){
         return permanent;
+    }
+    public boolean isWarning(){
+        return isWarning;
     }
 
     public abstract void apply(PunishmentContext ctx) throws SQLException;

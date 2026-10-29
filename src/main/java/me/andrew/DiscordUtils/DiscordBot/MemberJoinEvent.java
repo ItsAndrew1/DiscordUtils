@@ -3,17 +3,13 @@ package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
-import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.jetbrains.annotations.NotNull;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.UUID;
 
 public class MemberJoinEvent extends ListenerAdapter {
@@ -24,7 +20,7 @@ public class MemberJoinEvent extends ListenerAdapter {
     }
 
     @Override
-    public void onGuildMemberJoin(GuildMemberJoinEvent event) {
+    public void onGuildMemberJoin(@NotNull GuildMemberJoinEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
         //This event should only fire when the discord bot is toggled
@@ -48,106 +44,34 @@ public class MemberJoinEvent extends ListenerAdapter {
 
             if(verifiedRole == null || unverifiedRole == null || timeoutRole == null || bannedRole == null) return;
 
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                try {
-                    if(isUserVerified(event.getUser().getId())){
-                        event.getGuild().addRoleToMember(member, verifiedRole).queue();
+            //Checking if the user is verified or not
+            if(!isUserVerified(userId)) event.getGuild().addRoleToMember(member, unverifiedRole).queue();
+            else{
+                event.getGuild().addRoleToMember(member, verifiedRole).queue();
 
-                        //Modifying their nickname after their MC ign
-                        member.modifyNickname(getUserIGN(member.getId())).queue();
-                    }
+                //Modifying their nickname after their MC ign
+                member.modifyNickname(getUserIGN(member.getId())).queue();
 
-                    //Giving the user the 'Timeout' Role if he is still on timeout (on discord/globally)
-                    if(isUserOnTimeout(member.getId(), PunishmentScopes.GLOBAL) || isUserOnTimeout(member.getId(), PunishmentScopes.DISCORD)) event.getGuild().addRoleToMember(member, timeoutRole).queue();
+                //Giving the user the 'Timeout' Role if he is still on timeout (on discord/globally)
+                if(plugin.getPlayerPunishmentDataCache().isUserOnTimeout(member.getId(), PunishmentScopes.GLOBAL) || plugin.getPlayerPunishmentDataCache().isUserOnTimeout(member.getId(), PunishmentScopes.DISCORD)) event.getGuild().addRoleToMember(member, timeoutRole).queue();
 
-                    //Giving the user the 'Banned' Role if he is still banned (on discord / globally).
-                    if(isUserBanned(member.getId(), PunishmentScopes.GLOBAL) || isUserBanned(member.getId(), PunishmentScopes.DISCORD)){
-                        event.getGuild().removeRoleFromMember(member, verifiedRole).queue();
-                        event.getGuild().addRoleToMember(member, bannedRole).queue();
-                    }
-                    else event.getGuild().addRoleToMember(member, unverifiedRole).queue();
-                } catch (SQLException e) {
-                    plugin.getLogger().warning("[DC] Coulnd't apply the necesarry roles for the new user. See message: "+e.getMessage());
+                //Giving the user the 'Banned' Role if he is still banned (on discord / globally).
+                if(plugin.getPlayerPunishmentDataCache().isUserBanned(member.getId(), PunishmentScopes.GLOBAL)|| plugin.getPlayerPunishmentDataCache().isUserBanned(member.getId(), PunishmentScopes.DISCORD)){
+                    event.getGuild().removeRoleFromMember(member, verifiedRole).queue();
+                    event.getGuild().addRoleToMember(member, bannedRole).queue();
                 }
-            });
+            }
         });
     }
 
-    private boolean isUserVerified(String discordId) throws SQLException {
-        String SQL = "SELECT 1 FROM playersVerification WHERE discordId = ?";
-
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(SQL)){
-            ps.setString(1, discordId);
-            try(ResultSet rs = ps.executeQuery()){
-                return rs.next();
-            }
-        }
+    private boolean isUserVerified(String discordId) {
+        return plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(discordId);
     }
 
-    private String getUserIGN(String discordId) throws SQLException {
-        String SQL = "SELECT ign FROM playersVerification WHERE discordId = ?";
+    private String getUserIGN(String discordId) {
+        UUID userUUID = plugin.getPlayerVerificationCache().getUuidFromDiscordId(discordId);
+        if(userUUID == null) return null;
 
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(SQL)){
-            ps.setString(1, discordId);
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) return rs.getString("ign");
-                return null;
-            }
-        }
-    }
-
-    private boolean isUserOnTimeout(String userID, PunishmentScopes scope) throws SQLException {
-        boolean permTimeout = false, tempTimeout = false;
-        String sql = "SELECT 1 FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1";
-        UUID targetUUID = Bukkit.getOfflinePlayer(getUserIGN(userID)).getUniqueId();
-
-        //Checking if he is on permanent timeout
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-            ps.setString(1, targetUUID.toString());
-            ps.setString(2, PunishmentType.PERM_MUTE.name());
-            ps.setString(3, scope.name());
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) permTimeout = true;
-            }
-        }
-
-        //Checking if the user is on temporary timeout
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-            ps.setString(1, targetUUID.toString());
-            ps.setString(2, PunishmentType.TEMP_MUTE.name());
-            ps.setString(3, scope.name());
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) tempTimeout = true;
-            }
-        }
-
-        return permTimeout || tempTimeout;
-    }
-
-    private boolean isUserBanned(String userID, PunishmentScopes scope) throws SQLException {
-        boolean permBanned = false, tempBanned = false;
-        String sql = "SELECT 1 FROM punishments WHERE uuid = ? AND type = ? AND scope = ? AND active = 1";
-
-        //Checking if the user is permanently banned
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-            ps.setString(1, userID);
-            ps.setString(2, PunishmentType.PERM_BAN.name());
-            ps.setString(3, scope.name());
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) permBanned = true;
-            }
-        }
-
-        //Checking if the user is temporarily banned
-        try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-            ps.setString(1, userID);
-            ps.setString(2, PunishmentType.TEMP_BAN.name());
-            ps.setString(3, scope.name());
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next()) tempBanned = true;
-            }
-        }
-
-        return permBanned || tempBanned;
+        return Bukkit.getOfflinePlayer(userUUID).getName();
     }
 }
