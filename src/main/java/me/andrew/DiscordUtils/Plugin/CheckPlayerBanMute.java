@@ -6,6 +6,7 @@ import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -27,7 +28,7 @@ public class CheckPlayerBanMute implements Listener{
     }
 
     @EventHandler
-    public void onLogin(PlayerLoginEvent e) throws SQLException {
+    public void onLogin(PlayerLoginEvent e) {
         //This event should only fire when the discord bot is toggled
         boolean toggleDcBot = plugin.botFile().getConfig().getBoolean("toggle-discord-bot", false);
         if(!toggleDcBot) return;
@@ -37,22 +38,15 @@ public class CheckPlayerBanMute implements Listener{
         //Checks if the player is perm banned (with scope minecraft/global)
         Punishment permBan = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.PERM_BAN);
         if(permBan != null && (permBan.scope() == PunishmentScopes.MINECRAFT || permBan.scope() == PunishmentScopes.GLOBAL)){
-            if(!permBan.active()){
-                plugin.getDatabaseManager().expirePunishmentById(permBan.id());
-                plugin.getPlayerPunishmentDataCache().expirePunishmentById(player.getUniqueId(), permBan.id());
-                e.allow();
-            }
-            else{
-                //Displays a configurable message on the player's screen
-                //Getting the reason
-                String reason = permBan.reason();
+            //Displays a configurable message on the player's screen
+            //Getting the reason
+            String reason = permBan.reason();
 
-                //Displaying the message
-                String message =  plugin.getConfig().getString("player-punishments-messages.perm-ban-message", "&cYou are permanently banned from this server.\\n\\n&7Scope: %scope%\\n&7Reason: &f%reason%\\n\\n&7Ban ID: &f%id%\\n&7Use this ID to appeal.");
-                message = plugin.parsePP(player, message);
-                message = message.replace("%scope%", getColoredScope(permBan.scope())).replace("%reason%", reason).replace("%id%", permBan.id());
-                e.disallow(PlayerLoginEvent.Result.KICK_BANNED, LegacyComponentSerializer.legacyAmpersand().deserialize(message));
-            }
+            //Displaying the message
+            String message =  plugin.getConfig().getString("player-punishments-messages.perm-ban-message", "&cYou are permanently banned from this server.\\n\\n&7Scope: %scope%\\n&7Reason: &f%reason%\\n\\n&7Ban ID: &f%id%\\n&7Use this ID to appeal.");
+            message = plugin.parsePP(player, message);
+            message = message.replace("%scope%", getColoredScope(permBan.scope())).replace("%reason%", reason).replace("%id%", permBan.id());
+            e.disallow(PlayerLoginEvent.Result.KICK_BANNED, LegacyComponentSerializer.legacyAmpersand().deserialize(message));
             return;
         }
 
@@ -60,8 +54,14 @@ public class CheckPlayerBanMute implements Listener{
         Punishment tempBan = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.PERM_BAN);
         if(tempBan != null && (tempBan.scope() == PunishmentScopes.MINECRAFT || tempBan.scope() == PunishmentScopes.GLOBAL)){
             if(isPunishmentExpired(tempBan)){
-                plugin.getDatabaseManager().expirePunishmentById(tempBan.id());
-                plugin.getPlayerPunishmentDataCache().expirePunishmentById(player.getUniqueId(), tempBan.id());
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try {
+                        plugin.getDatabaseManager().expirePunishmentById(tempBan.id());
+                        plugin.getPlayerPunishmentDataCache().expirePunishmentById(player.getUniqueId(), tempBan.id());
+                    } catch (SQLException ex) {
+                        plugin.getLogger().warning("[!] There was a problem expiring a temporary ban! See message: "+ex.getMessage());
+                    }
+                });
                 e.allow();
             }
             else{
@@ -95,6 +95,7 @@ public class CheckPlayerBanMute implements Listener{
 
         e.allow();
     }
+
     private String getColoredScope(PunishmentScopes scope){
         return switch(scope){
             case DISCORD -> ChatColor.translateAlternateColorCodes('&', "&9&lDISCORD");
@@ -107,7 +108,7 @@ public class CheckPlayerBanMute implements Listener{
     }
 
     @EventHandler
-    public void onChat(AsyncChatEvent e) throws SQLException{
+    public void onChat(AsyncChatEvent e) {
         //This event should only fire when the discord bot is toggled
         boolean toggleDcBot = plugin.botFile().getConfig().getBoolean("toggle-discord-bot", false);
         if(!toggleDcBot) return;
@@ -117,23 +118,21 @@ public class CheckPlayerBanMute implements Listener{
         //Check if the player is perm muted (with scope minecraft/global)
         Punishment permMute = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.PERM_MUTE);
         if(permMute != null && (permMute.scope() == PunishmentScopes.MINECRAFT || permMute.scope() == PunishmentScopes.GLOBAL)){
-            if(permMute.active()){
-                e.setCancelled(true);
+            e.setCancelled(true);
 
-                //Getting the reason and scope
-                String reason = permMute.reason();
-                String scope = getColoredScope(permMute.scope());
+            //Getting the reason and scope
+            String reason = permMute.reason();
+            String scope = getColoredScope(permMute.scope());
 
-                //Sending the message
-                List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
-                for(String messageLine: message){
-                    messageLine = plugin.parsePP(player, messageLine);
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
-                            .replace("%scope%", scope)
-                            .replace("%reason%", reason)
-                            .replace("%id%", permMute.id())
-                    ));
-                }
+            //Sending the message
+            List<String> message = plugin.getConfig().getStringList("player-punishments-messages.perm-mute-message");
+            for(String messageLine: message){
+                messageLine = plugin.parsePP(player, messageLine);
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', messageLine
+                        .replace("%scope%", scope)
+                        .replace("%reason%", reason)
+                        .replace("%id%", permMute.id())
+                ));
             }
         }
 
@@ -141,8 +140,14 @@ public class CheckPlayerBanMute implements Listener{
         Punishment tempMute = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
         if(tempMute != null && (tempMute.scope() == PunishmentScopes.MINECRAFT || tempMute.scope() == PunishmentScopes.GLOBAL)){
             if(isPunishmentExpired(tempMute)) {
-                plugin.getDatabaseManager().expirePunishmentById(tempMute.id());
-                plugin.getPlayerPunishmentDataCache().expirePunishmentById(player.getUniqueId(), tempMute.id());
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try {
+                        plugin.getDatabaseManager().expirePunishmentById(tempMute.id());
+                        plugin.getPlayerPunishmentDataCache().expirePunishmentById(player.getUniqueId(), tempMute.id());
+                    } catch (SQLException ex) {
+                        plugin.getLogger().warning("[!] There was a problem expiring a temporary mute! See message: "+ex.getMessage());
+                    }
+                });
             }
             else{
                 e.setCancelled(true);

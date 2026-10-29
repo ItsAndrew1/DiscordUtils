@@ -55,7 +55,7 @@ public class PlayerPunishmentDataCache {
         modifyPunishment(punishment.uuid(), newPunishment);
     }
 
-    public boolean playerHasPunishments(UUID playerUUID){
+    public boolean playerHasActivePunishments(UUID playerUUID){
         List<Punishment> punishments = mainCache.get(playerUUID);
         return punishments != null && punishments.stream().anyMatch(Punishment::active);
     }

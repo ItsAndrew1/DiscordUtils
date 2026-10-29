@@ -42,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public final class DiscordUtils extends JavaPlugin implements Listener{
-    private String guiTitle;
     private DiscordGUI discordGUI;
     private DiscordTask discordTaskManager;
     private DiscordBlock discordBlockManager;
@@ -74,7 +73,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     public void onEnable(){
         saveDefaultConfig();
 
-        guiTitle = ChatColor.translateAlternateColorCodes('&', getConfig().getString("discord-gui.title"));
         discordTaskManager = new DiscordTask(this);
         Commands commands = new Commands(this);
         databaseManager = new DatabaseManager(this);
@@ -152,58 +150,54 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             //Runs a task to auto expire the punishments
             Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
                 try{
-                    List<Punishment> allPunishments = getAllPunishments(null);
-                    if(!allPunishments.isEmpty()){
-                        for(Punishment p : allPunishments){
+                    for(UUID uuid : playerPunishmentsCache.getMainCache().keySet()){
+                        CopyOnWriteArrayList<Punishment> playerPunishments = playerPunishmentsCache.getMainCache().get(uuid);
+                        if(playerPunishments == null || !playerPunishmentsCache.playerHasActivePunishments(uuid)) continue;
+
+                        for(Punishment p : playerPunishments){
                             if(p.expiresAt() <= System.currentTimeMillis() && p.active() && p.expiresAt() != 0){
+                                //Setting the punishment as expired in DB and Cache
                                 String sql = "UPDATE punishments SET active = false WHERE id = ?";
                                 try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
                                     ps.setString(1, p.id());
                                     ps.executeUpdate();
                                 }
+                                playerPunishmentsCache.expirePunishmentById(uuid, p.id());
 
                                 PunishmentType type = p.punishmentType();
                                 PunishmentScopes scope = p.scope();
 
                                 //Unbans/removes the timeout of a user if the scope is discord/global
                                 UUID targetUUID = p.uuid();
-                                String sql2 = "SELECT discordId FROM playersVerification WHERE uuid = ?";
-                                try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql2)){
-                                    ps.setString(1, targetUUID.toString());
+                                String userId = getPlayerVerificationCache().getDiscordIdFromUuid(targetUUID);
 
-                                    try(ResultSet rs = ps.executeQuery()){
-                                        if(!rs.next()) return;
-
-                                        String userId = rs.getString("discordId");
-                                        if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL){
-                                            discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
-                                                Guild dcServer = discordBot.getDiscordServer();
-                                                if(type == PunishmentType.PERM_BAN || type == PunishmentType.TEMP_BAN){
-                                                    //Removing the banned role (and giving the 'Verified' role) from the member if he has the role
-                                                    long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
-                                                    long verifiedRoleID = botConfig.getConfig().getLong("verification.verified-role-id");
-                                                    Role bannedRole = dcServer.getRoleById(bannedRoleID);
-                                                    dcServer.retrieveMemberById(userId).queue(member -> {
-                                                        if(member.getRoles().contains(bannedRole)){
-                                                            dcServer.removeRoleFromMember(member, bannedRole).queue();
-                                                            dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
-                                                        }
-                                                    });
-                                                }
-                                                if(type == PunishmentType.PERM_MUTE || type == PunishmentType.TEMP_MUTE){
-                                                    //Removes the timeout role of the member if he has the role
-                                                    dcServer.retrieveMemberById(userId).queue(targetMember -> {
-                                                        long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
-                                                        Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
-
-                                                        if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
-                                                    });
-
-                                                    if(type == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(targetUser).queue();
+                                if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL && userId != null){
+                                    discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
+                                        Guild dcServer = discordBot.getDiscordServer();
+                                        if(type == PunishmentType.TEMP_BAN){
+                                            //Removing the banned role (and giving the 'Verified' role) from the member if he has the role
+                                            long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
+                                            long verifiedRoleID = botConfig.getConfig().getLong("verification.verified-role-id");
+                                            Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                                            dcServer.retrieveMemberById(userId).queue(member -> {
+                                                if(member.getRoles().contains(bannedRole)){
+                                                    dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                                    dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
                                                 }
                                             });
                                         }
-                                    }
+                                        if(type == PunishmentType.TEMP_MUTE){
+                                            //Removes the timeout role of the member if he has the role
+                                            dcServer.retrieveMemberById(userId).queue(targetMember -> {
+                                                long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
+                                                Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
+
+                                                if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                            });
+
+                                            dcServer.removeTimeout(targetUser).queue();
+                                        }
+                                    });
                                 }
                             }
                         }
@@ -555,9 +549,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public VerificationManager getVerificationManager() {
         return verificationManager;
-    }
-    public String getGuiTitle() {
-        return guiTitle;
     }
     public Map<UUID, AddingState> getPunishmentsAddingStates(){
         return punishmentsAddingStates;

@@ -13,7 +13,6 @@ import net.dv8tion.jda.api.entities.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.apache.logging.log4j.spi.CopyOnWrite;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,14 +23,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 public class AddRemoveHistoryGUI implements Listener{
@@ -52,7 +45,7 @@ public class AddRemoveHistoryGUI implements Listener{
 
     public void showGui(Player player){
         int invSize = 54;
-        String invTitle = "Add/Remove Punishment";
+        Component invTitle = Component.text("Add/Remove Punishment");
         Inventory gui = Bukkit.createInventory(null, invSize, invTitle);
         String playerName = plugin.getPlayerHeadsGUIs().getClickedPlayer().getName();
 
@@ -62,7 +55,7 @@ public class AddRemoveHistoryGUI implements Listener{
         PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
         profile.setProperty(new ProfileProperty("textures", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWZmMzE0MzFkNjQ1ODdmZjZlZjk4YzA2NzU4MTA2ODFmOGMxM2JmOTZmNTFkOWNiMDdlZDc4NTJiMmZmZDEifX19"));
         addButtonSkull.setPlayerProfile(profile);
-        addButtonSkull.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aAdd &lpunishment &afor player &e&l"+playerName));
+        addButtonSkull.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&aAdd &lpunishment &afor player &e&l"+playerName));
         addButton.setItemMeta(addButtonSkull);
         gui.setItem(20, addButton);
 
@@ -71,21 +64,21 @@ public class AddRemoveHistoryGUI implements Listener{
         SkullMeta removeButtonSkull = (SkullMeta) removeButton.getItemMeta();
         PlayerProfile profile2 = Bukkit.createProfile(UUID.randomUUID());
         profile2.setProperty(new ProfileProperty("textures", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGU0YjhiOGQyMzYyYzg2NGUwNjIzMDE0ODdkOTRkMzI3MmE2YjU3MGFmYmY4MGMyYzViMTQ4Yzk1NDU3OWQ0NiJ9fX0="));
-        removeButtonSkull.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&cRemove &lpunishment &cfor player &e&l"+playerName));
+        removeButtonSkull.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&cRemove &lpunishment &cfor player &e&l"+playerName));
         removeButton.setItemMeta(removeButtonSkull);
         gui.setItem(22, removeButton);
 
         //History button
         ItemStack historyButton = new ItemStack(Material.PAPER);
         ItemMeta historyButtonMeta = historyButton.getItemMeta();
-        historyButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&5See the &lpunishment history &5of &e&l"+playerName));
+        historyButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&5See the &lpunishment history &5of &e&l"+playerName));
         historyButton.setItemMeta(historyButtonMeta);
         gui.setItem(24, historyButton);
 
         //Return button
         ItemStack returnButton = new ItemStack(Material.SPECTRAL_ARROW);
         ItemMeta returnButtonMeta = returnButton.getItemMeta();
-        returnButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lRETURN"));
+        returnButtonMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&c&lRETURN"));
         returnButton.setItemMeta(returnButtonMeta);
         gui.setItem(40, returnButton);
 
@@ -95,7 +88,7 @@ public class AddRemoveHistoryGUI implements Listener{
     @EventHandler
     public void onClick(InventoryClickEvent e) throws SQLException {
         if(!(e.getWhoClicked() instanceof Player player)) return;
-        if(!e.getView().getTitle().equalsIgnoreCase("Add/Remove Punishment")) return;
+        if(!e.getView().title().equals(Component.text("Add/Remove Punishment"))) return;
         e.setCancelled(true);
 
         ItemStack clickedItem = e.getCurrentItem();
@@ -125,8 +118,10 @@ public class AddRemoveHistoryGUI implements Listener{
             plugin.getPunishmentsGUI().showGui(player, 1, false);
         }
 
+        if(!clickedItemMeta.hasDisplayName()) return;
+
         //If the player clicks on add punishment button
-        if(clickedItemMeta.getDisplayName().contains("Add")){
+        if(clickedItemMeta.displayName().contains(Component.text("Add"))) {
             //Checking if the player has permission to add
             if(!player.hasPermission("discordutils.punishments.add")){
                 player.closeInventory();
@@ -154,7 +149,7 @@ public class AddRemoveHistoryGUI implements Listener{
         }
 
         //If the player clicks on remove punishment button
-        if(clickedItemMeta.getDisplayName().contains("Remove")){
+        if(clickedItemMeta.displayName().contains(Component.text("Remove"))) {
             //Checking if the player has permission
             if(!player.hasPermission("discordutils.punishments.remove")){
                 player.closeInventory();
@@ -202,46 +197,58 @@ public class AddRemoveHistoryGUI implements Listener{
                 return;
             }
 
-            plugin.getDatabaseManager().removePunishment(targetP.id());
-            plugin.getPlayerPunishmentDataCache().removePunishment(targetP.uuid(), targetP);
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    plugin.getDatabaseManager().removePunishment(targetP.id());
+                    plugin.getPlayerPunishmentDataCache().removePunishment(targetP.uuid(), targetP);
+                } catch (SQLException e) {
+                    plugin.getLogger().warning("[!] There was a problem removing the punishment from the DB/Cache. See message: "+e.getMessage());
 
-            //If the scope is discord/global, I have to unban/remove the target user's timeout
-            if(targetP.scope() == PunishmentScopes.DISCORD || targetP.scope() == PunishmentScopes.GLOBAL){
-                String targetUserID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetP.uuid());
-                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
-
-                if(psType == PunishmentType.PERM_BAN || psType == PunishmentType.TEMP_BAN){
-                    //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
-                    dcServer.retrieveMemberById(targetUserID).queue(member -> {
-                        long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
-                        Role bannedRole = dcServer.getRoleById(bannedRoleID);
-
-                        long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
-                        Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
-                        if(member.getRoles().contains(bannedRole)){
-                            dcServer.removeRoleFromMember(member, bannedRole).queue();
-                            dcServer.addRoleToMember(member, verifiedRole).queue();
-                        }
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        staff.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(chatPrefix+" &cThere was a problem removing the punishment from the DB/Cache."));
+                        staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
                     });
+                    return;
                 }
 
-                if(psType == PunishmentType.TEMP_MUTE || psType == PunishmentType.PERM_MUTE){
-                    //Removing the timeout role
-                    long timeoutRoleID = plugin.botFile().getConfig().getLong("timeout-role-id");
-                    dcServer.retrieveMemberById(targetUserID).queue(member ->{
-                        dcServer.removeRoleFromMember(member, dcServer.getRoleById(timeoutRoleID)).queue();
+                //If the scope is discord/global, I have to unban/remove the target user's timeout
+                if(targetP.scope() == PunishmentScopes.DISCORD || targetP.scope() == PunishmentScopes.GLOBAL){
+                    String targetUserID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetP.uuid());
+                    Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
-                        //Removing the timeout if it is a temporary one
-                        if(targetP.punishmentType() == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(member).queue();
-                    });
+                    if(psType == PunishmentType.PERM_BAN || psType == PunishmentType.TEMP_BAN){
+                        //Removes the 'banned' role (and give him the 'verified' role) from the member if he has it
+                        dcServer.retrieveMemberById(targetUserID).queue(member -> {
+                            long bannedRoleID = plugin.botFile().getConfig().getLong("ban-role-id");
+                            Role bannedRole = dcServer.getRoleById(bannedRoleID);
+
+                            long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
+                            if(member.getRoles().contains(bannedRole)){
+                                dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                dcServer.addRoleToMember(member, verifiedRole).queue();
+                            }
+                        });
+                    }
+
+                    if(psType == PunishmentType.TEMP_MUTE || psType == PunishmentType.PERM_MUTE){
+                        //Removing the timeout role
+                        long timeoutRoleID = plugin.botFile().getConfig().getLong("timeout-role-id");
+                        dcServer.retrieveMemberById(targetUserID).queue(member ->{
+                            dcServer.removeRoleFromMember(member, dcServer.getRoleById(timeoutRoleID)).queue();
+
+                            //Removing the timeout if it is a temporary one
+                            if(targetP.punishmentType() == PunishmentType.TEMP_MUTE) dcServer.removeTimeout(member).queue();
+                        });
+                    }
                 }
-            }
+            });
 
             staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment with ID &7&l"+ID+" &ahas been removed from player &e"+Bukkit.getOfflinePlayer(targetP.uuid()).getName()+"&a!"));
             staff.playSound(staff.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.4f);
         } catch (Exception e){
-            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThere was a problem when attempted to remove the punishment. See the server's CMD for more info"));
-            Bukkit.getLogger().warning("[DISCORDUTILS] "+e.getMessage());
+            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThere was a problem removing the punishment. See the server's CMD for more info"));
+            Bukkit.getLogger().warning("[!] "+e.getMessage());
         }
     }
 }

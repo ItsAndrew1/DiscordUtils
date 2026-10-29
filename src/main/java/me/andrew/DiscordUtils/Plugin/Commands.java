@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 
 public class Commands implements CommandExecutor{
     private final DiscordUtils plugin;
@@ -115,6 +116,8 @@ public class Commands implements CommandExecutor{
         //Get the sounds
         Sound good = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
         Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
+        assert good != null;
+        assert invalid != null;
 
         if(command.getName().equalsIgnoreCase("dcutils")){
             if(strings.length == 0){
@@ -209,7 +212,7 @@ public class Commands implements CommandExecutor{
 
         if(command.getName().equalsIgnoreCase("discord")){
             if(!player.hasPermission("discordutils.discord")){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message")));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', Objects.requireNonNull(plugin.getConfig().getString("command-no-permission-message", "&cYou don't have permission to run this command."))));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
             }
@@ -219,10 +222,14 @@ public class Commands implements CommandExecutor{
         }
 
         if(command.getName().equalsIgnoreCase("verify")){
-            //TO DO: Check if the bot is toggled or not
+            if(!isBotConfigured()){
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThe Discord feature isn't enabled yet!"));
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
+                return true;
+            }
 
             if(!player.hasPermission("discordutils.verify")){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message")));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("command-no-permission-message", "&cYou don't have permission to run this command.")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
             }
@@ -235,11 +242,15 @@ public class Commands implements CommandExecutor{
         }
 
         if(command.getName().equalsIgnoreCase("unverify")){
-            //TO DO: Same as 'verify'
+            if(!isBotConfigured()){
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThe Discord feature isn't enabled yet!"));
+                player.playSound(player.getLocation(), invalid, 1f, 1f);
+                return true;
+            }
 
             //Checking if the player has permission to run the command
             if(!player.hasPermission("discordutils.unverify")){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message")));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message", "&cYou don't have permission to run this command.")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
             }
@@ -263,7 +274,7 @@ public class Commands implements CommandExecutor{
 
             String userDiscordID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(player.getUniqueId());
             dcServer.retrieveMemberById(userDiscordID).queue(targetMember -> {
-                //Removing the 'verified' role and giving himt he 'unverified' role
+                //Removing the 'verified' role and giving him the 'unverified' role
                 if(targetMember.getRoles().contains(verifiedRole)) dcServer.removeRoleFromMember(targetMember, verifiedRole).queue();
                 dcServer.addRoleToMember(targetMember, unverified).queue();
 
@@ -309,19 +320,22 @@ public class Commands implements CommandExecutor{
         if(command.getName().equalsIgnoreCase("history")){
             //Checking if the player has the permission
             if(!player.hasPermission("discordutils.viewhistory")){
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message")));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&' , plugin.getConfig().getString("command-no-permission-message", "&cYou don't have permission to run this command.")));
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
             }
 
-            try {
-                plugin.getPunishmentsGUI().showGui(player, 1, true);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
+            plugin.getPunishmentsGUI().showGui(player, 1, true);
         }
 
         return false;
+    }
+
+    private boolean isBotConfigured(){
+        String guildId = plugin.botFile().getConfig().getString("guild-id");
+        String botToken = plugin.botFile().getConfig().getString("bot-token");
+
+        return guildId != null && botToken != null;
     }
 
     private boolean isPunishmentExpired(Punishment p){

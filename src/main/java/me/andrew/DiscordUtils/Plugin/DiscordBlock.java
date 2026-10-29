@@ -102,11 +102,6 @@ public class DiscordBlock implements Listener {
             return;
         }
 
-        if(!toggleParticle && getParticleTask() != null && !getParticleTask().isCancelled()){
-            getParticleTask().cancel();
-            return;
-        }
-
         if(getParticleTask() != null && !getParticleTask().isCancelled()) return;
 
         //Gets the particle

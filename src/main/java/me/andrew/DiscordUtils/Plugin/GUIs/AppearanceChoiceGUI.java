@@ -2,6 +2,8 @@
 package me.andrew.DiscordUtils.Plugin.GUIs;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -17,7 +19,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class AppearanceChoiceGUI implements Listener {
     private final DiscordUtils plugin;
     private boolean chatMessage, book, applyChanges;
-    private String guiTitle;
+    private Component guiTitle;
     private String choice;
 
     public AppearanceChoiceGUI(DiscordUtils plugin) {
@@ -28,14 +30,14 @@ public class AppearanceChoiceGUI implements Listener {
     }
 
     public void showGUI(Player player){
-        guiTitle = "Choose appearance type";
+        guiTitle = Component.text("Choose appearance type");
         Inventory GUI = Bukkit.createInventory(null, 54, guiTitle);
 
         //Return button
         ItemStack returnButton = new ItemStack(Material.RED_CONCRETE);
         ItemMeta returnButtonMeta = returnButton.getItemMeta();
         if(!applyChanges){
-            returnButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lRETURN"));
+            returnButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"));
             returnButton.setItemMeta(returnButtonMeta);
             GUI.setItem(40, returnButton);
         }
@@ -47,7 +49,7 @@ public class AppearanceChoiceGUI implements Listener {
 
             ItemStack applyChangesButton = new ItemStack(Material.GREEN_CONCRETE);
             ItemMeta applyChangesButtonMeta = applyChangesButton.getItemMeta();
-            applyChangesButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&lAPPLY CHANGES"));
+            applyChangesButtonMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&a&lAPPLY CHANGES"));
             applyChangesButton.setItemMeta(applyChangesButtonMeta);
             GUI.setItem(39, applyChangesButton);
         }
@@ -59,7 +61,7 @@ public class AppearanceChoiceGUI implements Listener {
             bookButtonMeta.addEnchant(Enchantment.LURE, 1, true);
             bookButtonMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
-        bookButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&b&lBOOK APPEARANCE"));
+        bookButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lBOOK APPEARANCE"));
         bookButton.setItemMeta(bookButtonMeta);
         GUI.setItem(20, bookButton);
 
@@ -70,7 +72,7 @@ public class AppearanceChoiceGUI implements Listener {
             chatButtonMeta.addEnchant(Enchantment.LURE, 1, true);
             chatButtonMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
-        chatButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&b&lCHAT APPEARANCE"));
+        chatButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lCHAT APPEARANCE"));
         chatButton.setItemMeta(chatButtonMeta);
         GUI.setItem(24, chatButton);
 
@@ -86,7 +88,7 @@ public class AppearanceChoiceGUI implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event){
         if(!(event.getWhoClicked() instanceof Player player)) return;
-        if(!event.getView().getTitle().equals(guiTitle)) return;
+        if(!event.getView().title().equals(guiTitle)) return;
 
         ItemStack clickedItem = event.getCurrentItem();
         if(clickedItem == null) return;
@@ -97,6 +99,7 @@ public class AppearanceChoiceGUI implements Listener {
 
         Sound clickSound = Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
+        assert clickSound != null;
 
         //If the player clicks on return button
         Material retButton = Material.RED_CONCRETE;
@@ -141,6 +144,8 @@ public class AppearanceChoiceGUI implements Listener {
             plugin.saveConfig();
 
             Sound savedChoice =  Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
+            assert savedChoice != null;
+
             player.playSound(player.getLocation(), savedChoice, 1f, 1.4f);
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aSaved appearance choice &l"+choice+"&a!"));
             setBooleansToFalse();

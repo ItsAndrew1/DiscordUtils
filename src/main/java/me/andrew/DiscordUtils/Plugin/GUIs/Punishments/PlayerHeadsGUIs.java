@@ -2,6 +2,8 @@
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -16,7 +18,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class PlayerHeadsGUIs implements Listener{
@@ -29,7 +30,7 @@ public class PlayerHeadsGUIs implements Listener{
 
     public void showGui(Player player, int page) throws SQLException {
         int inventorySize = 54;
-        String invTitle = "Select Player (page "+page+")";
+        Component invTitle = Component.text("Select Player (page "+page+")");
         Inventory gui = Bukkit.createInventory(null, inventorySize, invTitle);
 
         if(plugin.getDatabaseManager().getConnection() == null){
@@ -44,8 +45,8 @@ public class PlayerHeadsGUIs implements Listener{
         int endIndex = Math.min(startIndex + headsPerPage, players.length);
 
         //Setting the navigation buttons
-        if(page > 1) gui.setItem(48, createButton(Material.ARROW, ChatColor.RED + "◀ Previous Page"));
-        if(endIndex < players.length) gui.setItem(50, createButton(Material.ARROW, ChatColor.GREEN + "Next Page ▶"));
+        if(page > 1) gui.setItem(48, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&c◀ Previous Page")));
+        if(endIndex < players.length) gui.setItem(50, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&aNext Page ▶")));
 
         //Adding each player's skull
         for(int i = startIndex; i < endIndex; i++){
@@ -57,50 +58,50 @@ public class PlayerHeadsGUIs implements Listener{
             SkullMeta skullMeta = (SkullMeta) skull.getItemMeta();
 
             skullMeta.setOwningPlayer(targetPlayer);
-            skullMeta.setDisplayName(ChatColor.YELLOW + targetPlayer.getName());
+            skullMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&e"+targetPlayer.getName()));
 
             //Setting the lore
-            List<String> lore = new ArrayList<>();
-            String playerStatus;
+            List<Component> lore = new ArrayList<>();
+            Component playerStatus;
 
-            if(targetPlayer.isOnline()) playerStatus = ChatColor.translateAlternateColorCodes('&', "&aStatus: &a&lONLINE");
-            else playerStatus = ChatColor.translateAlternateColorCodes('&', "&aStatus: &c&lOFFLINE");
+            if(targetPlayer.isOnline()) playerStatus = LegacyComponentSerializer.legacyAmpersand().deserialize("&aStatus: &a&lONLINE");
+            else playerStatus = LegacyComponentSerializer.legacyAmpersand().deserialize("&aStatus: &c&lOFFLINE");
 
             int activePunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(targetPlayer.getUniqueId(), true);
             int inactivePunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(targetPlayer.getUniqueId(), false);
 
-            lore.add(" ");
-            lore.add(ChatColor.translateAlternateColorCodes('&', "&aActive Punishments: &c&l"+activePunishments));
-            lore.add(ChatColor.translateAlternateColorCodes('&', "&aExpired Punishments: &c&l"+inactivePunishments));
-            lore.add(" ");
+            lore.add(Component.text(" "));
+            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aActive Punishments: &c&l"+activePunishments));
+            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aExpired Punishments: &c&l"+inactivePunishments));
+            lore.add(Component.text(" "));
             lore.add(playerStatus);
 
-            skullMeta.setLore(lore);
+            skullMeta.lore(lore);
             skull.setItemMeta(skullMeta);
 
             gui.addItem(skull);
         }
 
         //Setting the search player button
-        gui.setItem(53, createButton(Material.OAK_SIGN, ChatColor.YELLOW + "Search Player"));
+        gui.setItem(53, createButton(Material.OAK_SIGN, LegacyComponentSerializer.legacyAmpersand().deserialize("&eSearch Player")));
 
         //Setting the exit button
-        gui.setItem(49, createButton(Material.RED_CONCRETE, ChatColor.translateAlternateColorCodes('&', "&c&lEXIT")));
+        gui.setItem(49, createButton(Material.RED_CONCRETE, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lEXIT")));
 
         //Setting decoration glass
         ItemStack decoGlass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta meta = decoGlass.getItemMeta();
-        meta.setDisplayName(" ");
+        meta.displayName(Component.text(" "));
         decoGlass.setItemMeta(meta);
         for(int i = 36; i<=44; i++) gui.setItem(i, decoGlass);
 
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, String title){
+    private ItemStack createButton(Material mat, Component title){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(title);
+        meta.displayName(title);
         item.setItemMeta(meta);
         return item;
     }
@@ -194,14 +195,14 @@ public class PlayerHeadsGUIs implements Listener{
             });
         }
 
-        //If the staff clicks on previous page button
-        if(meta.getDisplayName().contains(ChatColor.RED + "Previous")){
+        //If the staff clicks on next page button
+        if(meta.displayName().contains(Component.text("Next"))){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             showGui(player, getPageFromTitle(event.getView().getTitle())+1);
         }
 
-        //If the staff clicks on next page button
-        if(meta.getDisplayName().contains(ChatColor.GREEN + "Next")){
+        //If the staff clicks on previous page button
+        if(meta.displayName().contains(Component.text("Previous"))){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             showGui(player, getPageFromTitle(event.getView().getTitle())-1);
         }

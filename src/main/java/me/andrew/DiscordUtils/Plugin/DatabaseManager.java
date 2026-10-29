@@ -5,17 +5,14 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.DiscordBot.AppealState;
-import me.andrew.DiscordUtils.Plugin.GUIs.Punishments.PunishmentsFilter;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import java.io.File;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 
 //This class handles the database. It also has all the helper methods that I need
 public class DatabaseManager {

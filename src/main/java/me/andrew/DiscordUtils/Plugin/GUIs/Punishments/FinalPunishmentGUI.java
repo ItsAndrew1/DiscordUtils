@@ -7,14 +7,9 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentContext;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.User;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,10 +18,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.security.SecureRandom;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -34,11 +25,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class FinalPunishmentGUI implements Listener {
     private final DiscordUtils plugin;
-    private long expiredAt;
 
     public FinalPunishmentGUI(DiscordUtils plugin) {
         this.plugin = plugin;
@@ -46,25 +35,25 @@ public class FinalPunishmentGUI implements Listener {
 
     public void showGui(Player player){
         int invSize = 54;
-        String title = "Approve Punishment";
+        Component title = Component.text("Approve Punishment");
         Inventory gui = Bukkit.createInventory(player, invSize, title);
 
         AddingState state = plugin.getPunishmentsAddingStates().get(player.getUniqueId());
 
         //Return button
-        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, ChatColor.translateAlternateColorCodes('&', "&c&lRETURN"), null);
+        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"), null);
         gui.setItem(30, returnButton);
 
         //Approve Punishment button
         String clickedPlayerName = Bukkit.getOfflinePlayer(state.targetUUID).getName();
-        ItemStack approveButton = createButton(Material.GREEN_CONCRETE, ChatColor.translateAlternateColorCodes('&', "&a&lAPPROVE PUNISHMENT FOR &e"+clickedPlayerName), null);
+        ItemStack approveButton = createButton(Material.GREEN_CONCRETE, LegacyComponentSerializer.legacyAmpersand().deserialize("&a&lAPPROVE PUNISHMENT FOR &e"+clickedPlayerName), null);
         gui.setItem(32, approveButton);
 
         //Punishment Item
-        List<String> punishmentItemLore = new ArrayList<>();
+        List<Component> punishmentItemLore = new ArrayList<>();
         String staffName = player.getName();
         String reason = state.reason;
-        String scopeString = plugin.getChoosePunishScopeGUI().getStringScope(player);
+        String scopeString = getPunishmentColoredScope(state.scope);
         PunishmentType punishmentType = state.type;
 
         //Formatting created time
@@ -74,54 +63,41 @@ public class FinalPunishmentGUI implements Listener {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
         String issuedAt = time.format(formatter);
 
-        punishmentItemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Issued at &l"+issuedAt));
-        punishmentItemLore.add(" ");
-        punishmentItemLore.add(ChatColor.translateAlternateColorCodes('&', "&aScope: "+ scopeString));
-        punishmentItemLore.add(ChatColor.translateAlternateColorCodes('&', "&aStaff: &e"+ staffName));
-        punishmentItemLore.add(ChatColor.translateAlternateColorCodes('&', "&aReason: &e"+reason));
+        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Issued at &l"+issuedAt));
+        punishmentItemLore.add(Component.text(" "));
+        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aScope: "+ scopeString));
+        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aStaff: &e"+ staffName));
+        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aReason: &e"+reason));
 
-        //Adds the expiration date if the punishment is temporary and not a warning
-        if(punishmentType.toString().contains("TEMP") && !punishmentType.toString().contains("WARN")){
+        //Adds the expiration date if the punishment is temporary
+        if(!punishmentType.isPermanent()){
             long duration = state.duration;
-            expiredAt = created_at +duration;
+            long expiredAt = created_at + duration;
             Instant expireInstant = Instant.ofEpochMilli(expiredAt);
             LocalDateTime time2 = LocalDateTime.ofInstant(expireInstant, ZoneId.systemDefault());
             DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
             String expiresAt = time2.format(formatter2);
 
-            punishmentItemLore.add(" ");
-            punishmentItemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Expires at &l"+expiresAt));
-            punishmentItemLore.add(" ");
+            punishmentItemLore.add(Component.text(" "));
+            punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Expires at &l"+expiresAt));
+            punishmentItemLore.add(Component.text(" "));
         }
 
-        ItemStack punishmentItem = createButton(Material.OAK_SIGN, getPunishmentString(state.type), punishmentItemLore);
+        ItemStack punishmentItem = createButton(Material.OAK_SIGN, Component.text("&e&l"+state.type.getName()), punishmentItemLore);
         gui.setItem(22, punishmentItem);
 
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, String displayName, List<String> lore){
+    private ItemStack createButton(Material mat, Component displayName, List<Component> lore){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
 
-        if(displayName != null) meta.setDisplayName(displayName);
-        if(lore != null) meta.setLore(lore);
+        if(displayName != null) meta.displayName(displayName);
+        if(lore != null) meta.lore(lore);
 
         item.setItemMeta(meta);
         return item;
-    }
-    private String getPunishmentString(PunishmentType type){
-        return switch(type){
-            case KICK -> ChatColor.translateAlternateColorCodes('&', "&e&lKICK");
-            case PERM_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN");
-            case PERM_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN WARN");
-            case PERM_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE");
-            case PERM_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE WARN");
-            case TEMP_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN");
-            case TEMP_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN WARN");
-            case TEMP_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE");
-            case TEMP_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE WARN");
-        };
     }
 
     private String getPunishmentColoredScope(PunishmentScopes scope){
@@ -135,7 +111,7 @@ public class FinalPunishmentGUI implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent e) throws SQLException {
         if(!(e.getWhoClicked() instanceof Player player)) return;
-        if(!e.getView().getTitle().equals("Approve Punishment")) return;
+        if(!e.getView().title().equals(Component.text("Approve Punishment"))) return;
         e.setCancelled(true);
 
         ItemStack clickedItem = e.getCurrentItem();
@@ -174,9 +150,6 @@ public class FinalPunishmentGUI implements Listener {
                 return;
             }
 
-            //Creating the context for the punishment
-            PunishmentContext ctx = new PunishmentContext(plugin, player, state);
-
             //If the punishment is a kick
             if (punishmentType.equals(PunishmentType.KICK)) {
                 //Checking if the target player is online or not
@@ -190,14 +163,17 @@ public class FinalPunishmentGUI implements Listener {
                 }
             }
 
+            //Creating the context for the punishment
+            PunishmentContext ctx = new PunishmentContext(plugin, player, state);
+
             //Applying the punishment
             scope.applyPunishment(ctx, punishmentType);
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " " + getPunishmentString(punishmentType) + "&awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for " + clickedPlayerName + "&a!"));
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix + " &e&l"+ punishmentType.getName() + " &awith scope " + getPunishmentColoredScope(state.scope) + " &aapplied for " + clickedPlayerName + "&a!"));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
         }
 
         //Inserting the log (if they are toggled)
-        if(plugin.botFile().getConfig().getBoolean("use-logs")) new InsertLog(plugin, plugin.getDiscordBot(), state);
+        if(plugin.botFile().getConfig().getBoolean("use-logs", false)) new InsertLog(plugin, plugin.getDiscordBot(), state);
 
         //Removing the staff from the adding state map
         plugin.getPunishmentsAddingStates().remove(player.getUniqueId());

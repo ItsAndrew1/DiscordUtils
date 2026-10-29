@@ -1,12 +1,13 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import java.sql.SQLException;
 
 public enum PunishmentType{
-    PERM_BAN(true, false){
+    PERM_BAN(true, false, Material.NETHERITE_AXE){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermBan();
@@ -23,7 +24,7 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_BAN(false, false){
+    TEMP_BAN(false, false, Material.IRON_AXE){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyTempBan();
@@ -40,7 +41,7 @@ public enum PunishmentType{
         }
     },
 
-    PERM_BAN_WARN(true, true){
+    PERM_BAN_WARN(true, true, Material.NETHERITE_AXE){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermBanWarn();
@@ -57,7 +58,7 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_BAN_WARN(true, true){
+    TEMP_BAN_WARN(true, true, Material.IRON_AXE){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyTempBanWarn();
@@ -74,8 +75,8 @@ public enum PunishmentType{
         }
     },
 
-    KICK(true, false){
-        public void apply(PunishmentContext ctx) throws SQLException {
+    KICK(true, false, Material.LEATHER_BOOTS){
+        public void apply(PunishmentContext ctx) {
             ctx.applyKick();
         }
 
@@ -90,7 +91,7 @@ public enum PunishmentType{
         }
     },
 
-    PERM_MUTE(true, false){
+    PERM_MUTE(true, false, Material.SOUL_LANTERN){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermMuteTimeout();
@@ -107,9 +108,9 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_MUTE(false, false){
+    TEMP_MUTE(false, false, Material.LANTERN){
         @Override
-        public void apply(PunishmentContext ctx) throws SQLException {
+        public void apply(PunishmentContext ctx) {
             ctx.applyTempMuteTimeout();
         }
 
@@ -123,7 +124,7 @@ public enum PunishmentType{
             return "Temporary Mute/Timeout";
         }
     },
-    PERM_MUTE_WARN(true, true){
+    PERM_MUTE_WARN(true, true, Material.SOUL_LANTERN){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyPermMuteTimeoutWarn();
@@ -140,7 +141,7 @@ public enum PunishmentType{
         }
     },
 
-    TEMP_MUTE_WARN(true, true){
+    TEMP_MUTE_WARN(true, true, Material.LANTERN){
         @Override
         public void apply(PunishmentContext ctx) throws SQLException {
             ctx.applyTempMuteTimeoutWarn();
@@ -159,9 +160,11 @@ public enum PunishmentType{
 
     private final boolean permanent;
     private final boolean isWarning;
-    PunishmentType(boolean permanent, boolean isWarning){
+    private final Material material;
+    PunishmentType(boolean permanent, boolean isWarning, Material material){
         this.permanent = permanent;
         this.isWarning = isWarning;
+        this.material = material;
     }
 
     //Helper checks
@@ -170,6 +173,9 @@ public enum PunishmentType{
     }
     public boolean isWarning(){
         return isWarning;
+    }
+    public Material getMaterial(){
+        return material;
     }
 
     public abstract void apply(PunishmentContext ctx) throws SQLException;

@@ -17,7 +17,6 @@ import java.awt.*;
 import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -86,7 +85,7 @@ public class PunishmentContext {
         long expiresAt = 0;
 
         active = state.type != PunishmentType.KICK;
-        if(state.type.name().contains("TEMP")) expiresAt = System.currentTimeMillis() + state.duration;
+        if(!state.type.isPermanent()) expiresAt = System.currentTimeMillis() + state.duration;
 
         Punishment punishment = new Punishment(state.ID, state.targetUUID, state.type, state.scope, state.reason, state.staffIgn,
                 System.currentTimeMillis(), expiresAt, active, false, 0L, null);
@@ -160,7 +159,7 @@ public class PunishmentContext {
     }
 
     //Kicks
-    public void applyKick() throws SQLException {
+    public void applyKick() {
         switch(state.scope){
             case MINECRAFT -> {kickMinecraft(); insertPunishment();}
             case DISCORD ->  {kickDiscord(); insertPunishment();}
@@ -169,7 +168,7 @@ public class PunishmentContext {
     }
     private void kickMinecraft(){
        Bukkit.getScheduler().runTask(plugin, () -> {
-           String kickMessage = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.kick-message"));
+           String kickMessage = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("player-punishments-messages.kick-message", "&cYou have been kicked from this server.\\n\\n&7Scope: %scope%\\n&7Reason: &f%reason%"));
            ((Player) targetPlayer).kickPlayer(kickMessage
                    .replace("%scope%", getColoredStringScope(state))
                    .replace("%reason%", state.reason)
@@ -254,7 +253,7 @@ public class PunishmentContext {
             });
         }
     }
-    private void permBanDC() throws SQLException {
+    private void permBanDC() {
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
         //Attempts to send a DM to the target user about the perm ban
@@ -375,7 +374,7 @@ public class PunishmentContext {
             });
         }
     }
-    private void tempBanDC() throws SQLException {
+    private void tempBanDC() {
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
         //Attempts to send the target user a DM
@@ -459,7 +458,7 @@ public class PunishmentContext {
             });
         }
     }
-    private void permTimeoutDC() throws SQLException {
+    private void permTimeoutDC() {
         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
 
         //Attempts to send the target user a DM
@@ -525,7 +524,7 @@ public class PunishmentContext {
     }
 
     //Temporary Mutes/Timeouts
-    public void applyTempMuteTimeout() throws SQLException {
+    public void applyTempMuteTimeout() {
         state.ID = createId();
 
         switch(state.scope){

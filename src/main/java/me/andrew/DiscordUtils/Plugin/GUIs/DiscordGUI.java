@@ -4,6 +4,8 @@ package me.andrew.DiscordUtils.Plugin.GUIs;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -36,7 +38,7 @@ public class DiscordGUI implements Listener {
         int guiSize = guiRows * 9;
 
         //Creating the GUI
-        Inventory gui = Bukkit.createInventory(null, guiSize, plugin.getGuiTitle());
+        Inventory gui = Bukkit.createInventory(null, guiSize, Component.text(plugin.getConfig().getString("discord-gui.title", "Get the discord link!")));
 
         //Displays the decorations if they are toggled
         boolean toggleDecorations = plugin.getConfig().getBoolean("discord-gui.decorations.toggle", true);
@@ -66,13 +68,13 @@ public class DiscordGUI implements Listener {
                     if(i == iiSlot) continue;
                 }
 
-                diMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', diDisplayName));
+                diMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(diDisplayName));
                 decoItem.setItemMeta(diMeta);
                 gui.setItem(i, decoItem);
             }
 
             for(int i = 45; i<=53; i++){
-                diMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', diDisplayName));
+                diMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(diDisplayName));
                 decoItem.setItemMeta(diMeta);
                 gui.setItem(i, decoItem);
             }
@@ -152,7 +154,7 @@ public class DiscordGUI implements Listener {
         }
 
         //Gets the sound from config
-        Sound openGuiSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("open-discord-gui-sound").toLowerCase()));
+        Sound openGuiSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("open-discord-gui-sound", "entity.experience_orb.pickup").toLowerCase()));
         float ogsVolume = plugin.getConfig().getInt("odgs-volume", 1);
         float ogsPitch = plugin.getConfig().getInt("odgs-pitch", 1);
 
@@ -190,7 +192,7 @@ public class DiscordGUI implements Listener {
         SkullMeta headMeta = (SkullMeta) head.getItemMeta();
 
         //Sets the display name
-        headMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', displayName));
+        headMeta.displayName(LegacyComponentSerializer.legacySection().deserialize(displayName));
 
         //Sets the lore (if there is any)
         List<String> discordItemLore = plugin.getConfig().getStringList("discord-gui.discord-item.lore");
@@ -234,7 +236,7 @@ public class DiscordGUI implements Listener {
         //If the player clicks on exit-item
         Material exitItem = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material").toUpperCase());
         if(clickedItem.getType().equals(exitItem)){
-            Sound exitItemSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("exit-item-sound").toLowerCase()));
+            Sound exitItemSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("exit-item-sound", "").toLowerCase()));
             float eisVolume = plugin.getConfig().getInt("eis-volume", 1);
             float eisPitch = plugin.getConfig().getInt("eis-pitch", 1);
 

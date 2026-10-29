@@ -3,6 +3,8 @@ package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Caching.Punishment;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -35,7 +37,7 @@ public class PunishmentsGUI implements Listener{
         this.plugin = plugin;
     }
 
-    public void showGui(Player player, int page, boolean self) throws SQLException {
+    public void showGui(Player player, int page, boolean self) {
         if(!selfMap.containsKey(player.getUniqueId())) selfMap.put(player.getUniqueId(), self);
 
         int invSize = 54;
@@ -45,16 +47,16 @@ public class PunishmentsGUI implements Listener{
         //Getting the main data
         String clickPlayerName;
         UUID playerUUID;
-        String guiTitle;
+        Component guiTitle;
         if(selfMap.get(player.getUniqueId())){
             clickPlayerName = player.getName();
             playerUUID = player.getUniqueId();
-            guiTitle = "Your History (Page "+page+")";
+            guiTitle = Component.text("Your History (Page "+page+")");
         }
         else{
             clickPlayerName = plugin.getPlayerHeadsGUIs().getClickedPlayer().getName();
             playerUUID = plugin.getPlayerHeadsGUIs().getClickedPlayer().getUniqueId();
-            guiTitle = clickPlayerName+"'s History (Page "+page+")";
+            guiTitle = Component.text(clickPlayerName+"'s History (Page "+page+")");
         }
 
         Inventory gui = Bukkit.createInventory(null, invSize, guiTitle);
@@ -66,30 +68,30 @@ public class PunishmentsGUI implements Listener{
         if(selfMap.get(player.getUniqueId())) sphMeta.setOwningPlayer(player);
         else sphMeta.setOwningPlayer(plugin.getPlayerHeadsGUIs().getClickedPlayer());
 
-        sphMeta.setDisplayName(ChatColor.YELLOW + clickPlayerName);
+        sphMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&e"+clickPlayerName));
         selectedPlayersHead.setItemMeta(sphMeta);
         gui.setItem(4, selectedPlayersHead);
 
         //Decorations
         ItemStack decoGlass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta decoGlassMeta = decoGlass.getItemMeta();
-        decoGlassMeta.setDisplayName(" ");
+        decoGlassMeta.displayName(Component.text(" "));
         decoGlass.setItemMeta(decoGlassMeta);
         for(int i = 9; i<=17; i++) gui.setItem(i, decoGlass);
 
         //Return/Exit button
         ItemStack returnButton = new ItemStack(selfMap.get(player.getUniqueId()) ? Material.RED_CONCRETE : Material.SPECTRAL_ARROW);
         ItemMeta returnButtonMeta = returnButton.getItemMeta();
-        returnButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', selfMap.get(player.getUniqueId()) ? "&c&lEXIT" : "&c&lRETURN"));
+        returnButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(selfMap.get(player.getUniqueId()) ? "&c&lEXIT" : "&c&lRETURN"));
         returnButton.setItemMeta(returnButtonMeta);
         gui.setItem(49, returnButton);
 
         //Setting the punishments
-        if(!plugin.getPlayerPunishmentDataCache().playerHasPunishments(playerUUID)){
+        if(!plugin.getPlayerPunishmentDataCache().playerHasActivePunishments(playerUUID)){
             //No punishments item
             ItemStack noPunish = new ItemStack(Material.BARRIER);
             ItemMeta noPunishMeta = noPunish.getItemMeta();
-            noPunishMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&cPlayer &e"+clickPlayerName+" &chas no punishments yet!"));
+            noPunishMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&cPlayer &e"+clickPlayerName+" &chas no punishments yet!"));
             noPunish.setItemMeta(noPunishMeta);
             gui.setItem(31, noPunish);
         }
@@ -102,16 +104,16 @@ public class PunishmentsGUI implements Listener{
                     ItemStack filterAllButton =  new ItemStack(Material.YELLOW_DYE);
                     ItemMeta filterAllButtonMeta = filterAllButton.getItemMeta();
 
-                    filterAllButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&e&lFiltering All Punishments"));
-                    List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&8Click to change!"));
-                    lore.add(" ");
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&a▶  &e&lALL PUNISHMENTS"));
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "    &a&lACTIVE PUNISHMENTS"));
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "    &c&lEXPIRED PUNISHMENTS"));
-                    lore.add(" ");
+                    filterAllButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&e&lFiltering All Punishments"));
+                    List<Component> lore = new ArrayList<>();
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Click to change!"));
+                    lore.add(Component.text(" "));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&a▶  &e&lALL PUNISHMENTS"));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("    &a&lACTIVE PUNISHMENTS"));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("    &c&lEXPIRED PUNISHMENTS"));
+                    lore.add(Component.text(" "));
 
-                    filterAllButtonMeta.setLore(lore);
+                    filterAllButtonMeta.lore(lore);
                     filterAllButton.setItemMeta(filterAllButtonMeta);
                     gui.setItem(53,  filterAllButton);
                 }
@@ -119,16 +121,16 @@ public class PunishmentsGUI implements Listener{
                     ItemStack filterActiveButton =  new ItemStack(Material.GREEN_DYE);
                     ItemMeta filterActiveButtonMeta = filterActiveButton.getItemMeta();
 
-                    filterActiveButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&lFiltering Active Punishments"));
-                    List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&8Click to change!"));
-                    lore.add(" ");
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "    &e&lALL PUNISHMENTS"));
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&a▶  &a&lACTIVE PUNISHMENTS"));
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "    &c&lEXPIRED PUNISHMENTS"));
-                    lore.add(" ");
+                    filterActiveButtonMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&a&lFiltering Active Punishments"));
+                    List<Component> lore = new ArrayList<>();
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Click to change!"));
+                    lore.add(Component.text(" "));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("    &e&lALL PUNISHMENTS"));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&a▶  &a&lACTIVE PUNISHMENTS"));
+                    lore.add(LegacyComponentSerializer.legacySection().deserialize("    &c&lEXPIRED PUNISHMENTS"));
+                    lore.add(Component.text(" "));
 
-                    filterActiveButtonMeta.setLore(lore);
+                    filterActiveButtonMeta.lore(lore);
                     filterActiveButton.setItemMeta(filterActiveButtonMeta);
                     gui.setItem(53, filterActiveButton);
                 }
@@ -136,16 +138,16 @@ public class PunishmentsGUI implements Listener{
                     ItemStack filterExpiredButton =  new ItemStack(Material.RED_DYE);
                     ItemMeta filterExpiredButtonMeta = filterExpiredButton.getItemMeta();
 
-                    filterExpiredButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lFiltering Expired Punishments"));
-                    List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&8Click to change!"));
-                    lore.add(" ");
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "    &e&lALL PUNISHMENTS"));
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "    &a&lACTIVE PUNISHMENTS"));
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&a▶  &c&lEXPIRED PUNISHMENTS"));
-                    lore.add(" ");
+                    filterExpiredButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lFiltering Expired Punishments"));
+                    List<Component> lore = new ArrayList<>();
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Click to change!"));
+                    lore.add(Component.text(" "));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("    &e&lALL PUNISHMENTS"));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("    &a&lACTIVE PUNISHMENTS"));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&a▶  &c&lEXPIRED PUNISHMENTS"));
+                    lore.add(Component.text(" "));
 
-                    filterExpiredButtonMeta.setLore(lore);
+                    filterExpiredButtonMeta.lore(lore);
                     filterExpiredButton.setItemMeta(filterExpiredButtonMeta);
                     gui.setItem(53, filterExpiredButton);
                 }
@@ -164,13 +166,13 @@ public class PunishmentsGUI implements Listener{
             if(page > 1){
                 ItemStack previousPageButton = new ItemStack(Material.ARROW);
                 ItemMeta previousPageButtonItemMeta = previousPageButton.getItemMeta();
-                previousPageButtonItemMeta.setDisplayName(ChatColor.RED + "◀ Previous Page");
+                previousPageButtonItemMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&c◀ Previous Page"));
                 gui.setItem(48, previousPageButton);
             }
             if(endIndex < playerPunishments.size()){
                 ItemStack nextPageButton = new ItemStack(Material.ARROW);
                 ItemMeta nextPageButtonItemMeta = nextPageButton.getItemMeta();
-                nextPageButtonItemMeta.setDisplayName(ChatColor.GREEN + "Next Page ▶");
+                nextPageButtonItemMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&aNext Page ▶"));
                 gui.setItem(50, nextPageButton);
             }
         }
@@ -185,31 +187,10 @@ public class PunishmentsGUI implements Listener{
     }
 
     private ItemStack createPunishmentItem(Punishment p){
-        //Setting the material based on the punishment type
-        Material pmMat = switch(p.punishmentType()){
-            case PERM_BAN, PERM_BAN_WARN -> Material.NETHERITE_AXE;
-            case TEMP_BAN, TEMP_BAN_WARN -> Material.IRON_AXE;
-            case KICK -> Material.LEATHER_BOOTS;
-            case PERM_MUTE, PERM_MUTE_WARN -> Material.SOUL_LANTERN;
-            case TEMP_MUTE, TEMP_MUTE_WARN -> Material.LANTERN;
-        };
-
-        ItemStack punishmentItem = new ItemStack(pmMat);
+        ItemStack punishmentItem = new ItemStack(p.punishmentType().getMaterial());
         ItemMeta punishmentItemMeta = punishmentItem.getItemMeta();
 
-        //Setting the display name based on the punishment type
-        String displayName = switch(p.punishmentType()){
-            case PERM_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN");
-            case PERM_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT BAN WARN");
-            case TEMP_BAN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN");
-            case TEMP_BAN_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY BAN WARN");
-            case KICK -> ChatColor.translateAlternateColorCodes('&', "&e&lKICK");
-            case PERM_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE");
-            case PERM_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lPERMANENT MUTE WARN");
-            case TEMP_MUTE -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE");
-            case TEMP_MUTE_WARN -> ChatColor.translateAlternateColorCodes('&', "&e&lTEMPORARY MUTE WARN");
-        };
-        punishmentItemMeta.setDisplayName(displayName);
+        punishmentItemMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&e&l"+p.punishmentType().getName()));
 
         //Formatting the time when the punishment was created
         long createdAt = p.createdAt();
@@ -246,31 +227,31 @@ public class PunishmentsGUI implements Listener{
         }
 
         //Setting the lore
-        List<String> itemLore = new ArrayList<>();
-        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Issued at: &l"+formatedTime));
-        itemLore.add(" ");
-        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aScope: "+punishmentScope));
-        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aStaff: &e&l"+p.staff()));
+        List<Component> itemLore = new ArrayList<>();
+        itemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Issued at: &l"+formatedTime));
+        itemLore.add(Component.text(" "));
+        itemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aScope: "+punishmentScope));
+        itemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aStaff: &e&l"+p.staff()));
 
         String reason = p.reason();
         reason = plugin.parsePP(Bukkit.getPlayer(p.uuid()), reason);
-        itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aReason: &e"+reason));
-        itemLore.add(" ");
+        itemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aReason: &e"+reason));
+        itemLore.add(Component.text(" "));
 
         //Setting the status
-        String status;
-        if(p.removed()) status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &4&lREMOVED");
-        else if(p.active()) status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &lACTIVE");
-        else status = ChatColor.translateAlternateColorCodes('&', "&aStatus: &c&lEXPIRED");
+        Component status;
+        if(p.removed()) status = LegacyComponentSerializer.legacyAmpersand().deserialize("&aStatus: &4&lREMOVED");
+        else if(p.active()) status = LegacyComponentSerializer.legacyAmpersand().deserialize("&aStatus: &lACTIVE");
+        else status = LegacyComponentSerializer.legacyAmpersand().deserialize("&aStatus: &c&lEXPIRED");
         itemLore.add(status);
 
-        if(p.removed()) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Removed at &l"+removedFormatedTime));
+        if(p.removed()) itemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Removed at &l"+removedFormatedTime));
         if(p.active() && !p.punishmentType().toString().contains("WARN")){
-            itemLore.add(ChatColor.translateAlternateColorCodes('&', "&aID: &8"+p.id()));
-            if(!isPermanent(p)) itemLore.add(ChatColor.translateAlternateColorCodes('&', "&8Expires at &l"+expireFormatedTime));
+            itemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aID: &8"+p.id()));
+            if(!isPermanent(p)) itemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Expires at &l"+expireFormatedTime));
         }
 
-        punishmentItemMeta.setLore(itemLore);
+        punishmentItemMeta.lore(itemLore);
         punishmentItem.setItemMeta(punishmentItemMeta);
         return punishmentItem;
     }
@@ -315,13 +296,13 @@ public class PunishmentsGUI implements Listener{
         }
 
         //If the player clicks on next page
-        if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&caNext Page"))){
+        if(clickedMeta.getDisplayName().contains("Next Page")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             showGui(player, getPageNrFromTitle(event.getView().getTitle()) + 1, selfMap.get(player.getUniqueId()));
         }
 
         //If the player clicks on previous page
-        if(clickedMeta.getDisplayName().contains(ChatColor.translateAlternateColorCodes('&', "&cPrevious Page"))){
+        if(clickedMeta.getDisplayName().contains("Previous Page")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             showGui(player, getPageNrFromTitle(event.getView().getTitle()) - 1, selfMap.get(player.getUniqueId()));
         }
