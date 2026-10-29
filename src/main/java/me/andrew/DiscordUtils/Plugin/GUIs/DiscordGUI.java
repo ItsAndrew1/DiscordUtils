@@ -234,9 +234,9 @@ public class DiscordGUI implements Listener {
         if(clickedMeta == null) return;
 
         //If the player clicks on exit-item
-        Material exitItem = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material").toUpperCase());
+        Material exitItem = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material", "red_concrete").toUpperCase());
         if(clickedItem.getType().equals(exitItem)){
-            Sound exitItemSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("exit-item-sound", "").toLowerCase()));
+            Sound exitItemSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("exit-item-sound", "ui.button.click").toLowerCase()));
             float eisVolume = plugin.getConfig().getInt("eis-volume", 1);
             float eisPitch = plugin.getConfig().getInt("eis-pitch", 1);
 

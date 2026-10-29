@@ -5,10 +5,7 @@ import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Caching.Punishment;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,6 +16,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.sql.SQLException;
 import java.time.Instant;
@@ -32,9 +30,11 @@ public class PunishmentsGUI implements Listener{
     private final DiscordUtils plugin;
     private final Map<UUID, PunishmentsFilter> filters = new HashMap<>();
     private final Map<UUID, Boolean> selfMap = new HashMap<>();
+    private final NamespacedKey container;
 
     public PunishmentsGUI(DiscordUtils plugin){
         this.plugin = plugin;
+        this.container = new NamespacedKey(plugin, "NextPrevious");
     }
 
     public void showGui(Player player, int page, boolean self) {
@@ -87,7 +87,7 @@ public class PunishmentsGUI implements Listener{
         gui.setItem(49, returnButton);
 
         //Setting the punishments
-        if(!plugin.getPlayerPunishmentDataCache().playerHasActivePunishments(playerUUID)){
+        if(!plugin.getPlayerPunishmentDataCache().playerHasPunishments(playerUUID)){
             //No punishments item
             ItemStack noPunish = new ItemStack(Material.BARRIER);
             ItemMeta noPunishMeta = noPunish.getItemMeta();
@@ -166,12 +166,14 @@ public class PunishmentsGUI implements Listener{
             if(page > 1){
                 ItemStack previousPageButton = new ItemStack(Material.ARROW);
                 ItemMeta previousPageButtonItemMeta = previousPageButton.getItemMeta();
+                previousPageButtonItemMeta.getPersistentDataContainer().set(container, PersistentDataType.STRING, "previous");
                 previousPageButtonItemMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&c◀ Previous Page"));
                 gui.setItem(48, previousPageButton);
             }
             if(endIndex < playerPunishments.size()){
                 ItemStack nextPageButton = new ItemStack(Material.ARROW);
                 ItemMeta nextPageButtonItemMeta = nextPageButton.getItemMeta();
+                nextPageButtonItemMeta.getPersistentDataContainer().set(container, PersistentDataType.STRING, "next");
                 nextPageButtonItemMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&aNext Page ▶"));
                 gui.setItem(50, nextPageButton);
             }
@@ -295,18 +297,6 @@ public class PunishmentsGUI implements Listener{
             player.closeInventory();
         }
 
-        //If the player clicks on next page
-        if(clickedMeta.getDisplayName().contains("Next Page")){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            showGui(player, getPageNrFromTitle(event.getView().getTitle()) + 1, selfMap.get(player.getUniqueId()));
-        }
-
-        //If the player clicks on previous page
-        if(clickedMeta.getDisplayName().contains("Previous Page")){
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-            showGui(player, getPageNrFromTitle(event.getView().getTitle()) - 1, selfMap.get(player.getUniqueId()));
-        }
-
         //If the player clicks on the filtering buttons
         if(clickedMaterial.equals(Material.YELLOW_DYE)){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
@@ -322,6 +312,21 @@ public class PunishmentsGUI implements Listener{
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             filters.put(player.getUniqueId(), PunishmentsFilter.ALL);
             showGui(player, 1, selfMap.get(player.getUniqueId()));
+        }
+
+        String clickedID = clickedMeta.getPersistentDataContainer().get(container, PersistentDataType.STRING);
+        if(clickedID == null) return;
+
+        //If the player clicks on next page
+        if(clickedID.equals("next")){
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+            showGui(player, getPageNrFromTitle(event.getView().getTitle()) + 1, selfMap.get(player.getUniqueId()));
+        }
+
+        //If the player clicks on previous page
+        if(clickedID.equals("previous")){
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+            showGui(player, getPageNrFromTitle(event.getView().getTitle()) - 1, selfMap.get(player.getUniqueId()));
         }
     }
 }

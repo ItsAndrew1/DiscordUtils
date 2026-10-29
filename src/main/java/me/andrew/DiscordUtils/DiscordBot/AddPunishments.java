@@ -56,7 +56,8 @@ public class AddPunishments extends ListenerAdapter{
                 null,
                 null,
                 0,
-                System.currentTimeMillis()
+                System.currentTimeMillis(),
+                AppealState.NO_APPEAL
         );
 
         //Attaching each user the state (into a map)

@@ -41,12 +41,12 @@ public class FinalPunishmentGUI implements Listener {
         AddingState state = plugin.getPunishmentsAddingStates().get(player.getUniqueId());
 
         //Return button
-        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"), null);
+        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, "&c&lRETURN", null);
         gui.setItem(30, returnButton);
 
         //Approve Punishment button
         String clickedPlayerName = Bukkit.getOfflinePlayer(state.targetUUID).getName();
-        ItemStack approveButton = createButton(Material.GREEN_CONCRETE, LegacyComponentSerializer.legacyAmpersand().deserialize("&a&lAPPROVE PUNISHMENT FOR &e"+clickedPlayerName), null);
+        ItemStack approveButton = createButton(Material.GREEN_CONCRETE, "&a&lAPPROVE PUNISHMENT FOR &e"+clickedPlayerName, null);
         gui.setItem(32, approveButton);
 
         //Punishment Item
@@ -83,17 +83,17 @@ public class FinalPunishmentGUI implements Listener {
             punishmentItemLore.add(Component.text(" "));
         }
 
-        ItemStack punishmentItem = createButton(Material.OAK_SIGN, Component.text("&e&l"+state.type.getName()), punishmentItemLore);
+        ItemStack punishmentItem = createButton(Material.OAK_SIGN, "&e&l"+state.type.getName(), punishmentItemLore);
         gui.setItem(22, punishmentItem);
 
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, Component displayName, List<Component> lore){
+    private ItemStack createButton(Material mat, String displayName, List<Component> lore){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
 
-        if(displayName != null) meta.displayName(displayName);
+        if(displayName != null) meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(displayName));
         if(lore != null) meta.lore(lore);
 
         item.setItemMeta(meta);

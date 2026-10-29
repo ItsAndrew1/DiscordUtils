@@ -60,6 +60,11 @@ public class PlayerPunishmentDataCache {
         return punishments != null && punishments.stream().anyMatch(Punishment::active);
     }
 
+    public boolean playerHasPunishments (UUID playerUUID){
+        List<Punishment> punishments = mainCache.get(playerUUID);
+        return punishments != null && !punishments.isEmpty();
+    }
+
     public int getNrOfPunishments(UUID playerUUID, boolean active){
         int count = 0;
         List<Punishment> punishments = mainCache.get(playerUUID);

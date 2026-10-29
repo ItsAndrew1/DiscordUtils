@@ -51,7 +51,7 @@ public class CheckPlayerBanMute implements Listener{
         }
 
         //Check if the player is temporarily banned (with scope minecraft/global)
-        Punishment tempBan = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.PERM_BAN);
+        Punishment tempBan = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.TEMP_BAN);
         if(tempBan != null && (tempBan.scope() == PunishmentScopes.MINECRAFT || tempBan.scope() == PunishmentScopes.GLOBAL)){
             if(isPunishmentExpired(tempBan)){
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {

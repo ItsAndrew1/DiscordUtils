@@ -152,7 +152,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 try{
                     for(UUID uuid : playerPunishmentsCache.getMainCache().keySet()){
                         CopyOnWriteArrayList<Punishment> playerPunishments = playerPunishmentsCache.getMainCache().get(uuid);
-                        if(playerPunishments == null || !playerPunishmentsCache.playerHasActivePunishments(uuid)) continue;
+                        if(playerPunishments == null || !playerHasActivePunishments(uuid)) continue;
 
                         for(Punishment p : playerPunishments){
                             if(p.expiresAt() <= System.currentTimeMillis() && p.active() && p.expiresAt() != 0){
@@ -403,11 +403,10 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     //Method for getting a list of all Punishments
     private CopyOnWriteArrayList<Punishment> getAllPunishments(UUID playerUUID) throws SQLException{
         CopyOnWriteArrayList<Punishment> allPunishments = new CopyOnWriteArrayList<>();
-        String sql = "SELECT * FROM punishments";
-        if(playerUUID != null) sql += " WHERE uuid = ?";
+        String sql = "SELECT * FROM punishments WHERE uuid = ?";
 
         try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-            if(playerUUID != null) ps.setString(1, playerUUID.toString());
+            ps.setString(1, playerUUID.toString());
 
             try(ResultSet rs = ps.executeQuery()){
                 while(rs.next()){
@@ -480,6 +479,11 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         if(seconds > 0 || sb.isEmpty()) sb.append(seconds).append("s");
 
         return sb.toString().trim();
+    }
+
+    private boolean playerHasActivePunishments(UUID playerUUID){
+        List<Punishment> punishments = playerPunishmentsCache.getMainCache().get(playerUUID);
+        return punishments != null && punishments.stream().anyMatch(Punishment::active);
     }
 
     //Message that runs on the first setup

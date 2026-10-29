@@ -20,6 +20,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
@@ -30,9 +31,11 @@ import java.util.regex.Pattern;
 
 public class ChoosePunishScopeGUI implements Listener {
     private final DiscordUtils plugin;
+    private final NamespacedKey dataContainer;
 
     public ChoosePunishScopeGUI(DiscordUtils plugin) {
         this.plugin = plugin;
+        this.dataContainer = new NamespacedKey(plugin, "Scope");
     }
 
     public void showGui(Player player){
@@ -41,34 +44,34 @@ public class ChoosePunishScopeGUI implements Listener {
         Inventory gui = Bukkit.createInventory(player, invSize, title);
 
         //Return button
-        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacySection().deserialize("&c&lRETURN"), null, null);
+        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"), null, null, null);
         gui.setItem(40, returnButton);
 
         //Discord Scope button
         List<Component> discordButtonLore = new ArrayList<>();
         discordButtonLore.add(Component.text(" "));
         discordButtonLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&eThe punishment will take place only in the &ldiscord server&e."));
-        ItemStack discordButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lDISCORD SCOPE"), discordButtonLore ,"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19");
+        ItemStack discordButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lDISCORD SCOPE"), discordButtonLore ,"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19", "discord");
         gui.setItem(20,  discordButton);
 
         //Minecraft Scope button
         List<Component> mcButtonLore = new ArrayList<>();
         mcButtonLore.add(Component.text(" "));
         mcButtonLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&eThe punishment will take place only in the &lminecraft server&e."));
-        ItemStack minecraftButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&2&LMINECRAFT SCOPE"), mcButtonLore,"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjFiNjM1YmM5MmRkMjAwMTFkNmU3ZDAxMjU3ZTZlYTczN2I0OWZiN2RlOTQxZDNiYmQxODc3MTA0ZmM1ZWIxZSJ9fX0=");
+        ItemStack minecraftButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&2&LMINECRAFT SCOPE"), mcButtonLore,"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjFiNjM1YmM5MmRkMjAwMTFkNmU3ZDAxMjU3ZTZlYTczN2I0OWZiN2RlOTQxZDNiYmQxODc3MTA0ZmM1ZWIxZSJ9fX0=", "minecraft");
         gui.setItem(22, minecraftButton);
 
         //Global Scope button
         List<Component> globalButtonLore = new ArrayList<>();
         globalButtonLore.add(Component.text(" "));
         globalButtonLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&eThe punishment will take place in both &lminecraft &eand &ldiscord server&e."));
-        ItemStack globalButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&6&lGLOBAL SCOPE"), globalButtonLore, "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTU3N2M0ZGUxZjUxYTcwNzIyMDIzZTg1NmI1NDNjZDU3MGYxZDBlZTZiOWQxNjdiNTkwMjhjZTFiYzkyZTQ1OCJ9fX0=");
+        ItemStack globalButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&6&lGLOBAL SCOPE"), globalButtonLore, "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTU3N2M0ZGUxZjUxYTcwNzIyMDIzZTg1NmI1NDNjZDU3MGYxZDBlZTZiOWQxNjdiNTkwMjhjZTFiYzkyZTQ1OCJ9fX0=", "global");
         gui.setItem(24, globalButton);
 
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, Component displayName, List<Component> lore, String customHeadValue){
+    private ItemStack createButton(Material mat, Component displayName, List<Component> lore, String customHeadValue, String ID){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
 
@@ -77,6 +80,9 @@ public class ChoosePunishScopeGUI implements Listener {
             SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
             skullMeta.displayName(displayName);
             if(lore != null) skullMeta.lore(lore);
+
+            if(ID != null) skullMeta.getPersistentDataContainer().set(dataContainer, PersistentDataType.STRING, ID);
+
             PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
             profile.setProperty(new ProfileProperty("textures", customHeadValue));
             skullMeta.setPlayerProfile(profile);
@@ -87,13 +93,14 @@ public class ChoosePunishScopeGUI implements Listener {
 
         meta.displayName(displayName);
         if(lore != null) meta.lore(lore);
-        item.setItemMeta(meta);
 
         item.setItemMeta(meta);
         return item;
     }
 
     private void checkForWarns(Player staff, OfflinePlayer targetPlayer, AddingState state) {
+        staff.playSound(staff.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
+
         PunishmentType type = state.type;
         long currentNrOfWarns = getNrOfWarns(targetPlayer.getUniqueId(), type, state.scope);
         long designatedNrWarns = plugin.getConfig().getLong("warns-amount");
@@ -183,10 +190,13 @@ public class ChoosePunishScopeGUI implements Listener {
             return;
         }
 
+        String clickedID = clickedMeta.getPersistentDataContainer().get(dataContainer, PersistentDataType.STRING);
+        if(clickedID == null) return;
+
         OfflinePlayer targetPlayer =  plugin.getPlayerHeadsGUIs().getClickedPlayer();
 
         //If the player clicks on discord scope button
-        if(clickedMeta.displayName().contains(Component.text("&9&lDISCORD"))){
+        if(clickedID.equals("discord")){
             //Checking if the bot is configured
             if(!isBotConfigured()) {
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
@@ -198,10 +208,10 @@ public class ChoosePunishScopeGUI implements Listener {
         }
 
         //If the player clicks on minecraft scope button
-        if(clickedMeta.displayName().contains(Component.text("&2&lMINECRAFT"))) state.scope = PunishmentScopes.MINECRAFT;
+        if(clickedID.equals("minecraft")) state.scope = PunishmentScopes.MINECRAFT;
 
         //If the player clicks on global scope button
-        if(clickedMeta.displayName().contains(Component.text("&6&lGLOBAL"))) {
+        if(clickedID.equals("global")) {
             if(!isBotConfigured()) {
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThe bot is not configured. Please configure it in the &ebotconfig.yml&c file."));

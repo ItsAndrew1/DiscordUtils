@@ -1,6 +1,8 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
+import me.andrew.DiscordUtils.DiscordBot.AppealState;
+
 import java.util.UUID;
 
 public class AddingState {
@@ -12,8 +14,9 @@ public class AddingState {
     public String reason;
     public long duration;
     public long lastInteraction;
+    public AppealState appealState;
 
-    public AddingState(String ID, UUID targetUUID, String staffIgn, PunishmentType type, PunishmentScopes scope, String reason, long duration,  long lastInteraction) {
+    public AddingState(String ID, UUID targetUUID, String staffIgn, PunishmentType type, PunishmentScopes scope, String reason, long duration,  long lastInteraction, AppealState appealState) {
         this.ID = ID;
         this.targetUUID = targetUUID;
         this.staffIgn = staffIgn;
@@ -22,5 +25,6 @@ public class AddingState {
         this.reason = reason;
         this.duration = duration;
         this.lastInteraction = lastInteraction;
+        this.appealState = appealState;
     }
 }

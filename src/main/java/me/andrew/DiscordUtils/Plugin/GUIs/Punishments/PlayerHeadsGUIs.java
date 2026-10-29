@@ -14,30 +14,26 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PlayerHeadsGUIs implements Listener{
     private final DiscordUtils plugin;
     private OfflinePlayer clickedPlayer;
+    private final NamespacedKey container;
 
     public PlayerHeadsGUIs(DiscordUtils plugin) {
         this.plugin = plugin;
+        this.container = new NamespacedKey(plugin, "PlayerHeadsGUIs");
     }
 
-    public void showGui(Player player, int page) throws SQLException {
+    public void showGui(Player player, int page) {
         int inventorySize = 54;
         Component invTitle = Component.text("Select Player (page "+page+")");
         Inventory gui = Bukkit.createInventory(null, inventorySize, invTitle);
-
-        if(plugin.getDatabaseManager().getConnection() == null){
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cDatabase is not connected! Set it up first to access this menu."));
-            player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
-            return;
-        }
 
         OfflinePlayer[] players = Bukkit.getOfflinePlayers();
         int headsPerPage = 35;
@@ -45,8 +41,8 @@ public class PlayerHeadsGUIs implements Listener{
         int endIndex = Math.min(startIndex + headsPerPage, players.length);
 
         //Setting the navigation buttons
-        if(page > 1) gui.setItem(48, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&c◀ Previous Page")));
-        if(endIndex < players.length) gui.setItem(50, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&aNext Page ▶")));
+        if(page > 1) gui.setItem(48, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&c◀ Previous Page"), "Previous"));
+        if(endIndex < players.length) gui.setItem(50, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&aNext Page ▶"), "Next"));
 
         //Adding each player's skull
         for(int i = startIndex; i < endIndex; i++){
@@ -83,10 +79,10 @@ public class PlayerHeadsGUIs implements Listener{
         }
 
         //Setting the search player button
-        gui.setItem(53, createButton(Material.OAK_SIGN, LegacyComponentSerializer.legacyAmpersand().deserialize("&eSearch Player")));
+        gui.setItem(53, createButton(Material.OAK_SIGN, LegacyComponentSerializer.legacyAmpersand().deserialize("&eSearch Player"), null));
 
         //Setting the exit button
-        gui.setItem(49, createButton(Material.RED_CONCRETE, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lEXIT")));
+        gui.setItem(49, createButton(Material.RED_CONCRETE, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lEXIT"), null));
 
         //Setting decoration glass
         ItemStack decoGlass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
@@ -98,11 +94,14 @@ public class PlayerHeadsGUIs implements Listener{
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, Component title){
+    private ItemStack createButton(Material mat, Component title, String ID){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(title);
         item.setItemMeta(meta);
+
+        if(ID != null) meta.getPersistentDataContainer().set(container, PersistentDataType.STRING, ID);
+
         return item;
     }
 
@@ -116,7 +115,7 @@ public class PlayerHeadsGUIs implements Listener{
     }
 
     @EventHandler
-    public void onClick(InventoryClickEvent event) throws SQLException {
+    public void onClick(InventoryClickEvent event) {
         if(!(event.getWhoClicked() instanceof Player player)) return;
         if(!event.getView().getTitle().contains("Select Player")) return;
         event.setCancelled(true);
@@ -156,17 +155,13 @@ public class PlayerHeadsGUIs implements Listener{
 
                     if(!inputPlayer.hasPlayedBefore()){
                         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUnknown player with name &l"+input+"&c!"));
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUnknown player with name &l"+PlainTextComponentSerializer.plainText().serialize(input)+"&c!"));
 
                         //Reopens the gui after 1/2 seconds
                         new BukkitRunnable() {
                             @Override
                             public void run() {
-                                try {
-                                    showGui(player, 1);
-                                } catch (SQLException ex) {
-                                    throw new RuntimeException(ex);
-                                }
+                                showGui(player, 1);
                             }
                         }.runTaskLater(plugin, 10L);
                         return;
@@ -180,11 +175,7 @@ public class PlayerHeadsGUIs implements Listener{
                         new BukkitRunnable(){
                             @Override
                             public void run() {
-                                try {
-                                    showGui(player, 1);
-                                } catch (SQLException e) {
-                                    throw new RuntimeException(e);
-                                }
+                                showGui(player, 1);
                             }
                         }.runTaskLater(plugin, 10L);
                         return;
@@ -196,13 +187,16 @@ public class PlayerHeadsGUIs implements Listener{
         }
 
         //If the staff clicks on next page button
-        if(meta.displayName().contains(Component.text("Next"))){
+        String clickedID = meta.getPersistentDataContainer().get(container, PersistentDataType.STRING);
+        if(clickedID == null) return;
+
+        if(clickedID.equals("Next")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             showGui(player, getPageFromTitle(event.getView().getTitle())+1);
         }
 
         //If the staff clicks on previous page button
-        if(meta.displayName().contains(Component.text("Previous"))){
+        if(clickedID.equals("Previous")){
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             showGui(player, getPageFromTitle(event.getView().getTitle())-1);
         }

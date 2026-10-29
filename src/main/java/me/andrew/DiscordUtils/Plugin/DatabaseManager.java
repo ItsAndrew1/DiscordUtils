@@ -34,6 +34,10 @@ public class DatabaseManager {
             config.setDriverClassName("org.sqlite.JDBC");
             config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
             config.setMaximumPoolSize(1);
+
+            config.addDataSourceProperty("busy_timeout", 10000);
+            config.addDataSourceProperty("journal_mode", "WAL");
+            config.addDataSourceProperty("sync_mode", "NORMAL");
         }
         else if(databaseType.equalsIgnoreCase("mysql")){
             //Getting the MySQL Database details

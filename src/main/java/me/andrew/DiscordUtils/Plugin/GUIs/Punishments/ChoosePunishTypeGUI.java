@@ -7,10 +7,7 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,6 +17,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.regex.Matcher;
@@ -27,9 +25,11 @@ import java.util.regex.Pattern;
 
 public class ChoosePunishTypeGUI implements Listener{
     private final DiscordUtils plugin;
+    private final NamespacedKey container;
 
     public ChoosePunishTypeGUI(DiscordUtils plugin) {
         this.plugin = plugin;
+        this.container = new NamespacedKey(plugin, "Types");
     }
 
     public void showGui(Player player){
@@ -39,50 +39,50 @@ public class ChoosePunishTypeGUI implements Listener{
         Inventory gui =  Bukkit.createInventory(player, invSize, title);
 
         //Return button
-        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"), false);
+        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"), false, null);
         gui.setItem(35, returnButton);
 
         //Permanent Ban button
-        ItemStack permBanButton = createButton(Material.NETHERITE_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&5&lPERMANENT BAN"), false);
+        ItemStack permBanButton = createButton(Material.NETHERITE_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&5&lPERMANENT BAN"), false, "permban");
         gui.setItem(9, permBanButton);
 
         //Temporary Ban button
-        ItemStack tempBanButton = createButton(Material.IRON_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&d&lTEMPORARY BAN"), false);
+        ItemStack tempBanButton = createButton(Material.IRON_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&d&lTEMPORARY BAN"), false, "tempban");
         gui.setItem(11, tempBanButton);
 
         //Permanent Ban Warn Button
-        ItemStack permBanWarnButton = createButton(Material.NETHERITE_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&5&lPERMANENT BAN WARN"), true);
+        ItemStack permBanWarnButton = createButton(Material.NETHERITE_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&5&lPERMANENT BAN WARN"), true, "permbanwarn");
         gui.setItem(13, permBanWarnButton);
 
         //Temporary Ban Warn Button
-        ItemStack tbwButton = createButton(Material.IRON_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&d&lTEMPORARY BAN WARN"), true);
+        ItemStack tbwButton = createButton(Material.IRON_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&d&lTEMPORARY BAN WARN"), true, "tempbanwarn");
         gui.setItem(15, tbwButton);
 
         //Kick Button
-        ItemStack kickButton = createButton(Material.LEATHER_BOOTS, LegacyComponentSerializer.legacyAmpersand().deserialize("&6&lKICK"), false);
+        ItemStack kickButton = createButton(Material.LEATHER_BOOTS, LegacyComponentSerializer.legacyAmpersand().deserialize("&6&lKICK"), false, "kick");
         gui.setItem(17, kickButton);
 
         //Permanent Mute button
-        ItemStack pmButton = createButton(Material.SOUL_LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lPERMANENT MUTE"), false);
+        ItemStack pmButton = createButton(Material.SOUL_LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lPERMANENT MUTE"), false, "permmute");
         gui.setItem(27, pmButton);
 
         //Temporary Mute button
-        ItemStack tmButton = createButton(Material.LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lTEMPORARY MUTE"), false);
+        ItemStack tmButton = createButton(Material.LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lTEMPORARY MUTE"), false, "tempmute");
         gui.setItem(29, tmButton);
 
         //Permanent Mute Warn button
-        ItemStack pmwButton = createButton(Material.SOUL_LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lPERMANENT MUTE WARN"), true);
+        ItemStack pmwButton = createButton(Material.SOUL_LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lPERMANENT MUTE WARN"), true, "permmutewarn");
         gui.setItem(31, pmwButton);
 
         //Temporary Mute Warn button
-        ItemStack tmwButton = createButton(Material.LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lTEMPORARY MUTE WARN"), true);
+        ItemStack tmwButton = createButton(Material.LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lTEMPORARY MUTE WARN"), true, "tempmutewarn");
         gui.setItem(33, tmwButton);
 
         player.openInventory(gui);
     }
 
     //Helper method to create all the buttons
-    private ItemStack createButton(Material mat, Component displayName, boolean enchantGlint){
+    private ItemStack createButton(Material mat, Component displayName, boolean enchantGlint, String ID){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(displayName);
@@ -91,6 +91,8 @@ public class ChoosePunishTypeGUI implements Listener{
             meta.addEnchant(Enchantment.LURE, 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
+        if(ID != null) meta.getPersistentDataContainer().set(container, PersistentDataType.STRING, ID);
+
         item.setItemMeta(meta);
         return item;
     }
@@ -190,23 +192,20 @@ public class ChoosePunishTypeGUI implements Listener{
         }
 
         //If the player clicks on the following buttons
-        if(meta.getDisplayName().contains("PERMANENT BAN WARN")) state.type = PunishmentType.PERM_BAN_WARN;
+        String clickedID = meta.getPersistentDataContainer().get(container, PersistentDataType.STRING);
+        if(clickedID == null) return;
 
-        if(clickedMat.equals(Material.NETHERITE_AXE)) state.type = PunishmentType.PERM_BAN;
-
-        if(meta.getDisplayName().contains("TEMPORARY BAN WARN")) state.type = PunishmentType.TEMP_BAN_WARN;
-
-        if(clickedMat.equals(Material.IRON_AXE)) state.type = PunishmentType.TEMP_BAN;
-
-        if(clickedMat.equals(Material.LEATHER_BOOTS)) state.type = PunishmentType.KICK;
-
-        if(meta.getDisplayName().contains("TEMPORARY MUTE WARN")) state.type = PunishmentType.TEMP_MUTE_WARN;
-
-        if(clickedMat.equals(Material.LANTERN)) state.type = PunishmentType.TEMP_MUTE;
-
-        if(meta.getDisplayName().contains("PERMANENT MUTE WARN")) state.type = PunishmentType.PERM_MUTE_WARN;
-
-        if(clickedMat.equals(Material.SOUL_LANTERN)) state.type = PunishmentType.PERM_MUTE;
+        switch(clickedID){
+            case "permban" -> state.type = PunishmentType.PERM_BAN;
+            case "tempban" -> state.type = PunishmentType.TEMP_BAN;
+            case "permbanwarn" -> state.type = PunishmentType.PERM_BAN_WARN;
+            case "tempbanwarn" -> state.type = PunishmentType.TEMP_BAN_WARN;
+            case "kick" -> state.type = PunishmentType.KICK;
+            case "permmute" -> state.type = PunishmentType.PERM_MUTE;
+            case "tempmute" -> state.type = PunishmentType.TEMP_MUTE;
+            case "permmutewarn" -> state.type =  PunishmentType.PERM_MUTE_WARN;
+            case "tempmutewarn" -> state.type = PunishmentType.TEMP_MUTE_WARN;
+        }
 
         if(!state.type.hasPermission(player)){
             noPermission(player);

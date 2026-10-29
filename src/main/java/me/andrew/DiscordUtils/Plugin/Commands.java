@@ -149,12 +149,8 @@ public class Commands implements CommandExecutor{
                         return true;
                     }
 
-                    try {
-                        plugin.getPlayerHeadsGUIs().showGui(player, 1);
-                        player.playSound(player.getLocation(), good, 1f, 1.4f);
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
+                    plugin.getPlayerHeadsGUIs().showGui(player, 1);
+                    player.playSound(player.getLocation(), good, 1f, 1.4f);
                     break;
 
                 case "help":

@@ -2,6 +2,7 @@
 package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
 import me.andrew.DiscordUtils.Caching.Punishment;
+import me.andrew.DiscordUtils.DiscordBot.AppealState;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
@@ -88,7 +89,7 @@ public class PunishmentContext {
         if(!state.type.isPermanent()) expiresAt = System.currentTimeMillis() + state.duration;
 
         Punishment punishment = new Punishment(state.ID, state.targetUUID, state.type, state.scope, state.reason, state.staffIgn,
-                System.currentTimeMillis(), expiresAt, active, false, 0L, null);
+                System.currentTimeMillis(), expiresAt, active, false, 0L, AppealState.NO_APPEAL);
         plugin.getPlayerPunishmentDataCache().addPunishment(state.targetUUID, punishment);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -105,7 +106,7 @@ public class PunishmentContext {
                 ps.setLong(7, System.currentTimeMillis());
                 ps.setBoolean(10, false);
                 ps.setLong(11, 0);
-                ps.setString(12, null);
+                ps.setString(12, state.appealState.name());
 
                 //Handling various cases
                 if(state.type == PunishmentType.KICK){

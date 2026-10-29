@@ -3,6 +3,7 @@ package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import me.andrew.DiscordUtils.DiscordBot.AppealState;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
@@ -22,6 +23,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.sql.SQLException;
 import java.util.UUID;
@@ -29,9 +31,11 @@ import java.util.concurrent.TimeUnit;
 
 public class AddRemoveHistoryGUI implements Listener{
     private final DiscordUtils plugin;
+    private final NamespacedKey dataContainer;
 
     public AddRemoveHistoryGUI(DiscordUtils plugin){
         this.plugin = plugin;
+        this.dataContainer = new NamespacedKey(plugin, "AddRemove");
 
         //Start a task which removes a user from the AddingState map after a period of time of inactivity.
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, ()->{
@@ -52,6 +56,7 @@ public class AddRemoveHistoryGUI implements Listener{
         //Add button
         ItemStack addButton = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta addButtonSkull =  (SkullMeta) addButton.getItemMeta();
+        addButtonSkull.getPersistentDataContainer().set(dataContainer, PersistentDataType.STRING, "add");
         PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
         profile.setProperty(new ProfileProperty("textures", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWZmMzE0MzFkNjQ1ODdmZjZlZjk4YzA2NzU4MTA2ODFmOGMxM2JmOTZmNTFkOWNiMDdlZDc4NTJiMmZmZDEifX19"));
         addButtonSkull.setPlayerProfile(profile);
@@ -62,6 +67,7 @@ public class AddRemoveHistoryGUI implements Listener{
         //Remove button
         ItemStack removeButton = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta removeButtonSkull = (SkullMeta) removeButton.getItemMeta();
+        removeButtonSkull.getPersistentDataContainer().set(dataContainer, PersistentDataType.STRING, "remove");
         PlayerProfile profile2 = Bukkit.createProfile(UUID.randomUUID());
         profile2.setProperty(new ProfileProperty("textures", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGU0YjhiOGQyMzYyYzg2NGUwNjIzMDE0ODdkOTRkMzI3MmE2YjU3MGFmYmY4MGMyYzViMTQ4Yzk1NDU3OWQ0NiJ9fX0="));
         removeButtonSkull.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&cRemove &lpunishment &cfor player &e&l"+playerName));
@@ -78,7 +84,7 @@ public class AddRemoveHistoryGUI implements Listener{
         //Return button
         ItemStack returnButton = new ItemStack(Material.SPECTRAL_ARROW);
         ItemMeta returnButtonMeta = returnButton.getItemMeta();
-        returnButtonMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&c&lRETURN"));
+        returnButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"));
         returnButton.setItemMeta(returnButtonMeta);
         gui.setItem(40, returnButton);
 
@@ -118,10 +124,11 @@ public class AddRemoveHistoryGUI implements Listener{
             plugin.getPunishmentsGUI().showGui(player, 1, false);
         }
 
-        if(!clickedItemMeta.hasDisplayName()) return;
+        String clickedID = clickedItemMeta.getPersistentDataContainer().get(dataContainer, PersistentDataType.STRING);
+        if(clickedID == null) return;
 
         //If the player clicks on add punishment button
-        if(clickedItemMeta.displayName().contains(Component.text("Add"))) {
+        if(clickedID.equals("add")) {
             //Checking if the player has permission to add
             if(!player.hasPermission("discordutils.punishments.add")){
                 player.closeInventory();
@@ -141,7 +148,8 @@ public class AddRemoveHistoryGUI implements Listener{
                     null,
                     null,
                     0,
-                    System.currentTimeMillis()
+                    System.currentTimeMillis(),
+                    AppealState.NO_APPEAL
             );
             plugin.getPunishmentsAddingStates().put(player.getUniqueId(), newState);
 
@@ -149,7 +157,7 @@ public class AddRemoveHistoryGUI implements Listener{
         }
 
         //If the player clicks on remove punishment button
-        if(clickedItemMeta.displayName().contains(Component.text("Remove"))) {
+        if(clickedID.equals("remove")){
             //Checking if the player has permission
             if(!player.hasPermission("discordutils.punishments.remove")){
                 player.closeInventory();
