@@ -6,7 +6,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.IOException;
 
 //Helps me create the .yml files :)
 public class YMLFiles {
@@ -31,14 +30,6 @@ public class YMLFiles {
 
     public FileConfiguration getConfig(){
         return config;
-    }
-
-    public void saveConfig(){
-        try{
-            config.save(file);
-        } catch (IOException e){
-            e.printStackTrace();
-        }
     }
 
     public void reloadConfig(){
