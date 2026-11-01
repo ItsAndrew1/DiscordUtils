@@ -121,13 +121,13 @@ public class PunishmentsGUI implements Listener{
                     ItemStack filterActiveButton =  new ItemStack(Material.GREEN_DYE);
                     ItemMeta filterActiveButtonMeta = filterActiveButton.getItemMeta();
 
-                    filterActiveButtonMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&a&lFiltering Active Punishments"));
+                    filterActiveButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&a&lFiltering Active Punishments"));
                     List<Component> lore = new ArrayList<>();
                     lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Click to change!"));
                     lore.add(Component.text(" "));
                     lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("    &e&lALL PUNISHMENTS"));
                     lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&a▶  &a&lACTIVE PUNISHMENTS"));
-                    lore.add(LegacyComponentSerializer.legacySection().deserialize("    &c&lEXPIRED PUNISHMENTS"));
+                    lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("    &c&lEXPIRED PUNISHMENTS"));
                     lore.add(Component.text(" "));
 
                     filterActiveButtonMeta.lore(lore);

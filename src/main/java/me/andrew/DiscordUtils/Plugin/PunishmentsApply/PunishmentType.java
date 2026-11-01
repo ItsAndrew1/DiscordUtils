@@ -9,7 +9,7 @@ import java.sql.SQLException;
 public enum PunishmentType{
     PERM_BAN(true, false, Material.NETHERITE_AXE){
         @Override
-        public void apply(PunishmentContext ctx) throws SQLException {
+        public void apply(PunishmentContext ctx) {
             ctx.applyPermBan();
         }
 
@@ -26,7 +26,7 @@ public enum PunishmentType{
 
     TEMP_BAN(false, false, Material.IRON_AXE){
         @Override
-        public void apply(PunishmentContext ctx) throws SQLException {
+        public void apply(PunishmentContext ctx) {
             ctx.applyTempBan();
         }
 
@@ -93,7 +93,7 @@ public enum PunishmentType{
 
     PERM_MUTE(true, false, Material.SOUL_LANTERN){
         @Override
-        public void apply(PunishmentContext ctx) throws SQLException {
+        public void apply(PunishmentContext ctx) {
             ctx.applyPermMuteTimeout();
         }
 

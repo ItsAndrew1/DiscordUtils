@@ -194,7 +194,7 @@ public class PunishmentContext {
     }
 
     //Permanent Bans
-    public void applyPermBan() throws SQLException {
+    public void applyPermBan() {
         state.ID = createId();
 
         switch(state.scope){
@@ -277,6 +277,8 @@ public class PunishmentContext {
         insertPunishment();
         if(plugin.getPlayerPunishmentDataCache().hasNrOfWarns(targetPlayer.getUniqueId(), PunishmentType.PERM_BAN_WARN, state.scope)){
             //Expires the warns
+
+            //Gotta remove all warns...
             plugin.getDatabaseManager().expireAllWarns(targetPlayer, PunishmentType.PERM_BAN_WARN, state.scope);
 
             state.type = PunishmentType.PERM_BAN;
@@ -297,8 +299,8 @@ public class PunishmentContext {
                 });
             }
 
-            //Attempts to send the target user a DM about the warning (if the bot is configured)
-            if(isBotConfigured()){
+            //Attempts to send the target user a DM about the warning (if the bot is configured and if the user is verified)
+            if(isBotConfigured() && plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(targetPlayer.getUniqueId())) {
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
@@ -313,7 +315,7 @@ public class PunishmentContext {
     }
 
     //Temporary Bans
-    public void applyTempBan() throws SQLException {
+    public void applyTempBan() {
         state.ID = createId();
 
         switch(state.scope){
@@ -420,8 +422,8 @@ public class PunishmentContext {
                 });
             }
 
-            //Attempts to send the target user a DM (if the bot is configured)
-            if(isBotConfigured()){
+            //Attempts to send the target user a DM
+            if(isBotConfigured() && plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(targetPlayer.getUniqueId())){
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     Guild dcServer = plugin.getDiscordBot().getDiscordServer();
                     targetUser.openPrivateChannel().queue(privateChannel -> {
@@ -435,7 +437,7 @@ public class PunishmentContext {
     }
 
     //Permanent Mutes/Timeouts
-    public void applyPermMuteTimeout() throws SQLException{
+    public void applyPermMuteTimeout() {
         state.ID = createId();
 
         switch(state.scope){
@@ -511,7 +513,7 @@ public class PunishmentContext {
             }
 
             //Attempts to send the target user a DM (if the bot is configured)
-            if(isBotConfigured()){
+            if(isBotConfigured() && plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(targetPlayer.getUniqueId())){
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     targetUser.openPrivateChannel().queue(privateChannel -> {
@@ -605,7 +607,7 @@ public class PunishmentContext {
             }
 
             //Attempts to send the target user a DM (if the bot is configured)
-            if(isBotConfigured()){
+            if(isBotConfigured() && plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(targetPlayer.getUniqueId())){
                 Guild dcServer = plugin.getDiscordBot().getDiscordServer();
                 plugin.getDiscordBot().getJda().retrieveUserById(getTargetUserID()).queue(targetUser -> {
                     targetUser.openPrivateChannel().queue(privateChannel -> {

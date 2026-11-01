@@ -187,7 +187,7 @@ public class AddRemoveHistoryGUI implements Listener{
 
             //Checking if there is a punishment with that ID
             if(targetP == null){
-                staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThere is no punishment with ID &l"+ID+"&c!"));
+                staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThere is no punishment with ID &l"+PlainTextComponentSerializer.plainText().serialize(ID)+"&c!"));
                 staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
                 //Re-opens the GUI after 1/2 seconds
@@ -211,6 +211,7 @@ public class AddRemoveHistoryGUI implements Listener{
                     plugin.getPlayerPunishmentDataCache().removePunishment(targetP.uuid(), targetP);
                 } catch (SQLException e) {
                     plugin.getLogger().warning("[!] There was a problem removing the punishment from the DB/Cache. See message: "+e.getMessage());
+                    e.printStackTrace();
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         staff.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(chatPrefix+" &cThere was a problem removing the punishment from the DB/Cache."));
@@ -252,7 +253,7 @@ public class AddRemoveHistoryGUI implements Listener{
                 }
             });
 
-            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment with ID &7&l"+ID+" &ahas been removed from player &e"+Bukkit.getOfflinePlayer(targetP.uuid()).getName()+"&a!"));
+            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment with ID &7&l"+PlainTextComponentSerializer.plainText().serialize(ID)+" &ahas been removed from player &e"+Bukkit.getOfflinePlayer(targetP.uuid()).getName()+"&a!"));
             staff.playSound(staff.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.4f);
         } catch (Exception e){
             staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThere was a problem removing the punishment. See the server's CMD for more info"));

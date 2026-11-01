@@ -2,7 +2,7 @@
 package me.andrew.DiscordUtils.Plugin.PunishmentsApply;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -20,7 +20,7 @@ public enum PunishmentScopes{
         public boolean playerAlreadyHasPunishment(PunishmentType type, OfflinePlayer offlinePlayer, Player staff, DiscordUtils plugin){
             if(plugin.getPlayerPunishmentDataCache().playerHasPunishment(offlinePlayer.getUniqueId(), type, DISCORD)){
                 staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                staff.sendMessage(ChatColor.RED + "&e"+offlinePlayer.getName()+" &calready has a &9&lDISCORD&c/&a&lMINECRAFT &cpunishment of this type!");
+                staff.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&e"+offlinePlayer.getName()+" &calready has a &9&lDISCORD&c/&a&lMINECRAFT &cpunishment of this type!"));
                 return true;
             }
 
@@ -37,7 +37,7 @@ public enum PunishmentScopes{
         public boolean playerAlreadyHasPunishment(PunishmentType type, OfflinePlayer offlinePlayer, Player staff, DiscordUtils plugin) {
             if(plugin.getPlayerPunishmentDataCache().playerHasPunishment(offlinePlayer.getUniqueId(), type, MINECRAFT)){
                 staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                staff.sendMessage(ChatColor.RED + "&e"+offlinePlayer.getName()+" &calready has a &9&lDISCORD&c/&a&lMINECRAFT &cpunishment of this type!");
+                staff.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&e"+offlinePlayer.getName()+" &calready has a &9&lDISCORD&c/&a&lMINECRAFT &cpunishment of this type!"));
                 return true;
             }
 
@@ -54,13 +54,13 @@ public enum PunishmentScopes{
         public boolean playerAlreadyHasPunishment(PunishmentType type, OfflinePlayer offlinePlayer, Player staff, DiscordUtils plugin) {
             if(plugin.getPlayerPunishmentDataCache().playerHasPunishment(offlinePlayer.getUniqueId(), type, DISCORD)|| plugin.getPlayerPunishmentDataCache().playerHasPunishment(offlinePlayer.getUniqueId(), type, MINECRAFT)){
                 staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                staff.sendMessage(ChatColor.RED + "&e"+offlinePlayer.getName()+" &calready has a &9&lDISCORD&c/&a&lMINECRAFT &cpunishment of this type!");
+                staff.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&e"+offlinePlayer.getName()+" &calready has a &9&lDISCORD&c/&a&lMINECRAFT &cpunishment of this type!"));
                 return true;
             }
 
             if(plugin.getPlayerPunishmentDataCache().playerHasPunishment(offlinePlayer.getUniqueId(), type, GLOBAL)){
                 staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&e"+offlinePlayer.getName()+" &calready has a &e&lGLOBAL &cpunishment of this type!"));
+                staff.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("&e"+offlinePlayer.getName()+" &calready has a &e&lGLOBAL &cpunishment of this type!"));
                 return true;
             }
 

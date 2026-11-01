@@ -55,11 +55,6 @@ public class PlayerPunishmentDataCache {
         modifyPunishment(punishment.uuid(), newPunishment);
     }
 
-    public boolean playerHasActivePunishments(UUID playerUUID){
-        List<Punishment> punishments = mainCache.get(playerUUID);
-        return punishments != null && punishments.stream().anyMatch(Punishment::active);
-    }
-
     public boolean playerHasPunishments (UUID playerUUID){
         List<Punishment> punishments = mainCache.get(playerUUID);
         return punishments != null && !punishments.isEmpty();
@@ -121,7 +116,7 @@ public class PlayerPunishmentDataCache {
         List<Punishment> punishments = mainCache.get(playerUUID);
         if(punishments == null) return false;
 
-        return punishments.stream().anyMatch(p -> p.punishmentType().equals(type) && p.scope().equals(scope) && p.active());
+        return punishments.stream().anyMatch(p -> p.punishmentType().equals(type) && p.scope().equals(scope) && p.active() && !p.punishmentType().isWarning());
     }
 
     public boolean isPlayerBanned(UUID playerUUID, PunishmentScopes scope){
