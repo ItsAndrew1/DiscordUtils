@@ -176,6 +176,20 @@ public class PlayerPunishmentDataCache {
         return permTimeout || tempTimeout;
     }
 
+    public void removeAllWarns(UUID playerUUID, PunishmentType type, PunishmentScopes scope){
+        List<Punishment> playerPunishments = mainCache.get(playerUUID);
+        if(playerPunishments == null) return;
+
+        long maxWarns = plugin.getConfig().getLong("warns-amount", 3);
+        long nrOfWarns = playerPunishments.stream().filter(p -> p.punishmentType().equals(type) && p.scope().equals(scope) && p.active()).count();
+
+        if(nrOfWarns != maxWarns) return;
+
+        for(int i = 0; i < maxWarns; i++){
+            playerPunishments.removeIf(p -> p.punishmentType().equals(type) && p.scope().equals(scope) && p.active());
+        }
+    }
+
     private void modifyPunishment (UUID playerUUID, Punishment punishment) {
         List<Punishment> punishments = mainCache.get(playerUUID);
         if(punishments != null){

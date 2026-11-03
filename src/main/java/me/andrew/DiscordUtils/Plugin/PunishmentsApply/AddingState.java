@@ -9,8 +9,8 @@ public class AddingState {
     public String ID;
     public UUID targetUUID;
     public String staffIgn;
-    public PunishmentType type;
     public PunishmentScopes scope;
+    public PunishmentType type;
     public String reason;
     public long duration;
     public long lastInteraction;

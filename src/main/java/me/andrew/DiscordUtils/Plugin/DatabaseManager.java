@@ -175,8 +175,8 @@ public class DatabaseManager {
         }
     }
 
-    public void expireAllWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
-        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("UPDATE punishments SET active = 0 WHERE uuid = ? AND type =? AND scope = ?")){
+    public void removeAllWarns(OfflinePlayer targetPlayer, PunishmentType warnType, PunishmentScopes warnScope) throws SQLException {
+        try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM punishments WHERE active = 1 AND uuid = ? AND type = ? AND scope = ?")){
             ps.setString(1, targetPlayer.getUniqueId().toString());
             ps.setString(2, warnType.toString());
             ps.setString(3, warnScope.toString());
