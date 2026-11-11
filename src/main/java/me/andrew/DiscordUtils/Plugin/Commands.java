@@ -282,6 +282,7 @@ public class Commands implements CommandExecutor{
             plugin.getDiscordBot().getJda().retrieveUserById(userDiscordID).queue(targetUser -> {
                 targetUser.openPrivateChannel().queue(privateChannel -> {
                     String message = plugin.botFile().getConfig().getString("unverified-from-mc-DM", "You have unverified from **%server_name%**. To verify again, run **/verify** on their Minecraft Server!");
+                    message = message.replace("%server_name%", plugin.getDiscordBot().getDiscordServer().getName());
                     privateChannel.sendMessage(message).queue();
                 });
             });

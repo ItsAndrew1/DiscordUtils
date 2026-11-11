@@ -395,7 +395,7 @@ public class PunishmentContext {
         String ID = createId();
 
         //Inserts the warning
-        insertPunishment(ID, PunishmentType.TEMP_MUTE_WARN);
+        insertPunishment(ID, PunishmentType.TEMP_BAN_WARN);
 
         //Checks if the target player/user has reached the nr of warns
         if(plugin.getPlayerPunishmentDataCache().hasNrOfWarns(targetPlayer.getUniqueId(), PunishmentType.TEMP_BAN_WARN, state.scope)){

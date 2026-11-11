@@ -87,7 +87,7 @@ public class DatabaseManager {
         //Creates the punishments table
         String punishmentsTable = """
                 CREATE TABLE IF NOT EXISTS punishments(
-                    crt INTEGER PRIMARY KEY AUTO_INCREMENT,
+                    crt INTEGER PRIMARY KEY AUTOINCREMENT,
                     id TEXT UNIQUE,
                     uuid TEXT,
                     type TEXT,

@@ -154,10 +154,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         }
     }
 
-    /**
-     * Logs in JDA. Returns false when the bot is turned off in config.
-     * Callers must already be off the main thread, because {@code awaitReady()} blocks.
-     */
     private boolean startDiscordBot() throws Exception{
         boolean openDiscordBot = getConfig().getBoolean("open-discord-bot", false);
         boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);

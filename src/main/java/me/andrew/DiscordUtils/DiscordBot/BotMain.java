@@ -55,7 +55,7 @@ public class BotMain extends ListenerAdapter {
         //The server commands
         discordServer.updateCommands().addCommands(
                 Commands.slash("verify", "Verify your minecraft account!")
-                        .addOption(OptionType.INTEGER, "code", "Enter the code you were given.", true),
+                        .addOption(OptionType.STRING, "code", "Enter the code you were given.", true),
                 Commands.slash("pshistory", "View the history of a player!")
                         .addOption(OptionType.STRING, "ign", "Enter the player's IGN!", false),
                 Commands.slash("punish", "Punish a player. You cannot enter your own name!")

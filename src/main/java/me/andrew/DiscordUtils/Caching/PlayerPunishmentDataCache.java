@@ -159,6 +159,7 @@ public class PlayerPunishmentDataCache {
     public boolean isUserBanned(String userID, PunishmentScopes scope){
         boolean permBanned, tempBanned;
         UUID userUUID = plugin.getPlayerVerificationCache().getUuidFromDiscordId(userID);
+        if(userUUID == null) return false;
 
         permBanned = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.PERM_BAN) &&  p.scope().equals(scope) && p.active());
         tempBanned = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.TEMP_BAN) &&  p.scope().equals(scope) && p.active());
@@ -169,6 +170,7 @@ public class PlayerPunishmentDataCache {
     public boolean isUserOnTimeout(String userID, PunishmentScopes scope){
         boolean permTimeout, tempTimeout;
         UUID userUUID = plugin.getPlayerVerificationCache().getUuidFromDiscordId(userID);
+        if(userUUID == null) return false;
 
         permTimeout = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.PERM_MUTE) &&  p.scope().equals(scope) && p.active());
         tempTimeout = plugin.getPlayerPunishmentDataCache().getMainCache().get(userUUID).stream().anyMatch(p -> p.punishmentType().equals(PunishmentType.TEMP_MUTE) &&  p.scope().equals(scope) && p.active());
