@@ -1,11 +1,11 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
+import me.andrew.DiscordUtils.Plugin.Sounds;
+
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.andrew.DiscordUtils.Plugin.SkullTextures;
+import me.andrew.DiscordUtils.Plugin.Texts;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,7 +19,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 public class DiscordGUI implements Listener {
     private final DiscordUtils plugin;
@@ -38,7 +37,8 @@ public class DiscordGUI implements Listener {
         int guiSize = guiRows * 9;
 
         //Creating the GUI
-        Inventory gui = Bukkit.createInventory(null, guiSize, Component.text(plugin.getConfig().getString("discord-gui.title", "Get the discord link!")));
+        String guiTitle = plugin.getConfig().getString("discord-gui.title", "Get the discord link!");
+        Inventory gui = Bukkit.createInventory(null, guiSize, guiTitle);
 
         //Displays the decorations if they are toggled
         boolean toggleDecorations = plugin.getConfig().getBoolean("discord-gui.decorations.toggle", true);
@@ -68,13 +68,13 @@ public class DiscordGUI implements Listener {
                     if(i == iiSlot) continue;
                 }
 
-                diMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(diDisplayName));
+                diMeta.setDisplayName(Texts.color(diDisplayName));
                 decoItem.setItemMeta(diMeta);
                 gui.setItem(i, decoItem);
             }
 
             for(int i = 45; i<=53; i++){
-                diMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(diDisplayName));
+                diMeta.setDisplayName(Texts.color(diDisplayName));
                 decoItem.setItemMeta(diMeta);
                 gui.setItem(i, decoItem);
             }
@@ -154,7 +154,7 @@ public class DiscordGUI implements Listener {
         }
 
         //Gets the sound from config
-        Sound openGuiSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("open-discord-gui-sound", "entity.experience_orb.pickup").toLowerCase()));
+        Sound openGuiSound = Sounds.fromKey(plugin.getConfig().getString("open-discord-gui-sound", "entity.experience_orb.pickup").toLowerCase());
         float ogsVolume = plugin.getConfig().getInt("odgs-volume", 1);
         float ogsPitch = plugin.getConfig().getInt("odgs-pitch", 1);
 
@@ -192,7 +192,7 @@ public class DiscordGUI implements Listener {
         SkullMeta headMeta = (SkullMeta) head.getItemMeta();
 
         //Sets the display name
-        headMeta.displayName(LegacyComponentSerializer.legacySection().deserialize(displayName));
+        headMeta.setDisplayName(Texts.color(displayName));
 
         //Sets the lore (if there is any)
         List<String> discordItemLore = plugin.getConfig().getStringList("discord-gui.discord-item.lore");
@@ -207,9 +207,7 @@ public class DiscordGUI implements Listener {
         }
 
         //Sets the custom-head
-        PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
-        profile.setProperty(new ProfileProperty("textures", value));
-        headMeta.setPlayerProfile(profile);
+        SkullTextures.apply(headMeta, value);
 
         head.setItemMeta(headMeta);
         return head;
@@ -224,7 +222,8 @@ public class DiscordGUI implements Listener {
     @EventHandler
     public void onPlayerClick(InventoryClickEvent e){
         if(!(e.getWhoClicked() instanceof Player player)) return;
-        if(!(e.getView().getTitle().equals(plugin.getConfig().getString("discord-gui.title")))) return;
+        String guiTitle = plugin.getConfig().getString("discord-gui.title", "Get the discord link!");
+        if(!e.getView().getTitle().equals(guiTitle)) return;
         e.setCancelled(true); //Doesn't let the player take or put items in the GUI
 
         ItemStack clickedItem = e.getCurrentItem();
@@ -236,7 +235,7 @@ public class DiscordGUI implements Listener {
         //If the player clicks on exit-item
         Material exitItem = Material.matchMaterial(plugin.getConfig().getString("discord-gui.exit-item.material", "red_concrete").toUpperCase());
         if(clickedItem.getType().equals(exitItem)){
-            Sound exitItemSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("exit-item-sound", "ui.button.click").toLowerCase()));
+            Sound exitItemSound = Sounds.fromKey(plugin.getConfig().getString("exit-item-sound", "ui.button.click").toLowerCase());
             float eisVolume = plugin.getConfig().getInt("eis-volume", 1);
             float eisPitch = plugin.getConfig().getInt("eis-pitch", 1);
 

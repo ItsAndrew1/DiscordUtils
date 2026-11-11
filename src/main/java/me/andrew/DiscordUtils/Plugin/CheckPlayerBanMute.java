@@ -1,16 +1,15 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
-import io.papermc.paper.event.player.AsyncChatEvent;
 import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 
 import java.sql.SQLException;
@@ -46,7 +45,7 @@ public class CheckPlayerBanMute implements Listener{
             String message =  plugin.getConfig().getString("player-punishments-messages.perm-ban-message", "&cYou are permanently banned from this server.\\n\\n&7Scope: %scope%\\n&7Reason: &f%reason%\\n\\n&7Ban ID: &f%id%\\n&7Use this ID to appeal.");
             message = plugin.parsePP(player, message);
             message = message.replace("%scope%", getColoredScope(permBan.scope())).replace("%reason%", reason).replace("%id%", permBan.id());
-            e.disallow(PlayerLoginEvent.Result.KICK_BANNED, LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+            e.disallow(PlayerLoginEvent.Result.KICK_BANNED, kickMessage(message));
             return;
         }
 
@@ -88,7 +87,7 @@ public class CheckPlayerBanMute implements Listener{
                         .replace("%time_left%", durationString)
                         .replace("%expiration_time%", expiresAt)
                         .replace("%id%", tempBan.id());
-                e.disallow(PlayerLoginEvent.Result.KICK_BANNED, LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+                e.disallow(PlayerLoginEvent.Result.KICK_BANNED, kickMessage(message));
             }
             return;
         }
@@ -107,8 +106,12 @@ public class CheckPlayerBanMute implements Listener{
         return p.expiresAt() <= System.currentTimeMillis();
     }
 
+    private String kickMessage(String message){
+        return ChatColor.translateAlternateColorCodes('&', message.replace("\\n", "\n"));
+    }
+
     @EventHandler
-    public void onChat(AsyncChatEvent e) {
+    public void onChat(AsyncPlayerChatEvent e) {
         //This event should only fire when the discord bot is toggled
         boolean toggleDcBot = plugin.botFile().getConfig().getBoolean("toggle-discord-bot", false);
         if(!toggleDcBot) return;

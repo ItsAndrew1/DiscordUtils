@@ -4,9 +4,6 @@ package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -35,57 +32,46 @@ public class ChoosePunishTypeGUI implements Listener{
     public void showGui(Player player){
         int invSize = 54;
 
-        Component title = Component.text("Choose Punishment Type");
-        Inventory gui =  Bukkit.createInventory(player, invSize, title);
+        Inventory gui =  Bukkit.createInventory(player, invSize, "Choose Punishment Type");
 
-        //Return button
-        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"), false, null);
+        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, "&c&lRETURN", false, null);
         gui.setItem(35, returnButton);
 
-        //Permanent Ban button
-        ItemStack permBanButton = createButton(Material.NETHERITE_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&5&lPERMANENT BAN"), false, "permban");
+        ItemStack permBanButton = createButton(Material.NETHERITE_AXE, "&5&lPERMANENT BAN", false, "permban");
         gui.setItem(9, permBanButton);
 
-        //Temporary Ban button
-        ItemStack tempBanButton = createButton(Material.IRON_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&d&lTEMPORARY BAN"), false, "tempban");
+        ItemStack tempBanButton = createButton(Material.IRON_AXE, "&d&lTEMPORARY BAN", false, "tempban");
         gui.setItem(11, tempBanButton);
 
-        //Permanent Ban Warn Button
-        ItemStack permBanWarnButton = createButton(Material.NETHERITE_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&5&lPERMANENT BAN WARN"), true, "permbanwarn");
+        ItemStack permBanWarnButton = createButton(Material.NETHERITE_AXE, "&5&lPERMANENT BAN WARN", true, "permbanwarn");
         gui.setItem(13, permBanWarnButton);
 
-        //Temporary Ban Warn Button
-        ItemStack tbwButton = createButton(Material.IRON_AXE, LegacyComponentSerializer.legacyAmpersand().deserialize("&d&lTEMPORARY BAN WARN"), true, "tempbanwarn");
+        ItemStack tbwButton = createButton(Material.IRON_AXE, "&d&lTEMPORARY BAN WARN", true, "tempbanwarn");
         gui.setItem(15, tbwButton);
 
-        //Kick Button
-        ItemStack kickButton = createButton(Material.LEATHER_BOOTS, LegacyComponentSerializer.legacyAmpersand().deserialize("&6&lKICK"), false, "kick");
+        ItemStack kickButton = createButton(Material.LEATHER_BOOTS, "&6&lKICK", false, "kick");
         gui.setItem(17, kickButton);
 
-        //Permanent Mute button
-        ItemStack pmButton = createButton(Material.SOUL_LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lPERMANENT MUTE"), false, "permmute");
+        ItemStack pmButton = createButton(Material.SOUL_LANTERN, "&9&lPERMANENT MUTE", false, "permmute");
         gui.setItem(27, pmButton);
 
-        //Temporary Mute button
-        ItemStack tmButton = createButton(Material.LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lTEMPORARY MUTE"), false, "tempmute");
+        ItemStack tmButton = createButton(Material.LANTERN, "&b&lTEMPORARY MUTE", false, "tempmute");
         gui.setItem(29, tmButton);
 
-        //Permanent Mute Warn button
-        ItemStack pmwButton = createButton(Material.SOUL_LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lPERMANENT MUTE WARN"), true, "permmutewarn");
+        ItemStack pmwButton = createButton(Material.SOUL_LANTERN, "&9&lPERMANENT MUTE WARN", true, "permmutewarn");
         gui.setItem(31, pmwButton);
 
-        //Temporary Mute Warn button
-        ItemStack tmwButton = createButton(Material.LANTERN, LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lTEMPORARY MUTE WARN"), true, "tempmutewarn");
+        ItemStack tmwButton = createButton(Material.LANTERN, "&b&lTEMPORARY MUTE WARN", true, "tempmutewarn");
         gui.setItem(33, tmwButton);
 
         player.openInventory(gui);
     }
 
     //Helper method to create all the buttons
-    private ItemStack createButton(Material mat, Component displayName, boolean enchantGlint, String ID){
+    private ItemStack createButton(Material mat, String displayName, boolean enchantGlint, String ID){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(displayName);
+        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', displayName));
 
         if(enchantGlint){
             meta.addEnchant(Enchantment.LURE, 1, true);
@@ -104,13 +90,13 @@ public class ChoosePunishTypeGUI implements Listener{
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&ld &f-> &adays | &f&lh &f-> &ahours | &f&lm &f-> &aminutes | &f&ls-> &aseconds"));
 
         plugin.waitForPlayerInput(player, input -> {
-            if(input.equals(Component.text("cancel"))){
+            if(input.equalsIgnoreCase("cancel")){
                 plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                 plugin.getAddRemovePunishGUI().showGui(player);
                 return;
             }
-            long durationMillis = parseCooldown(PlainTextComponentSerializer.plainText().serialize(input));
+            long durationMillis = parseCooldown(input.trim());
 
             if(durationMillis == 0){
                 plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
@@ -136,7 +122,7 @@ public class ChoosePunishTypeGUI implements Listener{
         player.closeInventory();
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the reason for the punishment. Type &c&lcancel &ato return."));
         plugin.waitForPlayerInput(player, input -> {
-            if(input.equals(Component.text("cancel"))){
+            if(input.equalsIgnoreCase("cancel")){
                 plugin.getPunishmentsAddingStates().remove(player.getUniqueId());
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                 plugin.getAddRemovePunishGUI().showGui(player);
@@ -144,7 +130,7 @@ public class ChoosePunishTypeGUI implements Listener{
             }
 
             state.lastInteraction = System.currentTimeMillis();
-            state.reason = PlainTextComponentSerializer.plainText().serialize(input);
+            state.reason = input;
 
             if(!state.type.isPermanent()) enterDuration(player, state);
             else plugin.getChoosePunishScopeGUI().showGui(player);
@@ -171,7 +157,7 @@ public class ChoosePunishTypeGUI implements Listener{
     @EventHandler
     public void onClick(InventoryClickEvent event){
         if(!(event.getWhoClicked() instanceof Player player)) return;
-        if(!event.getView().title().equals(Component.text("Choose Punishment Type"))) return;
+        if(!event.getView().getTitle().equals("Choose Punishment Type")) return;
         event.setCancelled(true);
 
         ItemStack item = event.getCurrentItem();

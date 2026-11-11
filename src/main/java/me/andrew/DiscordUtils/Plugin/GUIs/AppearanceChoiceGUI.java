@@ -1,9 +1,9 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs;
 
+import me.andrew.DiscordUtils.Plugin.Sounds;
+
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -19,7 +19,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class AppearanceChoiceGUI implements Listener {
     private final DiscordUtils plugin;
     private boolean chatMessage, book, applyChanges;
-    private Component guiTitle;
+    private String guiTitle;
     private String choice;
 
     public AppearanceChoiceGUI(DiscordUtils plugin) {
@@ -30,14 +30,14 @@ public class AppearanceChoiceGUI implements Listener {
     }
 
     public void showGUI(Player player){
-        guiTitle = Component.text("Choose appearance type");
+        guiTitle = "Choose appearance type";
         Inventory GUI = Bukkit.createInventory(null, 54, guiTitle);
 
         //Return button
         ItemStack returnButton = new ItemStack(Material.RED_CONCRETE);
         ItemMeta returnButtonMeta = returnButton.getItemMeta();
         if(!applyChanges){
-            returnButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"));
+            returnButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lRETURN"));
             returnButton.setItemMeta(returnButtonMeta);
             GUI.setItem(40, returnButton);
         }
@@ -49,7 +49,7 @@ public class AppearanceChoiceGUI implements Listener {
 
             ItemStack applyChangesButton = new ItemStack(Material.GREEN_CONCRETE);
             ItemMeta applyChangesButtonMeta = applyChangesButton.getItemMeta();
-            applyChangesButtonMeta.displayName(LegacyComponentSerializer.legacySection().deserialize("&a&lAPPLY CHANGES"));
+            applyChangesButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&lAPPLY CHANGES"));
             applyChangesButton.setItemMeta(applyChangesButtonMeta);
             GUI.setItem(39, applyChangesButton);
         }
@@ -61,7 +61,7 @@ public class AppearanceChoiceGUI implements Listener {
             bookButtonMeta.addEnchant(Enchantment.LURE, 1, true);
             bookButtonMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
-        bookButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lBOOK APPEARANCE"));
+        bookButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&b&lBOOK APPEARANCE"));
         bookButton.setItemMeta(bookButtonMeta);
         GUI.setItem(20, bookButton);
 
@@ -72,7 +72,7 @@ public class AppearanceChoiceGUI implements Listener {
             chatButtonMeta.addEnchant(Enchantment.LURE, 1, true);
             chatButtonMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
-        chatButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&b&lCHAT APPEARANCE"));
+        chatButtonMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&b&lCHAT APPEARANCE"));
         chatButton.setItemMeta(chatButtonMeta);
         GUI.setItem(24, chatButton);
 
@@ -88,7 +88,7 @@ public class AppearanceChoiceGUI implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event){
         if(!(event.getWhoClicked() instanceof Player player)) return;
-        if(!event.getView().title().equals(guiTitle)) return;
+        if(!event.getView().getTitle().equals(guiTitle)) return;
 
         ItemStack clickedItem = event.getCurrentItem();
         if(clickedItem == null) return;
@@ -97,7 +97,7 @@ public class AppearanceChoiceGUI implements Listener {
         if(clickedMeta == null) return;
         Material clickedMaterial = clickedMeta.getType();
 
-        Sound clickSound = Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
+        Sound clickSound = Sounds.fromKey("ui.button.click");
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
         assert clickSound != null;
 
@@ -143,7 +143,7 @@ public class AppearanceChoiceGUI implements Listener {
             plugin.getConfig().set("link-appearance-choice", choice);
             plugin.saveConfig();
 
-            Sound savedChoice =  Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
+            Sound savedChoice =  Sounds.fromKey("entity.player.levelup");
             assert savedChoice != null;
 
             player.playSound(player.getLocation(), savedChoice, 1f, 1.4f);

@@ -1,14 +1,14 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
+import me.andrew.DiscordUtils.DiscordBot.BotMain;
 import me.andrew.DiscordUtils.DiscordBot.InsertLog;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentContext;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.andrew.DiscordUtils.Plugin.Texts;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -35,8 +35,7 @@ public class FinalPunishmentGUI implements Listener {
 
     public void showGui(Player player){
         int invSize = 54;
-        Component title = Component.text("Approve Punishment");
-        Inventory gui = Bukkit.createInventory(player, invSize, title);
+        Inventory gui = Bukkit.createInventory(player, invSize, "Approve Punishment");
 
         AddingState state = plugin.getPunishmentsAddingStates().get(player.getUniqueId());
 
@@ -50,7 +49,7 @@ public class FinalPunishmentGUI implements Listener {
         gui.setItem(32, approveButton);
 
         //Punishment Item
-        List<Component> punishmentItemLore = new ArrayList<>();
+        List<String> punishmentItemLore = new ArrayList<>();
         String staffName = player.getName();
         String reason = state.reason;
         String scopeString = getPunishmentColoredScope(state.scope);
@@ -63,11 +62,11 @@ public class FinalPunishmentGUI implements Listener {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
         String issuedAt = time.format(formatter);
 
-        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Issued at &l"+issuedAt));
-        punishmentItemLore.add(Component.text(" "));
-        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aScope: "+ scopeString));
-        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aStaff: &e"+ staffName));
-        punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aReason: &e"+reason));
+        punishmentItemLore.add(Texts.color("&8Issued at &l"+issuedAt));
+        punishmentItemLore.add(" ");
+        punishmentItemLore.add(Texts.color("&aScope: "+ scopeString));
+        punishmentItemLore.add(Texts.color("&aStaff: &e"+ staffName));
+        punishmentItemLore.add(Texts.color("&aReason: &e"+reason));
 
         //Adds the expiration date if the punishment is temporary
         if(!punishmentType.isPermanent()){
@@ -78,9 +77,9 @@ public class FinalPunishmentGUI implements Listener {
             DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
             String expiresAt = time2.format(formatter2);
 
-            punishmentItemLore.add(Component.text(" "));
-            punishmentItemLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&8Expires at &l"+expiresAt));
-            punishmentItemLore.add(Component.text(" "));
+            punishmentItemLore.add(" ");
+            punishmentItemLore.add(Texts.color("&8Expires at &l"+expiresAt));
+            punishmentItemLore.add(" ");
         }
 
         ItemStack punishmentItem = createButton(Material.OAK_SIGN, "&e&l"+state.type.getName(), punishmentItemLore);
@@ -89,12 +88,12 @@ public class FinalPunishmentGUI implements Listener {
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, String displayName, List<Component> lore){
+    private ItemStack createButton(Material mat, String displayName, List<String> lore){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
 
-        if(displayName != null) meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(displayName));
-        if(lore != null) meta.lore(lore);
+        if(displayName != null) meta.setDisplayName(Texts.color(displayName));
+        if(lore != null) meta.setLore(lore);
 
         item.setItemMeta(meta);
         return item;
@@ -111,7 +110,7 @@ public class FinalPunishmentGUI implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent e) throws SQLException {
         if(!(e.getWhoClicked() instanceof Player player)) return;
-        if(!e.getView().title().equals(Component.text("Approve Punishment"))) return;
+        if(!e.getView().getTitle().equals("Approve Punishment")) return;
         e.setCancelled(true);
 
         ItemStack clickedItem = e.getCurrentItem();
@@ -172,8 +171,13 @@ public class FinalPunishmentGUI implements Listener {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
         }
 
-        //Inserting the log (if they are toggled)
-        if(plugin.botFile().getConfig().getBoolean("use-logs", false)) new InsertLog(plugin, plugin.getDiscordBot(), state);
+        if(plugin.botFile().getConfig().getBoolean("use-logs", false)){
+            AddingState loggedState = state;
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                BotMain bot = plugin.getDiscordBot();
+                if(bot != null && bot.getJda() != null) new InsertLog(plugin, bot, loggedState);
+            });
+        }
 
         //Removing the staff from the adding state map
         plugin.getPunishmentsAddingStates().remove(player.getUniqueId());

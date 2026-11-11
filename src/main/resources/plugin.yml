@@ -1,9 +1,9 @@
 name: DiscordUtils
 version: '1.2'
 main: me.andrew.DiscordUtils.Plugin.DiscordUtils
-api-version: '1.18'
+api-version: '1.16'
 author: _ItsAndrew_
-description: Connect your Minecraft Server with your Discord Server!
+description: Connect your Minecraft Server with your Discord Server! Requires Java 17. Supports Spigot/Paper 1.16.5 and newer.
 softdepend:
   - PlaceholderAPI
 

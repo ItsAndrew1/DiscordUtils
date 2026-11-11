@@ -3,12 +3,10 @@ package me.andrew.DiscordUtils.Plugin;
 
 import me.andrew.DiscordUtils.Caching.PlayerVerificationCache;
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 
 import java.security.SecureRandom;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,8 +17,8 @@ public class VerificationManager{
         this.plugin = plugin;
     }
 
-    public void verificationProcess(Player player) throws SQLException {
-        Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.villager.no"));
+    public void verificationProcess(Player player) {
+        Sound invalid = Sounds.fromKey("entity.villager.no");
         assert invalid != null;
 
         UUID UUID = player.getUniqueId();
@@ -40,14 +38,14 @@ public class VerificationManager{
             codes.deleteCode(UUID);
 
             String message = "&cLast verification code expired.";
-            player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
         }
 
         //Check if the player is already verifying
         if(codes.isPlayerVerifying(UUID)){
             String message = plugin.getConfig().getString("player-already-verifying-message", "&cPlease finish this verification before starting a new one!");
             message = PlaceholderAPI.setPlaceholders(player, message);
-            player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
             player.playSound(player.getLocation(), invalid, 1f, 1f);
             return;
         }
@@ -65,7 +63,7 @@ public class VerificationManager{
         float gvcsVolume = plugin.getConfig().getInt("gvcs-volume");
         float gvcsPitch = plugin.getConfig().getInt("gvcs-pitch");
 
-        Sound giveVerificationCodeSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("give-verification-code-sound", "block.note_block.pling").toLowerCase()));
+        Sound giveVerificationCodeSound = Sounds.fromKey(plugin.getConfig().getString("give-verification-code-sound", "block.note_block.pling").toLowerCase());
         player.playSound(player.getLocation(), giveVerificationCodeSound, gvcsVolume, gvcsPitch);
         List<String> chatMessage = plugin.getConfig().getStringList("use-verification-code-message");
         for(String line : chatMessage){

@@ -1,7 +1,6 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
-import io.papermc.paper.event.player.AsyncChatEvent;
 import me.andrew.DiscordUtils.Caching.PlayerVerificationCache;
 import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.DiscordBot.*;
@@ -21,12 +20,11 @@ import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -51,8 +49,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private AppearanceChoiceGUI appearanceChoiceGUI;
     private FacingChoiceGUI facingChoiceGUI;
     private VerificationManager verificationManager;
-    private DatabaseManager databaseManager;
-    private final Map<UUID, Consumer<Component>> chatInput = new HashMap<>();
+    private volatile DatabaseManager databaseManager;
+    private final Map<UUID, Consumer<String>> chatInput = new ConcurrentHashMap<>();
 
     //Punishments GUIs
     private PlayerHeadsGUIs playerHeadsGUIs;
@@ -67,7 +65,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private final PlayerVerificationCache playerVerificationCache = new PlayerVerificationCache();
 
     private BukkitTask broadcastTask; //Task for broadcasting
-    private BotMain discordBot;
+    private volatile BotMain discordBot;
 
     @Override
     public void onEnable(){
@@ -75,7 +73,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
 
         discordTaskManager = new DiscordTask(this);
         Commands commands = new Commands(this);
-        databaseManager = new DatabaseManager(this);
         verificationManager = new VerificationManager(this);
         playerHeadsGUIs = new PlayerHeadsGUIs(this);
         addRemovePunishmentsGUI = new AddRemoveHistoryGUI(this);
@@ -106,109 +103,6 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             getDiscordBlockManager().startParticleTask();
         }
 
-        //Starts the discord bot and other stuff (if the bot is toggled)
-        boolean openDiscordBot = getConfig().getBoolean("open-discord-bot", false);
-        boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);
-        if(openDiscordBot && toggleDiscordBot){
-            try{
-                String botToken = botFile().getConfig().getString("bot-token");
-                String guildId = botFile().getConfig().getString("guild-id");
-
-                if((botToken == null || guildId == null)) Bukkit.getLogger().warning("[DISCORDUTILS] Bot Token and/or Guild ID is null. The bot won't start!");
-                else discordBot = new BotMain(botToken, guildId, this);
-            } catch (Exception e){
-                getServer().getPluginManager().disablePlugin(this);
-                Bukkit.getLogger().warning("[DISCORDUTILS] There is something wrong with the bot. The bot won't start. See message:");
-                Bukkit.getLogger().warning(e.getMessage());
-            }
-
-            sendEmbedInVerificationChannel();
-            sendEmbedInBannedChannel();
-
-            try{
-                //Adding the punishments from the DB to the Punishment Cache
-                for(OfflinePlayer player : Bukkit.getOfflinePlayers()){
-                    CopyOnWriteArrayList<Punishment> playerPunishments = getAllPunishments(player.getUniqueId());
-                    getPlayerPunishmentDataCache().addPlayerPunishments(player.getUniqueId(), playerPunishments);
-                }
-
-                //Adding the verified players to the maps.
-                ConcurrentHashMap<UUID, String> verifiedData = getDatabaseManager().getVerifiedData();
-                for(Map.Entry<UUID, String> entry : verifiedData.entrySet()){
-                    UUID uuid = entry.getKey();
-                    String discordId = entry.getValue();
-
-                    getPlayerVerificationCache().putDiscordIdUUID(uuid, discordId);
-                    getPlayerVerificationCache().putUuidDiscordID(uuid, discordId);
-                }
-            } catch (Exception e){
-                getLogger().warning("[!] Failed to cache vital database information. See message: "+e.getMessage());
-                getLogger().warning("[!] Disabling DiscordUtils...");
-                getServer().getPluginManager().disablePlugin(this);
-            }
-
-            //Runs a task to auto expire the punishments
-            Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
-                try{
-                    for(UUID uuid : playerPunishmentsCache.getMainCache().keySet()){
-                        CopyOnWriteArrayList<Punishment> playerPunishments = playerPunishmentsCache.getMainCache().get(uuid);
-                        if(playerPunishments == null || !playerHasActivePunishments(uuid)) continue;
-
-                        for(Punishment p : playerPunishments){
-                            if(p.expiresAt() <= System.currentTimeMillis() && p.active() && p.expiresAt() != 0){
-                                //Setting the punishment as expired in DB and Cache
-                                String sql = "UPDATE punishments SET active = false WHERE id = ?";
-                                try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
-                                    ps.setString(1, p.id());
-                                    ps.executeUpdate();
-                                }
-                                playerPunishmentsCache.expirePunishmentById(uuid, p.id());
-
-                                PunishmentType type = p.punishmentType();
-                                PunishmentScopes scope = p.scope();
-
-                                //Unbans/removes the timeout of a user if the scope is discord/global
-                                UUID targetUUID = p.uuid();
-                                String userId = getPlayerVerificationCache().getDiscordIdFromUuid(targetUUID);
-
-                                if(scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL && userId != null){
-                                    discordBot.getJda().retrieveUserById(userId).queue(targetUser -> {
-                                        Guild dcServer = discordBot.getDiscordServer();
-                                        if(type == PunishmentType.TEMP_BAN){
-                                            //Removing the banned role (and giving the 'Verified' role) from the member if he has the role
-                                            long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
-                                            long verifiedRoleID = botConfig.getConfig().getLong("verification.verified-role-id");
-                                            Role bannedRole = dcServer.getRoleById(bannedRoleID);
-                                            dcServer.retrieveMemberById(userId).queue(member -> {
-                                                if(member.getRoles().contains(bannedRole)){
-                                                    dcServer.removeRoleFromMember(member, bannedRole).queue();
-                                                    dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
-                                                }
-                                            });
-                                        }
-                                        if(type == PunishmentType.TEMP_MUTE){
-                                            //Removes the timeout role of the member if he has the role
-                                            dcServer.retrieveMemberById(userId).queue(targetMember -> {
-                                                long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
-                                                Role timeoutRole =  dcServer.getRoleById(timeoutRoleID);
-
-                                                if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
-                                            });
-
-                                            dcServer.removeTimeout(targetUser).queue();
-                                        }
-                                    });
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception e){
-                    getLogger().severe("Couldn't start the asynchronous task. See message: "+ e.getMessage()+" Disabling DiscordUtils...");
-                    getPluginLoader().disablePlugin(this);
-                }
-            }, 0L, 20L*5); //Runs every 5 seconds
-        }
-
         //Setting the commands and the tabs
         getCommand("discord").setExecutor(commands);
         getCommand("history").setExecutor(commands);
@@ -235,6 +129,153 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         getServer().getPluginManager().registerEvents(this, this);
 
         startBroadcasting(); //Broadcasts the message over an interval of seconds
+
+        // JDBC, cache warm-up and JDA login must not run on the server thread.
+        Bukkit.getScheduler().runTaskAsynchronously(this, this::startNetworkServices);
+    }
+
+    private void startNetworkServices(){
+        try{
+            databaseManager = new DatabaseManager(this);
+        } catch (Exception e){
+            getLogger().severe("[DISCORDUTILS] Database setup failed: " + e.getMessage());
+            disableOnMainThread();
+            return;
+        }
+
+        try{
+            if(!startDiscordBot()) return;
+            warmCaches();
+            startPunishmentExpiryTask();
+        } catch (Exception e){
+            getLogger().warning("[DISCORDUTILS] There is something wrong with the bot or the cache. See message:");
+            getLogger().warning(e.getMessage());
+            disableOnMainThread();
+        }
+    }
+
+    /**
+     * Logs in JDA. Returns false when the bot is turned off in config.
+     * Callers must already be off the main thread, because {@code awaitReady()} blocks.
+     */
+    private boolean startDiscordBot() throws Exception{
+        boolean openDiscordBot = getConfig().getBoolean("open-discord-bot", false);
+        boolean toggleDiscordBot = botConfig.getConfig().getBoolean("toggle-discord-bot", false);
+        if(!openDiscordBot || !toggleDiscordBot) return false;
+
+        String botToken = botFile().getConfig().getString("bot-token");
+        String guildId = botFile().getConfig().getString("guild-id");
+
+        if(botToken == null || botToken.isBlank() || guildId == null || guildId.isBlank()){
+            getLogger().warning("[DISCORDUTILS] Bot Token and/or Guild ID is null. The bot won't start!");
+            return false;
+        }
+
+        discordBot = new BotMain(botToken, guildId, this);
+        if(discordBot.getJda() == null || discordBot.getDiscordServer() == null) return false;
+
+        sendEmbedInVerificationChannel();
+        sendEmbedInBannedChannel();
+        return true;
+    }
+
+    public void restartDiscordBot(){
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            BotMain current = discordBot;
+            discordBot = null;
+            if(current != null && current.getJda() != null) current.getJda().shutdownNow();
+
+            botConfig.reloadConfig();
+            try{
+                if(!startDiscordBot()) getLogger().warning("[DISCORDUTILS] The bot did not start after reload.");
+            } catch (Exception e){
+                getLogger().warning("[DISCORDUTILS] Couldn't reload the bot! See message: " + e.getMessage());
+            }
+        });
+    }
+
+    private void warmCaches() throws SQLException{
+        for(OfflinePlayer player : Bukkit.getOfflinePlayers()){
+            CopyOnWriteArrayList<Punishment> playerPunishments = getAllPunishments(player.getUniqueId());
+            getPlayerPunishmentDataCache().addPlayerPunishments(player.getUniqueId(), playerPunishments);
+        }
+
+        ConcurrentHashMap<UUID, String> verifiedData = getDatabaseManager().getVerifiedData();
+        for(Map.Entry<UUID, String> entry : verifiedData.entrySet()){
+            UUID uuid = entry.getKey();
+            String discordId = entry.getValue();
+
+            getPlayerVerificationCache().putDiscordIdUUID(uuid, discordId);
+            getPlayerVerificationCache().putUuidDiscordID(uuid, discordId);
+        }
+    }
+
+    private void startPunishmentExpiryTask(){
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+            BotMain bot = discordBot;
+            if(bot == null || bot.getJda() == null || bot.getDiscordServer() == null) return;
+
+            try{
+                for(UUID uuid : playerPunishmentsCache.getMainCache().keySet()){
+                    CopyOnWriteArrayList<Punishment> playerPunishments = playerPunishmentsCache.getMainCache().get(uuid);
+                    if(playerPunishments == null || !playerHasActivePunishments(uuid)) continue;
+
+                    for(Punishment p : playerPunishments){
+                        if(p.expiresAt() <= System.currentTimeMillis() && p.active() && p.expiresAt() != 0){
+                            String sql = "UPDATE punishments SET active = false WHERE id = ?";
+                            try(Connection conn = databaseManager.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+                                ps.setString(1, p.id());
+                                ps.executeUpdate();
+                            }
+                            playerPunishmentsCache.expirePunishmentById(uuid, p.id());
+
+                            PunishmentType type = p.punishmentType();
+                            PunishmentScopes scope = p.scope();
+
+                            UUID targetUUID = p.uuid();
+                            String userId = getPlayerVerificationCache().getDiscordIdFromUuid(targetUUID);
+
+                            if((scope == PunishmentScopes.DISCORD || scope == PunishmentScopes.GLOBAL) && userId != null){
+                                bot.getJda().retrieveUserById(userId).queue(targetUser -> {
+                                    Guild dcServer = bot.getDiscordServer();
+                                    if(type == PunishmentType.TEMP_BAN){
+                                        long bannedRoleID = botConfig.getConfig().getLong("ban-role-id");
+                                        long verifiedRoleID = botConfig.getConfig().getLong("verification.verified-role-id");
+                                        Role bannedRole = dcServer.getRoleById(bannedRoleID);
+                                        dcServer.retrieveMemberById(userId).queue(member -> {
+                                            if(member.getRoles().contains(bannedRole)){
+                                                dcServer.removeRoleFromMember(member, bannedRole).queue();
+                                                dcServer.addRoleToMember(member, dcServer.getRoleById(verifiedRoleID)).queue();
+                                            }
+                                        });
+                                    }
+                                    if(type == PunishmentType.TEMP_MUTE){
+                                        dcServer.retrieveMemberById(userId).queue(targetMember -> {
+                                            long timeoutRoleID = botConfig.getConfig().getLong("timeout-role-id");
+                                            Role timeoutRole = dcServer.getRoleById(timeoutRoleID);
+
+                                            if(targetMember.getRoles().contains(timeoutRole)) dcServer.removeRoleFromMember(targetMember, timeoutRole).queue();
+                                        });
+
+                                        dcServer.removeTimeout(targetUser).queue();
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e){
+                getLogger().severe("Punishment expiry task failed: " + e.getMessage());
+            }
+        }, 0L, 20L * 5);
+    }
+
+    private void disableOnMainThread(){
+        if(!isEnabled()) return;
+        if(Bukkit.isPrimaryThread()) getServer().getPluginManager().disablePlugin(this);
+        else Bukkit.getScheduler().runTask(this, () -> {
+            if(isEnabled()) getServer().getPluginManager().disablePlugin(this);
+        });
     }
 
     private void sendEmbedInBannedChannel(){
@@ -313,28 +354,28 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     @Override
     public void onDisable() {
         saveConfig();
-        if(discordBot.getJda() != null){
-            Bukkit.getLogger().info("Bot shut down successfully!");
-            discordBot.getJda().shutdownNow(); //Shuts down the bot if it is turned on
+        BotMain bot = discordBot;
+        discordBot = null;
+        if(bot != null && bot.getJda() != null){
+            bot.getJda().shutdownNow();
+            getLogger().info("Bot shut down successfully!");
         }
 
-        //Closing the DataSource of the DB
-        getDatabaseManager().closeDataSource();
+        DatabaseManager database = databaseManager;
+        if(database != null) database.closeDataSource();
 
-        Bukkit.getLogger().info("DiscordUtils has been disabled successfully!");
+        getLogger().info("DiscordUtils has been disabled successfully!");
     }
 
     //Handles the chat input for different configurations of the plugin
     @EventHandler
-    public void chatAsync(AsyncChatEvent event){
-        Player player = event.getPlayer();
-        UUID playerUUID = player.getUniqueId();
+    public void chatAsync(AsyncPlayerChatEvent event){
+        UUID playerUUID = event.getPlayer().getUniqueId();
+        Consumer<String> callback = chatInput.remove(playerUUID);
+        if(callback == null) return;
 
-        if(!chatInput.containsKey(playerUUID)) return;
         event.setCancelled(true);
-
-        Component message = event.message();
-        Consumer<Component> callback = chatInput.remove(playerUUID);
+        String message = event.getMessage();
         Bukkit.getScheduler().runTask(this, () -> callback.accept(message));
     }
 
@@ -345,7 +386,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         //If the code expired, sends him a message to inform him
         if(getPlayerVerificationCache().isCodeExpired(player.getUniqueId())){
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(getConfig().getString("code-expired-sound", "block.note_block.bass").toLowerCase()));
+                Sound sound = Sounds.fromKey(getConfig().getString("code-expired-sound", "block.note_block.bass"));
                 float volume = getConfig().getInt("ces-volume");
                 float pitch = getConfig().getInt("ces-pitch");
 
@@ -355,7 +396,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 getPlayerVerificationCache().removeFromDiscord(getPlayerVerificationCache().getCode(player.getUniqueId()));
                 getPlayerVerificationCache().deleteCode(player.getUniqueId());
 
-                player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+                player.sendMessage(Texts.color(message));
                 player.playSound(player.getLocation(), sound, volume, pitch);
             }, 40L);
         }
@@ -363,7 +404,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         //Checking if the player is still verifying, in order to give him the code again.
         if(getPlayerVerificationCache().isPlayerVerifying(player.getUniqueId())){
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(getConfig().getString("give-verification-code-sound", "block.note_block.pling").toLowerCase()));
+                Sound sound = Sounds.fromKey(getConfig().getString("give-verification-code-sound", "block.note_block.pling"));
                 float volume = getConfig().getInt("gvcs-volume", 1);
                 float pitch = getConfig().getInt("gvcs-pitch", 1);
                 List<String> rawMessage = getConfig().getStringList("resend-verification-code-message");
@@ -371,8 +412,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
                 for(String line : rawMessage){
                     line = line.replace("%code%", getPlayerVerificationCache().getCode(player.getUniqueId()));
                     line = PlaceholderAPI.setPlaceholders(player, line);
-                    Component finalLine = LegacyComponentSerializer.legacyAmpersand().deserialize(line);
-                    player.sendMessage(finalLine);
+                    player.sendMessage(Texts.color(line));
                 }
                 player.playSound(player.getLocation(), sound, volume, pitch);
             }, 40L);
@@ -387,7 +427,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         return PlaceholderAPI.setPlaceholders(player, text);
     }
 
-    public void waitForPlayerInput(Player player, Consumer<Component> callback){
+    public void waitForPlayerInput(Player player, Consumer<String> callback){
         chatInput.put(player.getUniqueId(), callback);
     }
 
@@ -438,7 +478,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
             return;
         }
 
-        Sound broadcastSound = Registry.SOUNDS.get(NamespacedKey.minecraft(getConfig().getString("boardcast-message-sound").toLowerCase()));
+        Sound broadcastSound = Sounds.fromKey(getConfig().getString("boardcast-message-sound"));
 
         //Check if sound is null
         if(broadcastSound == null) Bukkit.getLogger().warning("[DISCORDUTILS] Sound for broadcast is invalid!");

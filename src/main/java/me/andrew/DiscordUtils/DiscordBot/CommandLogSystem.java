@@ -1,10 +1,10 @@
-//Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.DiscordBot;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.EventHandler;
@@ -24,62 +24,55 @@ public class CommandLogSystem implements Listener {
     public void onCommand(PlayerCommandPreprocessEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
-        //This event should only fire when the discord bot is toggled
         boolean toggleDcBot = botConfig.getBoolean("toggle-discord-bot", false);
         if(!toggleDcBot) return;
 
-        //Checking if the command logging channel is configured
         String commandLogChannelId = botConfig.getString("command-logging.channel-id", null);
         if(commandLogChannelId == null || commandLogChannelId.isEmpty()) return;
+        if(!botConfig.getBoolean("command-logging.toggle", false)) return;
 
-        //Checking if the feature is toggled
-        if(botConfig.getBoolean("command-logging.toggle", false)){
-            try{
-                Guild dcServer = plugin.getDiscordBot().getDiscordServer();
+        List<String> dontLogCommands = botConfig.getStringList("command-logging.not-tracking-these-commands");
+        String[] command = event.getMessage().substring(1).split(" ");
+        if(command.length == 0 || dontLogCommands.contains(command[0])) return;
 
-                //Checking if the command is one of the ones that don't need to be logged
-                List<String> dontLogCommands = botConfig.getStringList("command-logging.not-tracking-these-commands");
-                String[] command = event.getMessage().substring(1).split(" ");
-                if(dontLogCommands.contains(command[0])) return;
+        long commandLogID = botConfig.getLong("command-logging.channel-id", 0);
+        if(commandLogID == 0){
+            plugin.getLogger().warning("[!] You have command logging turned on, but the channel id is null!");
+            return;
+        }
 
-                //Getting the text channel for logging
-                long commandLogID = botConfig.getLong("command-logging.channel-id", 0);
-                if(commandLogID == 0){
-                    plugin.getLogger().warning("[!] You have command logging turned on, but the channel id is null!");
-                    return;
-                }
+        int redValue = botConfig.getInt("command-logging.embed-color.RED");
+        int greenValue = botConfig.getInt("command-logging.embed-color.GREEN");
+        int blueValue = botConfig.getInt("command-logging.embed-color.BLUE");
+        String title = botConfig.getString("command-logging.embed-title", "COMMAND RAN BY **%player_name%**")
+                .replace("%player_name%", event.getPlayer().getName());
+        String description = botConfig.getString("command-logging.embed-description", "**Command Executed**: %command%")
+                .replace("%command%", event.getMessage());
 
-                TextChannel commandLoggingChannel = dcServer.getTextChannelById(commandLogID);
-                if(commandLoggingChannel == null) {
-                    plugin.getLogger().warning("[!] The command logging channel couldn't be found!");
-                    return;
-                }
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> sendLog(commandLogID, redValue, greenValue, blueValue, title, description));
+    }
 
-                //Building the EMBED
-                EmbedBuilder eb = new EmbedBuilder();
+    private void sendLog(long commandLogID, int red, int green, int blue, String title, String description) {
+        try{
+            BotMain bot = plugin.getDiscordBot();
+            if(bot == null || bot.getJda() == null) return;
 
-                //Color
-                int redValue = botConfig.getInt("command-logging.embed-color.RED");
-                int greenValue = botConfig.getInt("command-logging.embed-color.GREEN");
-                int blueValue = botConfig.getInt("command-logging.embed-color.BLUE");
-                eb.setColor(Color.fromRGB(redValue, greenValue, blueValue).asRGB());
+            Guild dcServer = bot.getDiscordServer();
+            if(dcServer == null) return;
 
-                //Title
-                String title = botConfig.getString("command-logging.embed-title", "COMMAND RAN BY **%player_name%**")
-                        .replace("%player_name%", event.getPlayer().getName())
-                        ;
-                eb.setTitle(title);
-
-                //Description
-                String description = botConfig.getString("command-logging.embed-description", "**Command Executed**: %command%")
-                        .replace("%command%", event.getMessage())
-                        ;
-                eb.setDescription(description);
-
-                commandLoggingChannel.sendMessageEmbeds(eb.build()).queue();
-            } catch (Exception e){
-                plugin.getLogger().warning("Couldn't send a Command Log. See message: "+e.getMessage());
+            TextChannel commandLoggingChannel = dcServer.getTextChannelById(commandLogID);
+            if(commandLoggingChannel == null) {
+                plugin.getLogger().warning("[!] The command logging channel couldn't be found!");
+                return;
             }
+
+            EmbedBuilder eb = new EmbedBuilder();
+            eb.setColor(Color.fromRGB(red, green, blue).asRGB());
+            eb.setTitle(title);
+            eb.setDescription(description);
+            commandLoggingChannel.sendMessageEmbeds(eb.build()).queue();
+        } catch (Exception e){
+            plugin.getLogger().warning("Couldn't send a Command Log. See message: "+e.getMessage());
         }
     }
 }

@@ -1,16 +1,13 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
 import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import me.andrew.DiscordUtils.Plugin.SkullTextures;
+import me.andrew.DiscordUtils.Plugin.Texts;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,7 +20,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -40,60 +36,45 @@ public class ChoosePunishScopeGUI implements Listener {
 
     public void showGui(Player player){
         int invSize = 54;
-        Component title = Component.text("Choose Punishment Scope");
-        Inventory gui = Bukkit.createInventory(player, invSize, title);
+        Inventory gui = Bukkit.createInventory(player, invSize, "Choose Punishment Scope");
 
-        //Return button
-        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"), null, null, null);
+        ItemStack returnButton = createButton(Material.SPECTRAL_ARROW, "&c&lRETURN", null, null, null);
         gui.setItem(40, returnButton);
 
-        //Discord Scope button
-        List<Component> discordButtonLore = new ArrayList<>();
-        discordButtonLore.add(Component.text(" "));
-        discordButtonLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&eThe punishment will take place only in the &ldiscord server&e."));
-        ItemStack discordButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&9&lDISCORD SCOPE"), discordButtonLore ,"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19", "discord");
+        ItemStack discordButton = createButton(Material.PLAYER_HEAD, "&9&lDISCORD SCOPE",
+                Texts.lines(" ", "&eThe punishment will take place only in the &ldiscord server&e."),
+                "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19", "discord");
         gui.setItem(20,  discordButton);
 
-        //Minecraft Scope button
-        List<Component> mcButtonLore = new ArrayList<>();
-        mcButtonLore.add(Component.text(" "));
-        mcButtonLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&eThe punishment will take place only in the &lminecraft server&e."));
-        ItemStack minecraftButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&2&LMINECRAFT SCOPE"), mcButtonLore,"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjFiNjM1YmM5MmRkMjAwMTFkNmU3ZDAxMjU3ZTZlYTczN2I0OWZiN2RlOTQxZDNiYmQxODc3MTA0ZmM1ZWIxZSJ9fX0=", "minecraft");
+        ItemStack minecraftButton = createButton(Material.PLAYER_HEAD, "&2&LMINECRAFT SCOPE",
+                Texts.lines(" ", "&eThe punishment will take place only in the &lminecraft server&e."),
+                "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjFiNjM1YmM5MmRkMjAwMTFkNmU3ZDAxMjU3ZTZlYTczN2I0OWZiN2RlOTQxZDNiYmQxODc3MTA0ZmM1ZWIxZSJ9fX0=", "minecraft");
         gui.setItem(22, minecraftButton);
 
-        //Global Scope button
-        List<Component> globalButtonLore = new ArrayList<>();
-        globalButtonLore.add(Component.text(" "));
-        globalButtonLore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&eThe punishment will take place in both &lminecraft &eand &ldiscord server&e."));
-        ItemStack globalButton = createButton(Material.PLAYER_HEAD, LegacyComponentSerializer.legacyAmpersand().deserialize("&6&lGLOBAL SCOPE"), globalButtonLore, "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTU3N2M0ZGUxZjUxYTcwNzIyMDIzZTg1NmI1NDNjZDU3MGYxZDBlZTZiOWQxNjdiNTkwMjhjZTFiYzkyZTQ1OCJ9fX0=", "global");
+        ItemStack globalButton = createButton(Material.PLAYER_HEAD, "&6&lGLOBAL SCOPE",
+                Texts.lines(" ", "&eThe punishment will take place in both &lminecraft &eand &ldiscord server&e."),
+                "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTU3N2M0ZGUxZjUxYTcwNzIyMDIzZTg1NmI1NDNjZDU3MGYxZDBlZTZiOWQxNjdiNTkwMjhjZTFiYzkyZTQ1OCJ9fX0=", "global");
         gui.setItem(24, globalButton);
 
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, Component displayName, List<Component> lore, String customHeadValue, String ID){
+    private ItemStack createButton(Material mat, String displayName, List<String> lore, String customHeadValue, String ID){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
 
-        //Setting custom head
         if(customHeadValue != null){
             SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
-            skullMeta.displayName(displayName);
-            if(lore != null) skullMeta.lore(lore);
-
+            skullMeta.setDisplayName(Texts.color(displayName));
+            if(lore != null) skullMeta.setLore(lore);
             if(ID != null) skullMeta.getPersistentDataContainer().set(dataContainer, PersistentDataType.STRING, ID);
-
-            PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
-            profile.setProperty(new ProfileProperty("textures", customHeadValue));
-            skullMeta.setPlayerProfile(profile);
-
+            SkullTextures.apply(skullMeta, customHeadValue);
             item.setItemMeta(skullMeta);
             return item;
         }
 
-        meta.displayName(displayName);
-        if(lore != null) meta.lore(lore);
-
+        meta.setDisplayName(Texts.color(displayName));
+        if(lore != null) meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
     }
@@ -112,13 +93,13 @@ public class ChoosePunishScopeGUI implements Listener {
             staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&ld &f-> &adays | &f&lh &f-> &ahours | &f&lm &f-> &aminutes | &f&ls-> &aseconds"));
 
             plugin.waitForPlayerInput(staff, input -> {
-                if(input.equals(Component.text("cancel"))){
+                if(input.equalsIgnoreCase("cancel")){
                     staff.playSound(staff.getLocation(), Sound.UI_BUTTON_CLICK, 1, 1);
                     state.scope = null;
                     showGui(staff);
                     return;
                 }
-                long durationFromWarnings = parseCooldown(PlainTextComponentSerializer.plainText().serialize(input));
+                long durationFromWarnings = parseCooldown(input.trim());
 
                 if(durationFromWarnings == 0){
                     staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
@@ -168,7 +149,7 @@ public class ChoosePunishScopeGUI implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if(!(e.getWhoClicked() instanceof Player player)) return;
-        if(!e.getView().title().equals(Component.text("Choose Punishment Scope"))) return;
+        if(!e.getView().getTitle().equals("Choose Punishment Scope")) return;
         e.setCancelled(true);
 
         ItemStack clickedItem = e.getCurrentItem();

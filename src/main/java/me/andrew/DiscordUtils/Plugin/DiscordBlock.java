@@ -1,8 +1,6 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -80,18 +78,12 @@ public class DiscordBlock implements Listener {
             return;
         }
 
-        PlayerProfile discordBlockProfile =Bukkit.createProfile(UUID.randomUUID());
-        //Check if the head texture is valid or not
         try{
             String headTexture = plugin.getConfig().getString("discord-block.custom-head", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19");
-            discordBlockProfile.setProperty(new ProfileProperty("textures", headTexture));
-            discordSkull.setPlayerProfile(discordBlockProfile);
-            discordSkull.update(true, false);
+            SkullTextures.apply(discordSkull, headTexture);
         } catch (Exception e) {
-            Bukkit.getLogger().warning("DISCORDUTILS] The texture of the block is INVALID!");
+            Bukkit.getLogger().warning("[DISCORDUTILS] The texture of the block is INVALID!");
         }
-        discordSkull.setPlayerProfile(discordBlockProfile);
-        discordSkull.update(true, false);
     }
 
     public void startParticleTask(){
@@ -186,7 +178,7 @@ public class DiscordBlock implements Listener {
 
         //Checks if the player has permission
         if(!player.hasPermission("discordutils.discord")){
-            Sound noPermission = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-no-permission-sound")));
+            Sound noPermission = Sounds.fromKey(plugin.getConfig().getString("player-no-permission-sound"));
             float npsVolume = plugin.getConfig().getInt("pnps-volume");
             float npsPitch = plugin.getConfig().getInt("pnps-pitch");
 
@@ -222,7 +214,7 @@ public class DiscordBlock implements Listener {
                 //Checks if the player already has the task running
                 if(cooldowns.contains(player.getUniqueId())){
                     //Plays the sound from config
-                    Sound taskInProgress = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("fetching-data-task-in-progress-sound").toLowerCase()));
+                    Sound taskInProgress = Sounds.fromKey(plugin.getConfig().getString("fetching-data-task-in-progress-sound").toLowerCase());
                     float fdtipsVolume = plugin.getConfig().getInt("fdtips-volume");
                     float fdtipsPitch = plugin.getConfig().getInt("fdtips-pitch");
                     player.playSound(player.getLocation(), taskInProgress, fdtipsVolume, fdtipsPitch);

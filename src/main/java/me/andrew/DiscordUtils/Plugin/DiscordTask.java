@@ -1,11 +1,6 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextReplacementConfig;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -14,7 +9,6 @@ import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 
 public class DiscordTask {
@@ -32,7 +26,7 @@ public class DiscordTask {
             //Check if the player has cooldown
             if(plugin.getDiscordBlockManager().getCooldowns().contains(player.getUniqueId())){
                 //Plays the sound
-                Sound taskInProgress = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("fetching-data-task-in-progress-sound").toLowerCase()));
+                Sound taskInProgress = Sounds.fromKey(plugin.getConfig().getString("fetching-data-task-in-progress-sound").toLowerCase());
                 float fdtipsVolume = plugin.getConfig().getInt("fdtips-volume");
                 float fdtipsPitch = plugin.getConfig().getInt("fdtips-pitch");
                 player.playSound(player.getLocation(), taskInProgress, fdtipsVolume, fdtipsPitch);
@@ -68,16 +62,15 @@ public class DiscordTask {
         String configChoice = plugin.getConfig().getString("link-appearance-choice", "book");
 
         //Get the giveLinkSound information
-        Sound giveLinkSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("get-discord-link-sound").toLowerCase()));
+        Sound giveLinkSound = Sounds.fromKey(plugin.getConfig().getString("get-discord-link-sound").toLowerCase());
         float glsVolume = plugin.getConfig().getInt("gdls-volume");
         float glsPitch = plugin.getConfig().getInt("gdls-pitch");
 
         //Gets the info for taskErrorSound
-        Sound taskErrorSound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("task-error-sound").toLowerCase()));
+        Sound taskErrorSound = Sounds.fromKey(plugin.getConfig().getString("task-error-sound").toLowerCase());
         float tesVolume = plugin.getConfig().getInt("tes-volume");
         float tesPitch = plugin.getConfig().getInt("tes-pitch");
 
-        Component discordLinkClickable;
         String discordWord = config.getString("discord-link-word");
         String hoverText = config.getString("hover-text");
 
@@ -92,28 +85,14 @@ public class DiscordTask {
 
         //Opens the book if the choice is 'book'
         if(configChoice.equalsIgnoreCase("book")){
-            discordLinkClickable = Component.text(discordWord)
-                    .clickEvent(ClickEvent.openUrl(discordLink))
-                    .hoverEvent(HoverEvent.showText(Component.text(hoverText)));
-
             ItemStack discordBook = new ItemStack(Material.WRITTEN_BOOK);
             BookMeta dbMeta =  (BookMeta) discordBook.getItemMeta();
 
             List<String> bookPages = config.getStringList("discord-link-book.pages");
-            List<Component> bookPagesComponents = new ArrayList<>();
             for(String page : bookPages){
-                Component bookPage = LegacyComponentSerializer.legacyAmpersand().deserialize(page);
-
-                //Replacing the word
-                bookPage = bookPage.replaceText(TextReplacementConfig.builder()
-                                .matchLiteral(discordWord)
-                                .replacement(discordLinkClickable)
-                        .build());
-
-                bookPagesComponents.add(bookPage);
+                dbMeta.spigot().addPage(Texts.linkify(page, discordWord, discordLink, hoverText));
             }
 
-            dbMeta.pages(bookPagesComponents);
             dbMeta.setAuthor(ChatColor.translateAlternateColorCodes('&', config.getString("discord-link-book.author", "Our Staff")));
             dbMeta.setTitle(ChatColor.translateAlternateColorCodes('&', config.getString("discord-link-book.title", "Join Our Discord!")));
             discordBook.setItemMeta(dbMeta);
@@ -122,20 +101,9 @@ public class DiscordTask {
 
         //Sends a message in chat if the choice is 'chat-message'
         if(configChoice.equalsIgnoreCase("chat-message")){
-            discordLinkClickable = Component.text(discordWord)
-                    .clickEvent(ClickEvent.openUrl(discordLink))
-                    .hoverEvent(HoverEvent.showText(Component.text(hoverText)));
-
             List<String> messageLines = config.getStringList("message-lines");
             for(String line : messageLines){
-                Component compLine =  LegacyComponentSerializer.legacyAmpersand().deserialize(line);
-
-                //Replacing the designated word with the component
-                compLine = compLine.replaceText(TextReplacementConfig.builder()
-                                .matchLiteral(discordWord)
-                                .replacement(discordLinkClickable)
-                        .build());
-                player.sendMessage(compLine);
+                player.spigot().sendMessage(Texts.linkify(line, discordWord, discordLink, hoverText));
             }
         }
     }

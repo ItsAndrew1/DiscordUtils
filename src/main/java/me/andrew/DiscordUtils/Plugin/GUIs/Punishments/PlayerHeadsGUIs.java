@@ -2,9 +2,7 @@
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import me.andrew.DiscordUtils.Plugin.Texts;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,9 +14,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class PlayerHeadsGUIs implements Listener{
     private final DiscordUtils plugin;
@@ -32,8 +27,7 @@ public class PlayerHeadsGUIs implements Listener{
 
     public void showGui(Player player, int page) {
         int inventorySize = 54;
-        Component invTitle = Component.text("Select Player (page "+page+")");
-        Inventory gui = Bukkit.createInventory(null, inventorySize, invTitle);
+        Inventory gui = Bukkit.createInventory(null, inventorySize, "Select Player (page "+page+")");
 
         OfflinePlayer[] players = Bukkit.getOfflinePlayers();
         int headsPerPage = 35;
@@ -41,8 +35,8 @@ public class PlayerHeadsGUIs implements Listener{
         int endIndex = Math.min(startIndex + headsPerPage, players.length);
 
         //Setting the navigation buttons
-        if(page > 1) gui.setItem(48, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&c◀ Previous Page"), "Previous"));
-        if(endIndex < players.length) gui.setItem(50, createButton(Material.ARROW, LegacyComponentSerializer.legacySection().deserialize("&aNext Page ▶"), "Next"));
+        if(page > 1) gui.setItem(48, createButton(Material.ARROW, "&c◀ Previous Page", "Previous"));
+        if(endIndex < players.length) gui.setItem(50, createButton(Material.ARROW, "&aNext Page ▶", "Next"));
 
         //Adding each player's skull
         for(int i = startIndex; i < endIndex; i++){
@@ -54,54 +48,45 @@ public class PlayerHeadsGUIs implements Listener{
             SkullMeta skullMeta = (SkullMeta) skull.getItemMeta();
 
             skullMeta.setOwningPlayer(targetPlayer);
-            skullMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&e"+targetPlayer.getName()));
-
-            //Setting the lore
-            List<Component> lore = new ArrayList<>();
-            Component playerStatus;
-
-            if(targetPlayer.isOnline()) playerStatus = LegacyComponentSerializer.legacyAmpersand().deserialize("&aStatus: &a&lONLINE");
-            else playerStatus = LegacyComponentSerializer.legacyAmpersand().deserialize("&aStatus: &c&lOFFLINE");
+            skullMeta.setDisplayName(Texts.color("&e"+targetPlayer.getName()));
 
             int activePunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(targetPlayer.getUniqueId(), true);
             int inactivePunishments = plugin.getPlayerPunishmentDataCache().getNrOfPunishments(targetPlayer.getUniqueId(), false);
-
-            lore.add(Component.text(" "));
-            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aActive Punishments: &c&l"+activePunishments));
-            lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize("&aExpired Punishments: &c&l"+inactivePunishments));
-            lore.add(Component.text(" "));
-            lore.add(playerStatus);
-
-            skullMeta.lore(lore);
+            String playerStatus = targetPlayer.isOnline() ? "&aStatus: &a&lONLINE" : "&aStatus: &c&lOFFLINE";
+            skullMeta.setLore(Texts.lines(
+                    " ",
+                    "&aActive Punishments: &c&l"+activePunishments,
+                    "&aExpired Punishments: &c&l"+inactivePunishments,
+                    " ",
+                    playerStatus
+            ));
             skull.setItemMeta(skullMeta);
 
             gui.addItem(skull);
         }
 
         //Setting the search player button
-        gui.setItem(53, createButton(Material.OAK_SIGN, LegacyComponentSerializer.legacyAmpersand().deserialize("&eSearch Player"), null));
+        gui.setItem(53, createButton(Material.OAK_SIGN, "&eSearch Player", null));
 
         //Setting the exit button
-        gui.setItem(49, createButton(Material.RED_CONCRETE, LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lEXIT"), null));
+        gui.setItem(49, createButton(Material.RED_CONCRETE, "&c&lEXIT", null));
 
         //Setting decoration glass
         ItemStack decoGlass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta meta = decoGlass.getItemMeta();
-        meta.displayName(Component.text(" "));
+        meta.setDisplayName(" ");
         decoGlass.setItemMeta(meta);
         for(int i = 36; i<=44; i++) gui.setItem(i, decoGlass);
 
         player.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, Component title, String ID){
+    private ItemStack createButton(Material mat, String title, String ID){
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(title);
-        item.setItemMeta(meta);
-
+        meta.setDisplayName(Texts.color(title));
         if(ID != null) meta.getPersistentDataContainer().set(container, PersistentDataType.STRING, ID);
-
+        item.setItemMeta(meta);
         return item;
     }
 
@@ -150,12 +135,19 @@ public class PlayerHeadsGUIs implements Listener{
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the &lexact name &aof the player:"));
 
             plugin.waitForPlayerInput(player, input->{
-                    OfflinePlayer inputPlayer;
-                    inputPlayer = Bukkit.getOfflinePlayer(PlainTextComponentSerializer.plainText().serialize(input));
+                    OfflinePlayer inputPlayer = Bukkit.getPlayerExact(input);
+                    if(inputPlayer == null){
+                        for(OfflinePlayer offline : Bukkit.getOfflinePlayers()){
+                            if(input.equalsIgnoreCase(offline.getName())){
+                                inputPlayer = offline;
+                                break;
+                            }
+                        }
+                    }
 
-                    if(!inputPlayer.hasPlayedBefore()){
+                    if(inputPlayer == null){
                         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUnknown player with name &l"+PlainTextComponentSerializer.plainText().serialize(input)+"&c!"));
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUnknown player with name &l"+input+"&c!"));
 
                         //Reopens the gui after 1/2 seconds
                         new BukkitRunnable() {

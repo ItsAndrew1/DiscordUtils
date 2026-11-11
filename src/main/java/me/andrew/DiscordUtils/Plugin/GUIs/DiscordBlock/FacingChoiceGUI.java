@@ -1,6 +1,8 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock;
 
+import me.andrew.DiscordUtils.Plugin.Sounds;
+
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
@@ -188,7 +190,7 @@ public class FacingChoiceGUI implements Listener {
         String ciDisplayName =  clickedItemMeta.getDisplayName();
         Material clickedMaterial = clickedItem.getType();
 
-        Sound clickSound = Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
+        Sound clickSound = Sounds.fromKey("ui.button.click");
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
 
         //If the staff clicks on return button
@@ -299,7 +301,7 @@ public class FacingChoiceGUI implements Listener {
             plugin.getConfig().set("discord-block.facing", choice);
             plugin.saveConfig();
 
-            Sound savedChoice =  Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
+            Sound savedChoice =  Sounds.fromKey("entity.player.levelup");
             player.playSound(player.getLocation(), savedChoice, 1f, 1.4f);
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aSaved facing &l"+choice+" &afor the discord block!"));
             setAllBooleansFalse();

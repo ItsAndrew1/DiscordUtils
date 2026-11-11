@@ -7,7 +7,6 @@ import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -21,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.UUID;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -40,13 +40,20 @@ public class Commands implements CommandExecutor{
         Player player = (Player) sender;
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
 
-        try {
-            //Check if the player is muted temporarily
+        //Check if the player is muted temporarily
             Punishment tempMute = plugin.getPlayerPunishmentDataCache().getPunishment(player.getUniqueId(), PunishmentType.TEMP_MUTE);
             if(tempMute != null && (tempMute.scope() == PunishmentScopes.MINECRAFT || tempMute.scope() == PunishmentScopes.GLOBAL)){
                 if(isPunishmentExpired(tempMute)){
-                    plugin.getDatabaseManager().expirePunishmentById(tempMute.id());
-                    plugin.getPlayerPunishmentDataCache().expirePunishmentById(player.getUniqueId(), tempMute.id());
+                    String punishmentId = tempMute.id();
+                    UUID playerId = player.getUniqueId();
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                        try{
+                            if(plugin.getDatabaseManager() != null) plugin.getDatabaseManager().expirePunishmentById(punishmentId);
+                            plugin.getPlayerPunishmentDataCache().expirePunishmentById(playerId, punishmentId);
+                        } catch (SQLException ex){
+                            plugin.getLogger().warning("[DISCORDUTILS] Could not expire mute " + punishmentId + ": " + ex.getMessage());
+                        }
+                    });
                 }
                 else{
                     //Sends the player a message (if the messages are toggled)
@@ -101,9 +108,6 @@ public class Commands implements CommandExecutor{
                     return true;
                 }
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
 
         //Checking if the player has permission for commands
         if(!player.hasPermission("discordutils.commands")){
@@ -114,8 +118,8 @@ public class Commands implements CommandExecutor{
         String commandNoPermissionMessage = plugin.getConfig().getString("command-no-permission-message", "&cYou don't have permission to run this command.");
 
         //Get the sounds
-        Sound good = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
-        Sound invalid = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
+        Sound good = Sounds.fromKey("entity.player.levelup");
+        Sound invalid = Sounds.fromKey("entity.enderman.teleport");
         assert good != null;
         assert invalid != null;
 
@@ -189,7 +193,7 @@ public class Commands implements CommandExecutor{
                     plugin.getDiscordBlockManager().startParticleTask(); //Spawns the particles
 
                     //Starts the broadcastingTask with a new one, so the task's don't pile up
-                    if(!plugin.getBroadcastTask().isCancelled()){
+                    if(plugin.getBroadcastTask() != null && !plugin.getBroadcastTask().isCancelled()){
                         plugin.getBroadcastTask().cancel();
                         plugin.startBroadcasting();
                     }
@@ -229,11 +233,7 @@ public class Commands implements CommandExecutor{
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
                 return true;
             }
-            try {
-                plugin.getVerificationManager().verificationProcess(player);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
+            plugin.getVerificationManager().verificationProcess(player);
             return true;
         }
 
@@ -288,9 +288,9 @@ public class Commands implements CommandExecutor{
 
             String message = plugin.getConfig().getString("unverified-from-mc-message", "&4[&c&l!&4] &aYou have been unverified! Run &e&l/verify&a in order to verify again.");
             message = PlaceholderAPI.setPlaceholders(player, message);
-            player.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
 
-            Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(plugin.getConfig().getString("player-unverified-sound", "entity.player.levelup").toLowerCase()));
+            Sound sound = Sounds.fromKey(plugin.getConfig().getString("player-unverified-sound", "entity.player.levelup").toLowerCase());
             float volume = plugin.getConfig().getInt("pus-volume", 1);
             float pitch = plugin.getConfig().getInt("pus-pitch", 1);
             player.playSound(player.getLocation(), sound, volume, pitch);

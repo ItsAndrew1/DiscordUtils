@@ -1,8 +1,9 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock;
 
+import me.andrew.DiscordUtils.Plugin.Sounds;
+
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -112,8 +113,8 @@ public class BlockConfigurationGUI implements Listener {
             event.setCancelled(true);
             return;
         }
-        Sound clickSound = Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
-        Sound inputSound = Registry.SOUNDS.get(NamespacedKey.minecraft("block.note_block.pling"));
+        Sound clickSound = Sounds.fromKey("ui.button.click");
+        Sound inputSound = Sounds.fromKey("block.note_block.pling");
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
 
         //If the player clicks on return item
@@ -137,7 +138,7 @@ public class BlockConfigurationGUI implements Listener {
                 plugin.getConfig().set("discord-block.world", input);
                 plugin.saveConfig();
 
-                Sound goodWorld = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
+                Sound goodWorld = Sounds.fromKey("entity.player.levelup");
                 player.playSound(player.getLocation(), goodWorld, 1f, 1.4f);
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aSaved world &l"+input+" &afor the discord-block!"));
 
@@ -173,11 +174,11 @@ public class BlockConfigurationGUI implements Listener {
                 //Checks if the coordinate X is valid
                 int coordinateX;
                 try{
-                    coordinateX = Integer.parseInt(PlainTextComponentSerializer.plainText().serialize(input1));
+                    coordinateX = Integer.parseInt(input1.trim());
                     plugin.getConfig().set("discord-block.location.x", coordinateX);
                     plugin.saveConfig();
                 } catch (Exception e){
-                    Sound invalidCoordinate = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
+                    Sound invalidCoordinate = Sounds.fromKey("entity.enderman.teleport");
                     player.playSound(player.getLocation(), invalidCoordinate, 1f, 1f);
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cInvalid coordinate X."));
 
@@ -199,11 +200,11 @@ public class BlockConfigurationGUI implements Listener {
                     //Check if the coordinate is valid
                     int coordinateY;
                     try{
-                        coordinateY = Integer.parseInt(PlainTextComponentSerializer.plainText().serialize(input2));
+                        coordinateY = Integer.parseInt(input2.trim());
                         plugin.getConfig().set("discord-block.location.y", coordinateY);
                         plugin.saveConfig();
                     } catch (Exception e){
-                        Sound InvalidCoordinate = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
+                        Sound InvalidCoordinate = Sounds.fromKey("entity.enderman.teleport");
                         player.playSound(player.getLocation(), InvalidCoordinate, 1f, 1f);
                         player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cInvalid coordinate Y."));
 
@@ -225,11 +226,11 @@ public class BlockConfigurationGUI implements Listener {
                         int coordinateZ;
                         //Check if the coordinate is valid
                         try{
-                            coordinateZ = Integer.parseInt(PlainTextComponentSerializer.plainText().serialize(input3));
+                            coordinateZ = Integer.parseInt(input3.trim());
                             plugin.getConfig().set("discord-block.location.z", coordinateZ);
                             plugin.saveConfig();
                         } catch (Exception e){
-                            Sound invalidCoord = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
+                            Sound invalidCoord = Sounds.fromKey("entity.enderman.teleport");
                             player.playSound(player.getLocation(), invalidCoord, 1f, 1f);
                             player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cInvalid coordinate Z."));
 
@@ -243,7 +244,7 @@ public class BlockConfigurationGUI implements Listener {
                             return;
                         }
 
-                        Sound validCoords = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
+                        Sound validCoords = Sounds.fromKey("entity.player.levelup");
                         player.playSound(player.getLocation(), validCoords, 1f, 1.4f);
                         player.sendMessage(ChatColor.translateAlternateColorCodes('&', " &aLocation &l"+input1+" "+input2+" "+input3+" &asaved for discord block."));
 

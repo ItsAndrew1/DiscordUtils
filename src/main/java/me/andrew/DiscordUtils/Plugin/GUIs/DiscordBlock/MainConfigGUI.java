@@ -1,10 +1,10 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs.DiscordBlock;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
+import me.andrew.DiscordUtils.Plugin.Sounds;
+
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import me.andrew.DiscordUtils.Plugin.SkullTextures;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -18,7 +18,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.net.URI;
-import java.util.UUID;
 
 public class MainConfigGUI implements Listener {
     private final DiscordUtils plugin;
@@ -66,9 +65,7 @@ public class MainConfigGUI implements Listener {
         ItemMeta discordBlockMeta = discordBlock.getItemMeta();
         SkullMeta dbSkull = (SkullMeta) discordBlockMeta;
         //Setting the custom head for it
-        PlayerProfile dbProfile = Bukkit.createProfile(UUID.randomUUID());
-        dbProfile.setProperty(new ProfileProperty("textures", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19"));
-        dbSkull.setPlayerProfile(dbProfile);
+        SkullTextures.apply(dbSkull, "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzg3M2MxMmJmZmI1MjUxYTBiODhkNWFlNzVjNzI0N2NiMzlhNzVmZjFhODFjYmU0YzhhMzliMzExZGRlZGEifX19");
         discordBlockMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&b&lCONFIGURE THE DISCORD BLOCK"));
         discordBlock.setItemMeta(discordBlockMeta);
         mainConfigGUI.setItem(20, discordBlock);
@@ -110,7 +107,7 @@ public class MainConfigGUI implements Listener {
         }
 
         //Click sound
-        Sound clickSound = Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
+        Sound clickSound = Sounds.fromKey("ui.button.click");
 
         //If the player clicks on exitItem
         Material exitItemMat = Material.RED_CONCRETE;
@@ -128,8 +125,8 @@ public class MainConfigGUI implements Listener {
             player.closeInventory();
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&aEnter the discord invite link:"));
             plugin.waitForPlayerInput(player, input->{
-                if(!isUrlValid(PlainTextComponentSerializer.plainText().serialize(input))){
-                    Sound invalidUrl = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.enderman.teleport"));
+                if(!isUrlValid(input)){
+                    Sound invalidUrl = Sounds.fromKey("entity.enderman.teleport");
                     player.playSound(player.getLocation(), invalidUrl, 1f, 1f);
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThe URL is invalid! Please enter a valid one."));
 
@@ -142,7 +139,7 @@ public class MainConfigGUI implements Listener {
                     }.runTaskLater(plugin, 10L);
                     return;
                 }
-                Sound goodUrl = Registry.SOUNDS.get(NamespacedKey.minecraft("entity.player.levelup"));
+                Sound goodUrl = Sounds.fromKey("entity.player.levelup");
 
                 //Saves the link to config
                 plugin.getConfig().set("discord-link", input);

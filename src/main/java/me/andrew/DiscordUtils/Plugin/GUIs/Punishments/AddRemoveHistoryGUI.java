@@ -1,19 +1,16 @@
 //Developed by _ItsAndrew_
 package me.andrew.DiscordUtils.Plugin.GUIs.Punishments;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
 import me.andrew.DiscordUtils.DiscordBot.AppealState;
 import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import me.andrew.DiscordUtils.Caching.Punishment;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.AddingState;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentScopes;
 import me.andrew.DiscordUtils.Plugin.PunishmentsApply.PunishmentType;
+import me.andrew.DiscordUtils.Plugin.SkullTextures;
+import me.andrew.DiscordUtils.Plugin.Texts;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -26,7 +23,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.sql.SQLException;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class AddRemoveHistoryGUI implements Listener{
@@ -49,18 +45,15 @@ public class AddRemoveHistoryGUI implements Listener{
 
     public void showGui(Player player){
         int invSize = 54;
-        Component invTitle = Component.text("Add/Remove Punishment");
-        Inventory gui = Bukkit.createInventory(null, invSize, invTitle);
+        Inventory gui = Bukkit.createInventory(null, invSize, "Add/Remove Punishment");
         String playerName = plugin.getPlayerHeadsGUIs().getClickedPlayer().getName();
 
         //Add button
         ItemStack addButton = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta addButtonSkull =  (SkullMeta) addButton.getItemMeta();
         addButtonSkull.getPersistentDataContainer().set(dataContainer, PersistentDataType.STRING, "add");
-        PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
-        profile.setProperty(new ProfileProperty("textures", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWZmMzE0MzFkNjQ1ODdmZjZlZjk4YzA2NzU4MTA2ODFmOGMxM2JmOTZmNTFkOWNiMDdlZDc4NTJiMmZmZDEifX19"));
-        addButtonSkull.setPlayerProfile(profile);
-        addButtonSkull.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&aAdd &lpunishment &afor player &e&l"+playerName));
+        SkullTextures.apply(addButtonSkull, "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWZmMzE0MzFkNjQ1ODdmZjZlZjk4YzA2NzU4MTA2ODFmOGMxM2JmOTZmNTFkOWNiMDdlZDc4NTJiMmZmZDEifX19");
+        addButtonSkull.setDisplayName(Texts.color("&aAdd &lpunishment &afor player &e&l"+playerName));
         addButton.setItemMeta(addButtonSkull);
         gui.setItem(20, addButton);
 
@@ -68,23 +61,22 @@ public class AddRemoveHistoryGUI implements Listener{
         ItemStack removeButton = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta removeButtonSkull = (SkullMeta) removeButton.getItemMeta();
         removeButtonSkull.getPersistentDataContainer().set(dataContainer, PersistentDataType.STRING, "remove");
-        PlayerProfile profile2 = Bukkit.createProfile(UUID.randomUUID());
-        profile2.setProperty(new ProfileProperty("textures", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGU0YjhiOGQyMzYyYzg2NGUwNjIzMDE0ODdkOTRkMzI3MmE2YjU3MGFmYmY4MGMyYzViMTQ4Yzk1NDU3OWQ0NiJ9fX0="));
-        removeButtonSkull.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&cRemove &lpunishment &cfor player &e&l"+playerName));
+        SkullTextures.apply(removeButtonSkull, "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGU0YjhiOGQyMzYyYzg2NGUwNjIzMDE0ODdkOTRkMzI3MmE2YjU3MGFmYmY4MGMyYzViMTQ4Yzk1NDU3OWQ0NiJ9fX0=");
+        removeButtonSkull.setDisplayName(Texts.color("&cRemove &lpunishment &cfor player &e&l"+playerName));
         removeButton.setItemMeta(removeButtonSkull);
         gui.setItem(22, removeButton);
 
         //History button
         ItemStack historyButton = new ItemStack(Material.PAPER);
         ItemMeta historyButtonMeta = historyButton.getItemMeta();
-        historyButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&5See the &lpunishment history &5of &e&l"+playerName));
+        historyButtonMeta.setDisplayName(Texts.color("&5See the &lpunishment history &5of &e&l"+playerName));
         historyButton.setItemMeta(historyButtonMeta);
         gui.setItem(24, historyButton);
 
         //Return button
         ItemStack returnButton = new ItemStack(Material.SPECTRAL_ARROW);
         ItemMeta returnButtonMeta = returnButton.getItemMeta();
-        returnButtonMeta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize("&c&lRETURN"));
+        returnButtonMeta.setDisplayName(Texts.color("&c&lRETURN"));
         returnButton.setItemMeta(returnButtonMeta);
         gui.setItem(40, returnButton);
 
@@ -92,9 +84,9 @@ public class AddRemoveHistoryGUI implements Listener{
     }
 
     @EventHandler
-    public void onClick(InventoryClickEvent e) throws SQLException {
+    public void onClick(InventoryClickEvent e) {
         if(!(e.getWhoClicked() instanceof Player player)) return;
-        if(!e.getView().title().equals(Component.text("Add/Remove Punishment"))) return;
+        if(!e.getView().getTitle().equals("Add/Remove Punishment")) return;
         e.setCancelled(true);
 
         ItemStack clickedItem = e.getCurrentItem();
@@ -174,20 +166,19 @@ public class AddRemoveHistoryGUI implements Listener{
         }
     }
 
-    private void removePunishment(Component ID, Player staff){
-        if(ID.equals(Component.text("cancel"))){
+    private void removePunishment(String ID, Player staff){
+        if(ID.equalsIgnoreCase("cancel")){
             showGui(staff);
             return;
         }
 
         String chatPrefix = plugin.getConfig().getString("chat-prefix");
         try{
-            //Getting the punishment with that ID
-            Punishment targetP = plugin.getPlayerPunishmentDataCache().getPunishmentByID(PlainTextComponentSerializer.plainText().serialize(ID));
+            Punishment targetP = plugin.getPlayerPunishmentDataCache().getPunishmentByID(ID);
 
             //Checking if there is a punishment with that ID
             if(targetP == null){
-                staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThere is no punishment with ID &l"+PlainTextComponentSerializer.plainText().serialize(ID)+"&c!"));
+                staff.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cThere is no punishment with ID &l"+ID+"&c!"));
                 staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
 
                 //Re-opens the GUI after 1/2 seconds
@@ -214,7 +205,7 @@ public class AddRemoveHistoryGUI implements Listener{
                     e.printStackTrace();
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        staff.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(chatPrefix+" &cThere was a problem removing the punishment from the DB/Cache."));
+                        staff.sendMessage(Texts.color(chatPrefix+" &cThere was a problem removing the punishment from the DB/Cache."));
                         staff.playSound(staff.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
                     });
                     return;
@@ -253,7 +244,7 @@ public class AddRemoveHistoryGUI implements Listener{
                 }
             });
 
-            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment with ID &7&l"+PlainTextComponentSerializer.plainText().serialize(ID)+" &ahas been removed from player &e"+Bukkit.getOfflinePlayer(targetP.uuid()).getName()+"&a!"));
+            staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &aPunishment with ID &7&l"+ID+" &ahas been removed from player &e"+Bukkit.getOfflinePlayer(targetP.uuid()).getName()+"&a!"));
             staff.playSound(staff.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.4f);
         } catch (Exception e){
             staff.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cThere was a problem removing the punishment. See the server's CMD for more info"));

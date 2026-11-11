@@ -16,11 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 //This class handles the database. It also has all the helper methods that I need
 public class DatabaseManager {
-    private final DiscordUtils plugin;
     private final HikariDataSource dataSource;
 
     public DatabaseManager(DiscordUtils plugin) {
-        this.plugin = plugin;
         HikariConfig config = new HikariConfig();
 
         //Creates and connects the DB (Using HikariCP)
@@ -62,8 +60,7 @@ public class DatabaseManager {
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         }
         else{
-            plugin.getLogger().severe("Invalid database type. Disabling DiscordUtils...");
-            plugin.getPluginLoader().disablePlugin(plugin);
+            throw new IllegalStateException("Invalid database type '" + databaseType + "'. Expected sqlite or mysql.");
         }
 
         config.setPoolName("DiscordUtils Pool");
@@ -83,17 +80,16 @@ public class DatabaseManager {
         try(Connection conn = dataSource.getConnection(); PreparedStatement statement = conn.prepareStatement(playersTable)){
             statement.executeUpdate();
         } catch (SQLException e){
-            plugin.getLogger().severe("Couldn't create playersVerification table. See message: "+e.getMessage());
-            plugin.getLogger().severe("Disabling DiscordUtils...");
-            plugin.getPluginLoader().disablePlugin(plugin);
+            dataSource.close();
+            throw new IllegalStateException("Couldn't create playersVerification table: " + e.getMessage(), e);
         }
 
         //Creates the punishments table
         String punishmentsTable = """
                 CREATE TABLE IF NOT EXISTS punishments(
-                    crt INTEGER PRIMARY KEY AUTOINCREMENT,
+                    crt INTEGER PRIMARY KEY AUTO_INCREMENT,
                     id TEXT UNIQUE,
-                    uuid,
+                    uuid TEXT,
                     type TEXT,
                     scope TEXT,
                     reason TEXT,
@@ -109,9 +105,8 @@ public class DatabaseManager {
         try(Connection conn = dataSource.getConnection(); PreparedStatement statement = conn.prepareStatement(punishmentsTable)){
             statement.executeUpdate();
         } catch (SQLException e){
-            plugin.getLogger().severe("Couldn't create punishments table. See message: "+e.getMessage());
-            plugin.getLogger().severe("Disabling DiscordUtils...");
-            plugin.getPluginLoader().disablePlugin(plugin);
+            dataSource.close();
+            throw new IllegalStateException("Couldn't create punishments table: " + e.getMessage(), e);
         }
     }
 
@@ -122,7 +117,7 @@ public class DatabaseManager {
         dataSource.close();
     }
 
-    public ConcurrentHashMap<UUID, String> getVerifiedData() {
+    public ConcurrentHashMap<UUID, String> getVerifiedData() throws SQLException {
         ConcurrentHashMap<UUID, String> verifiedData = new ConcurrentHashMap<>();
         try(Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT * FROM verifiedPlayers WHERE verified = 1")){
             try(ResultSet rs = ps.executeQuery()){
@@ -132,10 +127,6 @@ public class DatabaseManager {
                     verifiedData.put(uuid, ID);
                 }
             }
-        } catch (SQLException e){
-            plugin.getLogger().severe("Couldn't save verification data to the memory. See message: "+e.getMessage());
-            plugin.getLogger().severe("Disabling DiscordUtils...");
-            plugin.getPluginLoader().disablePlugin(plugin);
         }
 
         return verifiedData;
