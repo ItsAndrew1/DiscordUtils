@@ -45,11 +45,12 @@ public class SlashCommands extends ListenerAdapter{
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         FileConfiguration botConfig = plugin.botFile().getConfig();
-        event.deferReply(true).queue();
 
         switch (event.getName()) {
             //The 'verify' command
             case "verify" -> {
+                event.deferReply(true).queue();
+
                 //Checking if the user is banned
                 if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
                     event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
@@ -141,6 +142,8 @@ public class SlashCommands extends ListenerAdapter{
 
             //pshistory command
             case "pshistory" -> {
+                event.deferReply(true).queue();
+
                 //Check if the user is verified
                 if(!plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(event.getUser().getId())) {
                     event.getHook().sendMessage("You **are not** verified! Please run */verify* on our server and try again.").queue();
@@ -182,6 +185,8 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "punish" -> {
+                event.deferReply(true).queue();
+
                 if(isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL) || isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD)){
                     event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
                     return;
@@ -216,6 +221,8 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "psremove" -> {
+                event.deferReply(true).queue();
+
                 //Checking if the user is banned
                 if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
                     event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
@@ -292,6 +299,8 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "unverify" -> {
+                event.deferReply(true).queue();
+
                 String userID = event.getUser().getId();
 
                 //Checking if the user is banned
@@ -359,6 +368,24 @@ public class SlashCommands extends ListenerAdapter{
             case "appeal" -> {
                 String punishmentID = event.getOption("id").getAsString();
 
+                //Checking if the punishment still exists and hasn't expired
+                if(!punishmentIsActive(punishmentID)){
+                    event.getHook().sendMessage("This punishment has already been **removed** or has **expired**!").queue();
+                    return;
+                }
+
+                //Checking if the appeal was declined
+                if(wasAppealDeclined(punishmentID)){
+                    event.getHook().sendMessage("This appeal has been declined. You cannot appeal again.").queue();
+                    return;
+                }
+
+                //Checking if the punishment is already in appeal state
+                if(isAppealInPendingState(punishmentID)){
+                    event.getHook().sendMessage("You have already sent an appeal for this punishment! Please be patient while our staff reviews your appeal.").queue();
+                    return;
+                }
+
                 //Opening a modal with the appealing form
                 int maximumLength = botConfig.getInt("maximum-length-appeal");
                 int minimumLength = botConfig.getInt("minimum-length-appeal");
@@ -378,6 +405,8 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "appealstatus" -> {
+                event.deferReply(true).queue();
+
                 //Getting the punishment ID
                 String pID = event.getOption("id").getAsString();
 
@@ -392,6 +421,8 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "startverification" -> {
+                event.deferReply(true).queue();
+
                 //Checking if the user is banned
                 if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
                     event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
@@ -429,6 +460,8 @@ public class SlashCommands extends ListenerAdapter{
             }
 
             case "reload" -> {
+                event.deferReply(true).queue();
+
                 //Checking if the user is banned
                 if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
                     event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
@@ -479,5 +512,23 @@ public class SlashCommands extends ListenerAdapter{
 
     private boolean isUserBanned(String userID, PunishmentScopes scope){
         return plugin.getPlayerPunishmentDataCache().isUserBanned(userID, scope);
+    }
+
+    private boolean punishmentIsActive(String ID) {
+        ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache = plugin.getPlayerPunishmentDataCache().getMainCache();
+
+        return mainCache.values().stream().flatMap(CopyOnWriteArrayList::stream).anyMatch(p -> p.id().equals(ID) && p.active());
+    }
+
+    private boolean wasAppealDeclined(String ID) {
+        ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache = plugin.getPlayerPunishmentDataCache().getMainCache();
+
+        return mainCache.values().stream().flatMap(CopyOnWriteArrayList::stream).anyMatch(p -> p.id().equals(ID) && p.appeal_state().equals(AppealState.DECLINED));
+    }
+
+    private boolean isAppealInPendingState(String ID) {
+        ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache = plugin.getPlayerPunishmentDataCache().getMainCache();
+
+        return mainCache.values().stream().flatMap(CopyOnWriteArrayList::stream).anyMatch(p -> p.id().equals(ID) && p.appeal_state().equals(AppealState.PENDING));
     }
 }

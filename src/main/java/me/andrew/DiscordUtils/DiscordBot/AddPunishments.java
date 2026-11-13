@@ -47,11 +47,17 @@ public class AddPunishments extends ListenerAdapter{
     }
 
     public void punishPlayer(SlashCommandInteractionEvent event, OfflinePlayer targetPlayer) {
+        String staffName = getStaffName(event.getUser().getId());
+        if(staffName == null){
+            event.getHook().sendMessage("You cannot apply a punishment because you are not verified!").queue();
+            return;
+        }
+
         //Creating the state
         AddingState newState = new AddingState(
                 null,
                 targetPlayer.getUniqueId(),
-                getStaffName(event.getUser().getId()),
+                staffName,
                 null,
                 null,
                 null,
@@ -78,7 +84,7 @@ public class AddPunishments extends ListenerAdapter{
                 .addOption("Temporary Mute Warning", "TEMP_MUTE_WARN")
                 .build();
 
-        event.reply("Choose punishment type: ").setEphemeral(true).addComponents(ActionRow.of(setTypeMenu)).queue();
+        event.getHook().sendMessageComponents(ActionRow.of(setTypeMenu)).queue();
     }
 
     private String getStaffName(String userId) {
@@ -103,7 +109,7 @@ public class AddPunishments extends ListenerAdapter{
 
         if (event.getComponentId().equals("punishment:type")) {
             //Setting the type
-            state.type = PunishmentType.valueOf(event.getValues().getFirst());
+            state.type = PunishmentType.valueOf(event.getValues().get(0));
 
             //Updating the last interaction
             state.lastInteraction = System.currentTimeMillis();
@@ -125,7 +131,7 @@ public class AddPunishments extends ListenerAdapter{
 
         if (event.getComponentId().equals("punishment:scope")) {
             //Setting the punishment scope
-            state.scope = PunishmentScopes.valueOf(event.getValues().getFirst());
+            state.scope = PunishmentScopes.valueOf(event.getValues().get(0));
 
             //Checking if the target user/player is verified or not. (If the scope is DISCORD or GLOBAL)
             if((state.scope == PunishmentScopes.DISCORD || state.scope == PunishmentScopes.GLOBAL) && !plugin.getPlayerVerificationCache().isPlayerVerifiedUUID(state.targetUUID)){
