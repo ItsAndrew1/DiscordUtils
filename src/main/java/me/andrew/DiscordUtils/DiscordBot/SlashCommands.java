@@ -116,13 +116,15 @@ public class SlashCommands extends ListenerAdapter{
 
                         Guild dcServer = plugin.getDiscordBot().getDiscordServer();
                         dcServer.retrieveMemberById(userId).queue(member -> {
-                            long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
-                            long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
-                            Role unverifiedRole = dcServer.getRoleById(unverifiedRoleID);
-                            Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
-                            dcServer.addRoleToMember(member, verifiedRole).queue();
-                            dcServer.removeRoleFromMember(member, unverifiedRole).queue();
-                            member.modifyNickname(player.getName()).queue();
+                            if(!member.isOwner()){
+                                long verifiedRoleID = plugin.botFile().getConfig().getLong("verification.verified-role-id");
+                                long unverifiedRoleID = plugin.botFile().getConfig().getLong("verification.unverified-role-id");
+                                Role unverifiedRole = dcServer.getRoleById(unverifiedRoleID);
+                                Role verifiedRole = dcServer.getRoleById(verifiedRoleID);
+                                dcServer.addRoleToMember(member, verifiedRole).queue();
+                                dcServer.removeRoleFromMember(member, unverifiedRole).queue();
+                                member.modifyNickname(player.getName()).queue();
+                            }
                         }, error -> plugin.getLogger().warning("[!] There was a problem assigning the verified role for a player. See message: "+error.getMessage()));
 
                         List<String> hasVerifiedMessage = plugin.getConfig().getStringList("player-verified-message");
@@ -409,15 +411,19 @@ public class SlashCommands extends ListenerAdapter{
 
                 //Getting the punishment ID
                 String pID = event.getOption("id").getAsString();
+                Punishment punishment = plugin.getPlayerPunishmentDataCache().getPunishmentByID(pID);
+                if(punishment == null){
+                    event.getHook().sendMessage("There is **no punishment** with that ID!").queue();
+                    return;
+                }
 
-                //If the status is 'PENDING'
-                if(isPunishmentAppealInState(pID, AppealState.PENDING)) event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: PENDING").queue();
+                AppealState appealState = punishment.appeal_state();
+                if(appealState == null || appealState == AppealState.NO_APPEAL){
+                    event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: NO APPEAL").queue();
+                    return;
+                }
 
-                //If the status is 'DECLINED'
-                if(isPunishmentAppealInState(pID, AppealState.DECLINED)) event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: DECLINED").queue();
-
-                //If the status is 'ACCEPTED'
-                if(isPunishmentAppealInState(pID, AppealState.ACCEPTED)) event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: ACCEPTED").queue();
+                event.getHook().sendMessage("Punishment ID: "+pID+"\n**Status**: "+appealState.name()).queue();
             }
 
             case "startverification" -> {
@@ -425,7 +431,7 @@ public class SlashCommands extends ListenerAdapter{
 
                 //Checking if the user is banned
                 if(isUserBanned(event.getUser().getId(), PunishmentScopes.DISCORD) || isUserBanned(event.getUser().getId(), PunishmentScopes.GLOBAL)){
-                    event.reply("You cannot do this because **you are banned**!").setEphemeral(true).queue();
+                    event.getHook().sendMessage("You cannot do this because **you are banned**!").queue();
                     return;
                 }
 
@@ -435,6 +441,16 @@ public class SlashCommands extends ListenerAdapter{
                     event.getHook().sendMessage("You don't have permission to run this command!").queue();
                     return;
                 }
+
+                plugin.getPlayerVerificationCache().clear();
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    String sql = "DELETE FROM verifiedPlayers";
+                    try(Connection conn = plugin.getDatabaseManager().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)){
+                        ps.executeUpdate();
+                    } catch (SQLException e) {
+                        plugin.getLogger().warning("Couldn't reset verified players. See message: "+e.getMessage());
+                    }
+                });
 
                 event.getGuild().loadMembers().onSuccess(members -> {
                     for(Member member : members){
@@ -493,11 +509,6 @@ public class SlashCommands extends ListenerAdapter{
 
     private boolean punishmentExists(String ID) {
         return mainCache.values().stream().flatMap(CopyOnWriteArrayList::stream).anyMatch(p -> p.id().equals(ID));
-    }
-
-    private boolean isPunishmentAppealInState(String punishmentID, AppealState state) {
-        Punishment punishment = plugin.getPlayerPunishmentDataCache().getPunishmentByID(punishmentID);
-        return punishment.appeal_state().equals(state);
     }
 
     private boolean hasPermission(Member member, List<Long> roles){

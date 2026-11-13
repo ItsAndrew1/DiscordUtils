@@ -427,6 +427,10 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         chatInput.put(player.getUniqueId(), callback);
     }
 
+    public boolean isWaitingForChatInput(UUID playerUUID){
+        return chatInput.containsKey(playerUUID);
+    }
+
     //Helper method for building embeds
     private EmbedBuilder getEmbedBuilder(Color embedColor, String embedTitle, String description){
         EmbedBuilder embed = new  EmbedBuilder();

@@ -79,4 +79,11 @@ public class PlayerVerificationCache {
     public boolean isUserVerifiedDiscordId(String userID){
         return discordIdUuidCache.containsKey(userID);
     }
+
+    public void clear(){
+        codesCache.clear();
+        discordCodeCache.clear();
+        uuidDiscordIdCache.clear();
+        discordIdUuidCache.clear();
+    }
 }

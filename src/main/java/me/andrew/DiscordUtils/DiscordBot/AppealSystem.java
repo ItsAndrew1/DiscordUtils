@@ -6,6 +6,7 @@ import me.andrew.DiscordUtils.Plugin.DiscordUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
@@ -24,12 +25,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class AppealSystem extends ListenerAdapter {
     private final DiscordUtils plugin;
+    private final Set<String> resolvedAppeals = ConcurrentHashMap.newKeySet();
 
     public AppealSystem(DiscordUtils plugin) {
         this.plugin = plugin;
@@ -88,6 +91,8 @@ public class AppealSystem extends ListenerAdapter {
             throw new RuntimeException(e);
         }
 
+        plugin.getPlayerPunishmentDataCache().setPunishmentAppealState(punishment, AppealState.PENDING);
+
         event.getHook().sendMessage("Punishment appeal sent successfully!").queue();
     }
 
@@ -101,7 +106,7 @@ public class AppealSystem extends ListenerAdapter {
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event){
         if(!event.getComponentId().contains("appeal_") && !event.getComponentId().contains("getid")) return;
-        event.deferReply(true).queue();
+        event.deferReply().queue();
 
         FileConfiguration botConfig = plugin.botFile().getConfig();
 
@@ -109,7 +114,7 @@ public class AppealSystem extends ListenerAdapter {
             String userID = event.getUser().getId();
             List<String> punishmentIds = getUserActivePunishmentsIDs(plugin.getPlayerVerificationCache().getUuidFromDiscordId(userID));
             if(punishmentIds == null){
-                event.getHook().sendMessage("You don't have any active punishments").queue();
+                event.getHook().sendMessage("You don't have any active punishments").setEphemeral(true).queue();
                 return;
             }
 
@@ -120,24 +125,25 @@ public class AppealSystem extends ListenerAdapter {
                 ids.append("**").append(punishmentID).append("**").append(" ");
             }
 
-            event.getHook().sendMessage(ids.toString().trim()+". Run /appeal <id> to appeal your ban!").queue();
+            event.getHook().sendMessage(ids.toString().trim()+". Run /appeal <id> to appeal your ban!").setEphemeral(true).queue();
             return;
         }
 
         //Getting the punishment ID
         String punishmentID =  event.getComponentId().split(":", 2)[1];
 
-        //Checking if the appeal has been already solved
-        if(appealWasAcceptedDecline(punishmentID)){
-            event.getHook().sendMessage("This appeal has been solved.").queue();
+        Punishment p = plugin.getPlayerPunishmentDataCache().getPunishmentByID(punishmentID);
+        if(p == null){
+            resolvedAppeals.remove(punishmentID);
+            event.getHook().sendMessage("There is **no punishment** with that ID!").setEphemeral(true).queue();
             return;
         }
 
-        Punishment p = plugin.getPlayerPunishmentDataCache().getPunishmentByID(punishmentID);
+        boolean accepted = event.getComponentId().contains("appeal_accept");
 
         //If the staff clicks on the Accept Button
-        if(event.getComponentId().contains("appeal_accept")){
-            UUID targetPlayerUUID = getPlayerUuidFromID(punishmentID);
+        if(accepted){
+            UUID targetPlayerUUID = p.uuid();
 
             String targetUserID = plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetPlayerUUID);
             if(targetUserID != null) {
@@ -149,14 +155,14 @@ public class AppealSystem extends ListenerAdapter {
                         long bannedRoleID = botConfig.getLong("ban-role-id");
                         Role bannedRole = event.getGuild().getRoleById(bannedRoleID);
 
-                        if(member.getRoles().contains(bannedRole)) event.getGuild().removeRoleFromMember(member, bannedRole).queue();
-                        if(member.getRoles().contains(timeoutRole)) event.getGuild().removeRoleFromMember(member, timeoutRole).queue();
+                        if(bannedRole != null && member.getRoles().contains(bannedRole)) event.getGuild().removeRoleFromMember(member, bannedRole).queue();
+                        if(timeoutRole != null && member.getRoles().contains(timeoutRole)) event.getGuild().removeRoleFromMember(member, timeoutRole).queue();
 
                         //Now, if the user is verified, give him the 'Verified' role back
                         if(plugin.getPlayerVerificationCache().isUserVerifiedDiscordId(member.getId())){
                             long verifiedRoleID = botConfig.getLong("verification.verified-role-id");
                             Role verifiedRole = event.getGuild().getRoleById(verifiedRoleID);
-                            event.getGuild().addRoleToMember(member, verifiedRole).queue();
+                            if(verifiedRole != null) event.getGuild().addRoleToMember(member, verifiedRole).queue();
                         }
                     }
                 });
@@ -170,15 +176,18 @@ public class AppealSystem extends ListenerAdapter {
                 ps.setString(3, punishmentID);
                 ps.executeUpdate();
             } catch (SQLException e) {
+                resolvedAppeals.remove(punishmentID);
                 plugin.getLogger().warning("[!] Failed to update the appeal state. See message: "+e.getMessage());
-                event.getHook().sendMessage("[!] Failed to update the appeal state. See message: "+e.getMessage()).queue();
+                event.getHook().sendMessage("[!] Failed to update the appeal state. See message: "+e.getMessage()).setEphemeral(true).queue();
                 return;
             }
 
             plugin.getPlayerPunishmentDataCache().setPunishmentAppealState(p, AppealState.ACCEPTED);
-            plugin.getPlayerPunishmentDataCache().removePunishment(targetPlayerUUID, p);
+            Punishment acceptedPunishment = plugin.getPlayerPunishmentDataCache().getPunishmentByID(punishmentID);
+            plugin.getPlayerPunishmentDataCache().removePunishment(targetPlayerUUID, acceptedPunishment != null ? acceptedPunishment : p);
 
-
+            disableAppealButtons(event, punishmentID);
+            notifyPlayer(event, targetPlayerUUID, punishmentID, true);
             event.getHook().sendMessage("Appeal for **Punishment "+punishmentID+"** has been **ACCEPTED**\n**Staff**: "+event.getUser().getName()).setEphemeral(false).queue();
         }
 
@@ -192,32 +201,54 @@ public class AppealSystem extends ListenerAdapter {
                 ps.setString(2, punishmentID);
                 ps.executeUpdate();
             } catch (SQLException e){
+                resolvedAppeals.remove(punishmentID);
                 plugin.getLogger().warning("[!] Failed to update the appeal state. See message: "+e.getMessage());
-                event.getHook().sendMessage("[!] Failed to update the appeal state. See message: "+e.getMessage()).queue();
+                event.getHook().sendMessage("[!] Failed to update the appeal state. See message: "+e.getMessage()).setEphemeral(true).queue();
                 return;
             }
 
             plugin.getPlayerPunishmentDataCache().setPunishmentAppealState(p, AppealState.DECLINED);
 
+            disableAppealButtons(event, punishmentID);
+            notifyPlayer(event, p.uuid(), punishmentID, false);
             event.getHook().sendMessage("Appeal for **Punishment "+punishmentID+"** has been **DECLINED**\n**Staff**: "+event.getUser().getName()).setEphemeral(false).queue();
         }
     }
 
-    private UUID getPlayerUuidFromID(String id){
-        ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache = plugin.getPlayerPunishmentDataCache().getMainCache();
-        for(UUID uuid : mainCache.keySet()){
-            CopyOnWriteArrayList<Punishment> punishments = mainCache.get(uuid);
-            if(punishments != null && punishments.stream().anyMatch(p -> p.id().equals(id))) return uuid;
-        }
-        return null;
+    private void disableAppealButtons(ButtonInteractionEvent event, String punishmentID){
+        event.getMessage().editMessageComponents(ActionRow.of(
+                Button.success("appeal_accept:"+punishmentID, "Accept").asDisabled(),
+                Button.danger("appeal_decline:"+punishmentID, "Decline").asDisabled()
+        )).queue();
     }
 
-    private boolean appealWasAcceptedDecline(String ID){
-        ConcurrentHashMap<UUID, CopyOnWriteArrayList<Punishment>> mainCache = plugin.getPlayerPunishmentDataCache().getMainCache();
-        Punishment punishment = mainCache.values().stream().flatMap(CopyOnWriteArrayList::stream).filter(p -> p.id().equals(ID)).findFirst().orElse(null);
-        if(punishment == null) return false;
+    private void notifyPlayer(ButtonInteractionEvent event, UUID targetPlayerUUID, String punishmentID, boolean accepted){
+        String discordId = targetPlayerUUID == null ? null : plugin.getPlayerVerificationCache().getDiscordIdFromUuid(targetPlayerUUID);
+        if(discordId == null) discordId = discordIdFromAppealMessage(event);
+        if(discordId == null) return;
 
-        return punishment.appeal_state().equals(AppealState.ACCEPTED) || punishment.appeal_state().equals(AppealState.DECLINED);
+        String message = accepted
+                ? "Your appeal for punishment **"+punishmentID+"** has been **accepted**. The punishment has been removed."
+                : "Your appeal for punishment **"+punishmentID+"** has been **declined**.";
+
+        plugin.getDiscordBot().getJda().retrieveUserById(discordId).queue(user -> user.openPrivateChannel().queue(
+                channel -> channel.sendMessage(message).queue(),
+                error -> plugin.getLogger().warning("[!] Couldn't DM the appeal result to "+user.getId()+". See message: "+error.getMessage())
+        ), error -> plugin.getLogger().warning("[!] Couldn't find the user for appeal "+punishmentID+". See message: "+error.getMessage()));
+    }
+
+    private String discordIdFromAppealMessage(ButtonInteractionEvent event){
+        if(event.getMessage().getEmbeds().isEmpty()) return null;
+
+        MessageEmbed embed = event.getMessage().getEmbeds().get(0);
+        if(embed.getFooter() == null || embed.getFooter().getText() == null) return null;
+
+        String footer = embed.getFooter().getText();
+        String prefix = "User ID: ";
+        if(!footer.startsWith(prefix)) return null;
+
+        String discordId = footer.substring(prefix.length()).trim();
+        return discordId.isEmpty() ? null : discordId;
     }
 
     private List<String> getUserActivePunishmentsIDs(UUID targetUUID) {

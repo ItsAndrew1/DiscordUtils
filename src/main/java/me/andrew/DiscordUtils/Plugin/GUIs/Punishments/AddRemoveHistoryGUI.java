@@ -16,6 +16,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -23,26 +25,54 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.sql.SQLException;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.UUID;
 
 public class AddRemoveHistoryGUI implements Listener{
+    private static final Set<String> PUNISHMENT_FLOW_TITLES = Set.of(
+            "Add/Remove Punishment",
+            "Choose Punishment Type",
+            "Choose Punishment Scope",
+            "Approve Punishment"
+    );
+
     private final DiscordUtils plugin;
     private final NamespacedKey dataContainer;
 
     public AddRemoveHistoryGUI(DiscordUtils plugin){
         this.plugin = plugin;
         this.dataContainer = new NamespacedKey(plugin, "AddRemove");
-
-        //Start a task which removes a user from the AddingState map after a period of time of inactivity.
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, ()->{
-            long now = System.currentTimeMillis();
-            int inactivityMinutes = plugin.getConfig().getInt("inactivity-minutes");
-            plugin.getPunishmentsAddingStates().entrySet().removeIf(entry ->
-                    now - entry.getValue().lastInteraction > TimeUnit.MINUTES.toMillis(inactivityMinutes)
-            );
-        }, 0L, 20L * 180); //Runs every 3 minutes
     }
 
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event){
+        if(!(event.getPlayer() instanceof Player player)) return;
+        if(!PUNISHMENT_FLOW_TITLES.contains(event.getView().getTitle())) return;
+
+        UUID playerId = player.getUniqueId();
+        if(!plugin.getPunishmentsAddingStates().containsKey(playerId)) return;
+
+        // openInventory closes the previous GUI before the next one is open, and chat prompts
+        // (reason, temporary duration, warning duration) close the inventory before the callback is registered.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if(!plugin.getPunishmentsAddingStates().containsKey(playerId)) return;
+            if(!player.isOnline()){
+                plugin.getPunishmentsAddingStates().remove(playerId);
+                return;
+            }
+
+            if(PUNISHMENT_FLOW_TITLES.contains(player.getOpenInventory().getTitle())) return;
+            if(plugin.isWaitingForChatInput(playerId)) return;
+
+            plugin.getPunishmentsAddingStates().remove(playerId);
+        });
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event){
+        plugin.getPunishmentsAddingStates().remove(event.getPlayer().getUniqueId());
+    }
+    
     public void showGui(Player player){
         int invSize = 54;
         Inventory gui = Bukkit.createInventory(null, invSize, "Add/Remove Punishment");
