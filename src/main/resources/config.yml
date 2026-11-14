@@ -156,10 +156,12 @@ punishment-id-length: 6 #The ID structure is '#' + the digits!
 inactivity-minutes: 10
 
 #Give rewards to the player when the player verifies.
+#Staff can edit this from /dcutils rewards or Main Configuration. ItemStacks are written under items.
 rewards:
   toggle-giving-rewards: false #Whether you want to give rewards when a player verifies or not
   exp: 0 #In levels. It cannot be < 0!
-  items: "" #The items for the reward. 
+  received-message: "&aYou received your verification rewards!" #Leave blank to send nothing
+  items: [] #ItemStacks given on a successful verification. Filled in by the rewards GUI. 
 
 #Configure the punishment messages.
 player-punishments-messages:
@@ -337,3 +339,4 @@ help-message-book-pages:
   - " &9&l  DISCORD UTILS        HELP MANUAL\n\n&41. &l/dcutils mainconfig\n  &4->opens the Configuration GUI."
   - "&42. &l/dcutils reload\n  &4->reloads the .yml files. Use when manually changing something in them.\n\n&43. &l/dcutils help\n  &4->brings up the help manual.\n\n&44. &l/discord\n  &4->Opens the GUI. Main command for players."
   - "&45. &l/verify\n  &4->starts the verification process.\n\n&46. &l/unverify\n  &4->unverifies the player.\n\n&47. &l/history \n  &4->view your own punishment history."
+  - "&48. &l/dcutils rewards\n  &4->opens the verification rewards GUI.\n\n&7Add item copies, set the XP levels, then click save."

@@ -84,6 +84,13 @@ public class MainConfigGUI implements Listener {
         setAppearanceChoice.setItemMeta(sacMeta);
         mainConfigGUI.setItem(24, setAppearanceChoice);
 
+        //Verification rewards
+        ItemStack rewards = new ItemStack(Material.CHEST);
+        ItemMeta rewardsMeta = rewards.getItemMeta();
+        rewardsMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&lVERIFICATION REWARDS"));
+        rewards.setItemMeta(rewardsMeta);
+        mainConfigGUI.setItem(31, rewards);
+
         player.openInventory(mainConfigGUI); //Opens the inventory
     }
 
@@ -162,6 +169,13 @@ public class MainConfigGUI implements Listener {
             event.setCancelled(true);
             player.playSound(player.getLocation(), clickSound, 1f, 1f);
             plugin.getBlockConfigurationGUI().showGUI(player);
+        }
+
+        //If the player clicks on the verification rewards button
+        if(clickedMaterial.equals(Material.CHEST)){
+            event.setCancelled(true);
+            player.playSound(player.getLocation(), clickSound, 1f, 1f);
+            plugin.getRewardsGUI().showGUI(player);
         }
 
         //If the player clicks on appearance-choice button

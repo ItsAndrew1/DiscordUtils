@@ -132,6 +132,8 @@ public class SlashCommands extends ListenerAdapter{
                             player.sendMessage(ChatColor.translateAlternateColorCodes('&', line));
                         }
 
+                        plugin.getVerificationRewards().give(player);
+
                         Sound hasVerifiedSound =  Sounds.fromKey(plugin.getConfig().getString("player-has-verified-sound", "entity.player.levelup").toLowerCase());
                         float phvsVolume = plugin.getConfig().getInt("phvs-volume");
                         float phvsPitch = plugin.getConfig().getInt("phvs-pitch");

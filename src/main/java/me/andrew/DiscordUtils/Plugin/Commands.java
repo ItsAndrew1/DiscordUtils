@@ -126,7 +126,7 @@ public class Commands implements CommandExecutor{
         if(command.getName().equalsIgnoreCase("dcutils")){
             if(strings.length == 0){
                 player.playSound(player.getLocation(), invalid, 1f, 1f);
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils <blockConfig | punishments | reload | help>"));
+                player.sendMessage(ChatColor.translateAlternateColorCodes('&', chatPrefix+" &cUsage: &l/dcutils <mainconfig | rewards | punishments | reload | help>"));
                 return true;
             }
 
@@ -139,6 +139,16 @@ public class Commands implements CommandExecutor{
 
                     player.playSound(player.getLocation(), good, 1f, 1.4f);
                     plugin.getMainConfigGUI().showGUI(player);
+                    break;
+
+                case "rewards":
+                    if(!player.hasPermission("discordutils.commands.rewards") && !player.hasPermission("discordutils.commands.mainconfig")){
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', commandNoPermissionMessage));
+                        return true;
+                    }
+
+                    player.playSound(player.getLocation(), good, 1f, 1.4f);
+                    plugin.getRewardsGUI().showGUI(player);
                     break;
 
                 case "punishments":

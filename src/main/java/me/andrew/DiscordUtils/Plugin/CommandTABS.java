@@ -22,7 +22,7 @@ public class CommandTABS implements TabCompleter {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
         if(command.getName().equalsIgnoreCase("dcutils")) {
             if(strings.length == 1){
-                return Arrays.asList("mainconfig", "punishments", "reload", "help");
+                return Arrays.asList("mainconfig", "rewards", "punishments", "reload", "help");
             }
         }
 

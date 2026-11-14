@@ -44,6 +44,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     private DiscordTask discordTaskManager;
     private DiscordBlock discordBlockManager;
     private MainConfigGUI mainConfigGUI;
+    private RewardsGUI rewardsGUI;
+    private VerificationRewards verificationRewards;
     private YMLFiles botConfig;
     private BlockConfigurationGUI blockConfigurationGUI;
     private AppearanceChoiceGUI appearanceChoiceGUI;
@@ -85,6 +87,8 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         discordBlockManager = new DiscordBlock(this);
         botConfig = new YMLFiles(this, "botconfig.yml");
         mainConfigGUI = new MainConfigGUI(this);
+        verificationRewards = new VerificationRewards(this);
+        rewardsGUI = new RewardsGUI(this);
         blockConfigurationGUI = new BlockConfigurationGUI(this);
         appearanceChoiceGUI = new AppearanceChoiceGUI(this);
         facingChoiceGUI = new FacingChoiceGUI(this);
@@ -114,6 +118,7 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
         //Setting events
         getServer().getPluginManager().registerEvents(discordGUI, this);
         getServer().getPluginManager().registerEvents(mainConfigGUI, this);
+        getServer().getPluginManager().registerEvents(rewardsGUI, this);
         getServer().getPluginManager().registerEvents(blockConfigurationGUI, this);
         getServer().getPluginManager().registerEvents(discordBlockManager, this);
         getServer().getPluginManager().registerEvents(appearanceChoiceGUI, this);
@@ -560,6 +565,12 @@ public final class DiscordUtils extends JavaPlugin implements Listener{
     }
     public MainConfigGUI getMainConfigGUI() {
         return mainConfigGUI;
+    }
+    public RewardsGUI getRewardsGUI() {
+        return rewardsGUI;
+    }
+    public VerificationRewards getVerificationRewards() {
+        return verificationRewards;
     }
     public YMLFiles botFile() {
         return botConfig;

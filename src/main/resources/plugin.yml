@@ -55,6 +55,9 @@ permissions:
   discordutils.commands.mainconfig:
     description: Allows the player to access the main configuration
     default: op
+  discordutils.commands.rewards:
+    description: Allows the player to edit the verification rewards
+    default: op
   discordutils.commands.help:
     description: Allows the player to open the Help Manual
     default: op
