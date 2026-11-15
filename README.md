@@ -1,7 +1,7 @@
 ![DiscordUtils banner](https://github.com/user-attachments/assets/e0ef9048-17ce-4383-b84c-ca5ef383d292)
 
 <p align="center">
- <img src="https://img.shields.io/badge/plugin%20version-1.2-blue?style=for-the-badge"> <img src="https://img.shields.io/badge/Minecraft%20Version-1.18%2B-green?style=for-the-badge&labelColor=gray">
+ <img src="https://img.shields.io/badge/plugin%20version-1.2-blue?style=for-the-badge"> <img src="https://img.shields.io/badge/Minecraft%20Version-1.16.5%2B-green?style=for-the-badge&labelColor=gray">
  <br>
 
 **DiscordUtils** is a *lightweight*, *discord utility minecraft plugin*, designed to help every server owner *connect* the players with **his discord server**. **Control the punishments** of the players, track them using **logs** in specific channels, let players **appeal** their punishments and much more!
